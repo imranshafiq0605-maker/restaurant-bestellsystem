@@ -464,9 +464,6 @@ export default function HomePage() {
   }, [adminClicks]);
 
   async function handleStripeCheckout() {
-    alert("Stripe Funktion startet");
-    console.log("Stripe Funktion startet");
-
     setFehlermeldung("");
     setErfolgsmeldung("");
 
@@ -587,25 +584,10 @@ export default function HomePage() {
         }),
       });
 
-      alert("Response Status: " + response.status);
-
-      const rawText = await response.text();
-      alert("Response Text: " + rawText);
-
-      let data: any = {};
-
-      if (rawText) {
-        try {
-          data = JSON.parse(rawText);
-        } catch (error) {
-          data = {};
-        }
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        setFehlermeldung(
-          data.error || rawText || "Stripe Checkout konnte nicht gestartet werden."
-        );
+        setFehlermeldung(data.error || "Stripe Checkout konnte nicht gestartet werden.");
         return;
       }
 
