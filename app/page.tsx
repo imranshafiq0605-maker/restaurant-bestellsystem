@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  addDoc,
   collection,
   serverTimestamp,
   runTransaction,
@@ -147,33 +146,6 @@ export default function HomePage() {
   const [adminClicks, setAdminClicks] = useState(0);
 
   const status = getJetztStatus(bestellart);
-  const handleStripeCheckout = async () => {
-  try {
-    const response = await fetch("/api/create-checkout-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        artikel: cart,
-        gesamtpreis,
-        kunde: {
-          name,
-          adresse,
-          telefon,
-        },
-      }),
-    });
-
-    const data = await response.json();
-
-    if (data.url) {
-      window.location.href = data.url;
-    }
-  } catch (error) {
-    console.error("Stripe Fehler:", error);
-  }
-};
 
   function openCuisine(cuisine: Cuisine) {
     setActiveCuisine(cuisine);
@@ -491,7 +463,7 @@ export default function HomePage() {
     }
   }, [adminClicks]);
 
-  async function handleBestellungAbsenden() {
+  async function handleStripeCheckout() {
     setFehlermeldung("");
     setErfolgsmeldung("");
 
@@ -558,57 +530,76 @@ export default function HomePage() {
 
     const counterRef = doc(db, "system", "orderCounter");
 
-const neueBestellnummer = await runTransaction(db, async (transaction) => {
-  const counterSnap = await transaction.get(counterRef);
-
-  if (!counterSnap.exists()) {
-    transaction.set(counterRef, { current: 1001 });
-    return 1001;
-  }
-
-  const current = counterSnap.data().current || 1000;
-  const next = current + 1;
-
-  transaction.update(counterRef, { current: next });
-  return next;
-});
-
-const bestellung = {
-  orderNumber: neueBestellnummer,
-  kunde: {
-    name,
-    telefon,
-    adresse: bestellart === "lieferung" ? adresse : "Abholung",
-  },
-  bestellart,
-  hinweis,
-  vorbestellung,
-  uhrzeit: vorbestellung === "spaeter" ? uhrzeit : "sofort",
-  artikel: artikelOhneUndefined,
-  gesamtpreisProdukte,
-  liefergebuehr: finaleLiefergebuehr,
-  gesamtpreis,
-  status: "neu",
-  createdAt: serverTimestamp(),
-};
-
     try {
       setIsSubmitting(true);
-      const docRef = await addDoc(collection(db, "bestellungen"), bestellung);
-window.location.href = `/order-status?id=${docRef.id}`;
 
-      setErfolgsmeldung("Bestellung erfolgreich gesendet.");
-      setCart([]);
-      setName("");
-      setTelefon("");
-      setAdresse("");
-      setHinweis("");
-      setVorbestellung(status.isOpen ? "sofort" : "spaeter");
-      setUhrzeit("");
-      setBestellart("abholung");
+      const neueBestellnummer = await runTransaction(db, async (transaction) => {
+        const counterSnap = await transaction.get(counterRef);
+
+        if (!counterSnap.exists()) {
+          transaction.set(counterRef, { current: 1001 });
+          return 1001;
+        }
+
+        const current = counterSnap.data().current || 1000;
+        const next = current + 1;
+
+        transaction.update(counterRef, { current: next });
+        return next;
+      });
+
+      const bestellung = {
+        orderNumber: neueBestellnummer,
+        kunde: {
+          name,
+          telefon,
+          adresse: bestellart === "lieferung" ? adresse : "Abholung",
+        },
+        bestellart,
+        hinweis,
+        vorbestellung,
+        uhrzeit: vorbestellung === "spaeter" ? uhrzeit : "sofort",
+        artikel: artikelOhneUndefined,
+        gesamtpreisProdukte,
+        liefergebuehr: finaleLiefergebuehr,
+        gesamtpreis,
+        status: "neu",
+        createdAt: serverTimestamp(),
+      };
+
+      const response = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          artikel: artikelOhneUndefined,
+          gesamtpreis,
+          kunde: {
+            name,
+            adresse: bestellart === "lieferung" ? adresse : "Abholung",
+            telefon,
+          },
+          bestellung,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setFehlermeldung(data.error || "Stripe Checkout konnte nicht gestartet werden.");
+        return;
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      setFehlermeldung("Keine Stripe-URL erhalten.");
     } catch (error) {
-      console.error("Fehler beim Speichern der Bestellung:", error);
-      setFehlermeldung("Die Bestellung konnte nicht gespeichert werden.");
+      console.error("Stripe Fehler:", error);
+      setFehlermeldung("Stripe Checkout konnte nicht gestartet werden.");
     } finally {
       setIsSubmitting(false);
     }
