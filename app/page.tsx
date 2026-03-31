@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  addDoc,
   collection,
   serverTimestamp,
   runTransaction,
@@ -563,9 +564,12 @@ export default function HomePage() {
         gesamtpreisProdukte,
         liefergebuehr: finaleLiefergebuehr,
         gesamtpreis,
-        status: "neu",
+        status: "payment_pending",
+        bezahlt: false,
         createdAt: serverTimestamp(),
       };
+
+      const orderRef = await addDoc(collection(db, "bestellungen"), bestellung);
 
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
@@ -573,6 +577,8 @@ export default function HomePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          orderId: orderRef.id,
+          orderNumber: neueBestellnummer,
           artikel: artikelOhneUndefined,
           gesamtpreis,
           kunde: {
