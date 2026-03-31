@@ -464,6 +464,8 @@ export default function HomePage() {
   }, [adminClicks]);
 
   async function handleStripeCheckout() {
+    alert("Stripe Funktion startet");
+console.log("Stripe Funktion startet");
     setFehlermeldung("");
     setErfolgsmeldung("");
 
