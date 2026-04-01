@@ -114,6 +114,27 @@ function getProductBasePrice(produkt: Product) {
   }
   return 0;
 }
+function getMinVorbestellzeit() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 60);
+
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
+  return `${hours}:${minutes}`;
+}
+
+function istVorbestellungMindestensEineStundeSpaeter(uhrzeit: string) {
+  if (!uhrzeit) return false;
+
+  const now = new Date();
+  const [hours, minutes] = uhrzeit.split(":").map(Number);
+
+  const selected = new Date();
+  selected.setHours(hours, minutes, 0, 0);
+
+  return selected.getTime() - now.getTime() >= 60 * 60 * 1000;
+}
 
 export default function HomePage() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -143,7 +164,7 @@ export default function HomePage() {
   const [modalError, setModalError] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
-
+const [minVorbestellzeit, setMinVorbestellzeit] = useState(getMinVorbestellzeit());
   const status = getJetztStatus(bestellart);
 
   function openCuisine(cuisine: Cuisine) {
@@ -448,7 +469,13 @@ export default function HomePage() {
         produkt.cuisine === activeCuisine && produkt.category === activeCategory
     );
   }, [activeCuisine, activeCategory]);
+useEffect(() => {
+  const interval = setInterval(() => {
+    setMinVorbestellzeit(getMinVorbestellzeit());
+  }, 60000);
 
+  return () => clearInterval(interval);
+}, []);
   useEffect(() => {
     if (!status.isOpen) {
       setVorbestellung("spaeter");
@@ -508,10 +535,19 @@ export default function HomePage() {
       return;
     }
 
-    if (vorbestellung === "spaeter" && !uhrzeit.trim()) {
-      setFehlermeldung("Bitte wähle eine Uhrzeit für die Vorbestellung.");
-      return;
-    }
+    if (vorbestellung === "spaeter") {
+  if (!uhrzeit.trim()) {
+    setFehlermeldung("Bitte wähle eine Uhrzeit für die Vorbestellung.");
+    return;
+  }
+
+  if (!istVorbestellungMindestensEineStundeSpaeter(uhrzeit)) {
+    setFehlermeldung(
+      "Vorbestellungen müssen mindestens 1 Stunde in der Zukunft liegen."
+    );
+    return;
+  }
+}
 
     const artikelOhneUndefined = cart.map((item) => ({
       id: item.id,
@@ -1004,11 +1040,15 @@ export default function HomePage() {
                   <div className="form-group">
                     <label htmlFor="uhrzeit">Uhrzeit</label>
                     <input
-                      id="uhrzeit"
-                      type="time"
-                      value={uhrzeit}
-                      onChange={(e) => setUhrzeit(e.target.value)}
-                    />
+  id="uhrzeit"
+  type="time"
+  value={uhrzeit}
+  min={minVorbestellzeit}
+  onChange={(e) => setUhrzeit(e.target.value)}
+/>
+<p style={{ marginTop: 8, fontSize: 14, color: "#64748b" }}>
+  Früheste Vorbestellung: {minVorbestellzeit} Uhr
+</p>
                   </div>
                 )}
               </div>
