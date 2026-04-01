@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import {
   kategorienMap,
@@ -161,17 +161,6 @@ function getServiceStatus(bestellart: Bestellart) {
   };
 }
 
-function getJetztStatusText(bestellart: Bestellart) {
-  const status = getServiceStatus(bestellart);
-  return status.isOpen
-    ? bestellart === "abholung"
-      ? "Abholung ist aktuell geöffnet"
-      : "Lieferung ist aktuell geöffnet"
-    : bestellart === "abholung"
-    ? "Abholung ist aktuell geschlossen"
-    : "Lieferung ist aktuell geschlossen";
-}
-
 function validiereTelefonnummer(telefon: string) {
   const erlaubt = /^[\d\s()+/-]+$/;
 
@@ -299,7 +288,12 @@ function getAvailableTimeSlots(dateString: string) {
 
   const effectiveStart =
     selectedDate.toDateString() === new Date().toDateString()
-      ? new Date(Math.max(slotStart.getTime(), roundUpToNextFiveMinutes(nowPlusOneHour).getTime()))
+      ? new Date(
+          Math.max(
+            slotStart.getTime(),
+            roundUpToNextFiveMinutes(nowPlusOneHour).getTime()
+          )
+        )
       : slotStart;
 
   if (effectiveStart.getTime() > slotEnd.getTime()) return [];
@@ -361,7 +355,9 @@ export default function HomePage() {
   const [stadt, setStadt] = useState("");
   const [hinweis, setHinweis] = useState("");
   const [vorbestellung, setVorbestellung] = useState("sofort");
-  const [vorbestellungDatum, setVorbestellungDatum] = useState(formatDateInput(new Date()));
+  const [vorbestellungDatum, setVorbestellungDatum] = useState(
+    formatDateInput(new Date())
+  );
   const [uhrzeit, setUhrzeit] = useState("");
   const [fehlermeldung, setFehlermeldung] = useState("");
   const [erfolgsmeldung, setErfolgsmeldung] = useState("");
@@ -377,15 +373,17 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariantName, setSelectedVariantName] = useState("");
   const [selectedVariantPrice, setSelectedVariantPrice] = useState(0);
-  const [selectedOptionsMap, setSelectedOptionsMap] = useState<Record<string, string[]>>({});
-  const [selectedOptionsPriceMap, setSelectedOptionsPriceMap] = useState<Record<string, number[]>>({});
+  const [selectedOptionsMap, setSelectedOptionsMap] = useState<
+    Record<string, string[]>
+  >({});
+  const [selectedOptionsPriceMap, setSelectedOptionsPriceMap] = useState<
+    Record<string, number[]>
+  >({});
   const [modalError, setModalError] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
-  const [activeSlide, setActiveSlide] = useState(0);
+  const offersTrackRef = useRef<HTMLDivElement | null>(null);
 
-  const abholungStatus = getServiceStatus("abholung");
-  const lieferStatus = getServiceStatus("lieferung");
   const status = getServiceStatus(bestellart);
 
   const availablePreorderDates = useMemo(() => getAvailablePreorderDates(21), []);
@@ -405,16 +403,19 @@ export default function HomePage() {
     if (cuisine === "Getränke") {
       setActiveCategory("Getränke");
       setViewStep("products");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     setActiveCategory(null);
     setViewStep("categories");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function openCategory(category: string) {
     setActiveCategory(category);
     setViewStep("products");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function backFromProducts() {
@@ -422,17 +423,20 @@ export default function HomePage() {
       setActiveCuisine(null);
       setActiveCategory(null);
       setViewStep("kitchens");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     setActiveCategory(null);
     setViewStep("categories");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function backFromCategories() {
     setActiveCuisine(null);
     setActiveCategory(null);
     setViewStep("kitchens");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function openCheckout() {
@@ -680,8 +684,8 @@ export default function HomePage() {
       }
     }
 
-    const selectedOptions = Object.entries(selectedOptionsMap).flatMap(([group, items]) =>
-      items.map((item) => `${group}: ${item}`)
+    const selectedOptions = Object.entries(selectedOptionsMap).flatMap(
+      ([group, items]) => items.map((item) => `${group}: ${item}`)
     );
 
     addConfiguredProductToCart({
@@ -720,7 +724,10 @@ export default function HomePage() {
     return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [cart]);
 
-  const rabattBetrag = useMemo(() => gesamtpreisProdukte * 0.1, [gesamtpreisProdukte]);
+  const rabattBetrag = useMemo(
+    () => gesamtpreisProdukte * 0.1,
+    [gesamtpreisProdukte]
+  );
 
   const zwischensummeNachRabatt = useMemo(() => {
     return Math.max(gesamtpreisProdukte - rabattBetrag, 0);
@@ -747,6 +754,17 @@ export default function HomePage() {
     );
   }, [activeCuisine, activeCategory]);
 
+  function scrollOffers(direction: "left" | "right") {
+    const container = offersTrackRef.current;
+    if (!container) return;
+
+    const amount = container.clientWidth * 0.86;
+    container.scrollBy({
+      left: direction === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  }
+
   useEffect(() => {
     if (!status.isOpen) {
       setVorbestellung("spaeter");
@@ -759,14 +777,6 @@ export default function HomePage() {
       window.location.href = "/admin";
     }
   }, [adminClicks]);
-
-  useEffect(() => {
-    const slideInterval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % offerSlides.length);
-    }, 5200);
-
-    return () => clearInterval(slideInterval);
-  }, []);
 
   useEffect(() => {
     if (bestellart !== "lieferung") return;
@@ -805,7 +815,13 @@ export default function HomePage() {
     if (!availableTimeSlots.includes(uhrzeit)) {
       setUhrzeit(availableTimeSlots[0] || "");
     }
-  }, [vorbestellung, availableTimeSlots, uhrzeit, availablePreorderDates, vorbestellungDatum]);
+  }, [
+    vorbestellung,
+    availableTimeSlots,
+    uhrzeit,
+    availablePreorderDates,
+    vorbestellungDatum,
+  ]);
 
   async function handleStripeCheckout() {
     setFehlermeldung("");
@@ -916,7 +932,10 @@ export default function HomePage() {
         bestellart,
         hinweis,
         vorbestellung,
-        datum: vorbestellung === "spaeter" ? vorbestellungDatum : formatDateInput(new Date()),
+        datum:
+          vorbestellung === "spaeter"
+            ? vorbestellungDatum
+            : formatDateInput(new Date()),
         uhrzeit: vorbestellung === "spaeter" ? uhrzeit : "sofort",
         artikel: artikelOhneUndefined,
         gesamtpreisProdukte,
@@ -981,14 +1000,11 @@ export default function HomePage() {
             <div className="brand-box">
               <img src="/images/logo.jpg" alt="La Rosa Logo" className="logo-img" />
               <div className="brand-text">
-                <h1 className="brand-title">La Rosa</h1>
-                <p className="brand-subtitle">Premium Bestellsystem</p>
+                <h1 className="brand-title">La Rosa GmbH</h1>
               </div>
             </div>
 
             <div className="nav-right">
-              <div className="promo-pill dark">10% Rabatt</div>
-              <div className="promo-pill light">Versand kostenlos</div>
               <button
                 className={`cart-button compact ${cartPulse ? "pulse" : ""}`}
                 onClick={openCheckout}
@@ -1009,318 +1025,111 @@ export default function HomePage() {
           </div>
         )}
 
-        {viewStep !== "checkout" && (
+        {viewStep === "kitchens" && (
           <>
-            <section
-              className="hero-banner"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.82)), url('/images/hero-main.jpg')",
-              }}
-            >
-              <div className="hero-noise" />
-              <div className="container hero-content">
-                <div className="hero-badge-row">
-                  <span className="hero-chip">Premium Genuss</span>
-                  <span className="hero-chip accent">10% Rabatt & kostenloser Versand</span>
-                </div>
-
-                <h2 className="hero-headline">
-                  Modern. Klar. Hochwertig.
-                </h2>
-
-                <p className="hero-copy">
-                  Italienische Küche, indische Küche und Getränke in einer modernen,
-                  hellen und hochwertigen Oberfläche mit ruhigen Animationen und elegantem Checkout.
-                </p>
-
-                <div className="hero-stats">
-                  <div className="hero-stat-card">
-                    <span>Rabatt</span>
-                    <strong>10% auf jede Bestellung</strong>
-                  </div>
-                  <div className="hero-stat-card">
-                    <span>Versand</span>
-                    <strong>Immer kostenlos</strong>
-                  </div>
-                  <div className="hero-stat-card">
-                    <span>Status</span>
-                    <strong>{getJetztStatusText(bestellart)}</strong>
-                  </div>
-                </div>
+            <section className="hero-image-section">
+              <div className="container">
+                <div
+                  className="hero-image-card"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.18)), url('/images/hero-main.jpg')",
+                  }}
+                />
               </div>
             </section>
 
-            <section className="container section-spacing">
-              <div className="section-topline">
+            <section className="container section-spacing offers-section">
+              <div className="section-topline offers-headline">
                 <div>
-                  <span className="eyebrow">Angebote & Highlights</span>
+                  <span className="eyebrow">Angebote</span>
                   <h3 className="section-title">Unsere Angebote</h3>
                 </div>
-                <div className="slide-dots">
-                  {offerSlides.map((_, index) => (
-                    <button
-                      key={index}
-                      className={`slide-dot ${activeSlide === index ? "active" : ""}`}
-                      type="button"
-                      onClick={() => setActiveSlide(index)}
-                    />
-                  ))}
+
+                <div className="offers-nav-desktop">
+                  <button
+                    type="button"
+                    className="offer-nav-button"
+                    onClick={() => scrollOffers("left")}
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    className="offer-nav-button"
+                    onClick={() => scrollOffers("right")}
+                  >
+                    →
+                  </button>
                 </div>
               </div>
 
-              <div className="offer-slider-text-card">
-                {offerSlides.map((slide, index) => (
-                  <div
-                    key={slide.title}
-                    className={`offer-text-slide ${activeSlide === index ? "active" : ""}`}
-                  >
-                    <div className="offer-text-inner">
+              <div className="offers-track" ref={offersTrackRef}>
+                {offerSlides.map((slide) => (
+                  <article className="offer-card" key={slide.title}>
+                    <div className="offer-card-top">
                       <span className="offer-label">La Rosa Angebot</span>
-                      <h4>{slide.title}</h4>
                       <div className="offer-price">{formatEuro(slide.price)}</div>
-                      <p>{slide.text}</p>
-
-                      <div className="offer-actions">
-                        <div className="offer-tags">
-                          <span>10% Rabatt</span>
-                          <span>Versand kostenlos</span>
-                          <span>Beliebtes Angebot</span>
-                        </div>
-
-                        <button
-                          className="offer-cart-button"
-                          onClick={() => addOfferToCart(slide)}
-                          type="button"
-                        >
-                          In den Warenkorb
-                        </button>
-                      </div>
                     </div>
-                  </div>
+
+                    <h4>{slide.title}</h4>
+                    <p>{slide.text}</p>
+
+                    <div className="offer-tags">
+                      <span>10% Rabatt</span>
+                      <span>Versand kostenlos</span>
+                    </div>
+
+                    <button
+                      className="offer-cart-button"
+                      onClick={() => addOfferToCart(slide)}
+                      type="button"
+                    >
+                      In den Warenkorb
+                    </button>
+                  </article>
                 ))}
               </div>
             </section>
 
-            <section className="container section-spacing">
-              {viewStep === "kitchens" && (
-                <>
-                  <div className="section-topline">
-                    <div>
-                      <span className="eyebrow">Auswahl</span>
-                      <h3 className="section-title">Küchen & Getränke</h3>
-                    </div>
-                    <p className="section-text">
-                      Wähle deinen Bereich und starte direkt mit deiner Bestellung.
-                    </p>
-                  </div>
-
-                  <div className="cuisine-grid">
-                    {cuisineCards.map((card) => (
-                      <button
-                        key={card.cuisine}
-                        className="cuisine-card"
-                        onClick={() => openCuisine(card.cuisine)}
-                        type="button"
-                        style={{
-                          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.82)), url('${card.image}')`,
-                        }}
-                      >
-                        <div className="cuisine-card-content">
-                          <span className="cuisine-tag">{card.cuisine}</span>
-                          <h4>{card.title}</h4>
-                          <p>{card.text}</p>
-                          <span className="cuisine-link">
-                            {card.cuisine === "Getränke"
-                              ? "Direkt zu den Getränken"
-                              : "Kategorie öffnen"}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {viewStep === "categories" &&
-                activeCuisine &&
-                activeCuisine !== "Getränke" && (
-                  <>
-                    <div className="section-topline">
-                      <div>
-                        <span className="eyebrow">{activeCuisine}</span>
-                        <h3 className="section-title">Kategorien</h3>
-                      </div>
-
-                      <button
-                        className="back-button"
-                        onClick={backFromCategories}
-                        type="button"
-                      >
-                        ← Zurück
-                      </button>
-                    </div>
-
-                    <div className="category-grid">
-                      {kategorienMap[activeCuisine].map((kategorie) => (
-                        <button
-                          key={kategorie}
-                          className="category-card"
-                          onClick={() => openCategory(kategorie)}
-                          type="button"
-                        >
-                          <div className="category-card-inner">
-                            <span className="category-badge">{activeCuisine}</span>
-                            <h4>{kategorie}</h4>
-                            <p>
-                              {
-                                produkte.filter(
-                                  (produkt) =>
-                                    produkt.cuisine === activeCuisine &&
-                                    produkt.category === kategorie
-                                ).length
-                              }{" "}
-                              Artikel
-                            </p>
-                            <span className="category-link">Jetzt öffnen</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-              {viewStep === "products" && activeCuisine && activeCategory && (
-                <>
-                  <div className="section-topline">
-                    <div>
-                      <span className="eyebrow">{activeCuisine}</span>
-                      <h3 className="section-title">{activeCategory}</h3>
-                    </div>
-
-                    <button
-                      className="back-button"
-                      onClick={backFromProducts}
-                      type="button"
-                    >
-                      ← Zurück
-                    </button>
-                  </div>
-
-                  <div className="products-grid">
-                    {activeProducts.map((produkt) => (
-                      <article className="product-card" key={produkt.id}>
-                        <div className="product-card-shine" />
-                        <div className="product-card-top">
-                          <div>
-                            <span className="product-number">
-                              {produkt.number ? `${produkt.number}` : "La Rosa"}
-                            </span>
-                            <h4>
-                              {produkt.number ? `${produkt.number} ` : ""}
-                              {produkt.name}
-                            </h4>
-                          </div>
-                          <span className="product-price">
-                            {getProductBasePrice(produkt).toFixed(2)} €
-                          </span>
-                        </div>
-
-                        <p className="product-desc">{produkt.description}</p>
-
-                        {produkt.variants && (
-                          <div className="mini-chip-row">
-                            {produkt.variants.map((variant) => (
-                              <span className="mini-chip" key={variant.name}>
-                                {variant.name}: {variant.price.toFixed(2)} €
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {produkt.options && (
-                          <div className="mini-chip-row">
-                            {produkt.options.map((option) => (
-                              <span className="mini-chip soft" key={option.group}>
-                                {option.group}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        <button
-                          className="add-button"
-                          onClick={() => openProductModal(produkt)}
-                          type="button"
-                        >
-                          Hinzufügen
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                </>
-              )}
-            </section>
-
-            <section className="container section-spacing">
+            <section className="container section-spacing kitchens-section">
               <div className="section-topline">
                 <div>
-                  <span className="eyebrow">Live Status</span>
-                  <h3 className="section-title">Öffnungszeiten</h3>
+                  <span className="eyebrow">Auswahl</span>
+                  <h3 className="section-title">Küchen & Getränke</h3>
                 </div>
-                <p className="section-text">
-                  Live sichtbar, ob wir aktuell geöffnet oder geschlossen sind.
-                </p>
               </div>
 
-              <div className="hours-grid">
-                <div className="hours-card">
-                  <div className="hours-card-head">
-                    <h4>Abholung</h4>
-                    <span className={`status-pill ${abholungStatus.isOpen ? "open" : "closed"}`}>
-                      {abholungStatus.isOpen ? "Jetzt geöffnet" : "Geschlossen"}
-                    </span>
-                  </div>
-
-                  <div className="hours-list">
-                    <div className="hours-row">
-                      <span>Montag – Freitag</span>
-                      <strong>11:00 – 23:00</strong>
+              <div className="cuisine-grid">
+                {cuisineCards.map((card) => (
+                  <button
+                    key={card.cuisine}
+                    className="cuisine-card"
+                    onClick={() => openCuisine(card.cuisine)}
+                    type="button"
+                    style={{
+                      backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.82)), url('${card.image}')`,
+                    }}
+                  >
+                    <div className="cuisine-card-content">
+                      <span className="cuisine-tag">{card.cuisine}</span>
+                      <h4>{card.title}</h4>
+                      <p>{card.text}</p>
+                      <span className="cuisine-link">
+                        {card.cuisine === "Getränke"
+                          ? "Direkt zu den Getränken"
+                          : "Kategorie öffnen"}
+                      </span>
                     </div>
-                    <div className="hours-row">
-                      <span>Samstag – Sonntag</span>
-                      <strong>14:00 – 23:00</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="hours-card">
-                  <div className="hours-card-head">
-                    <h4>Lieferung</h4>
-                    <span className={`status-pill ${lieferStatus.isOpen ? "open" : "closed"}`}>
-                      {lieferStatus.isOpen ? "Jetzt geöffnet" : "Geschlossen"}
-                    </span>
-                  </div>
-
-                  <div className="hours-list">
-                    <div className="hours-row">
-                      <span>Montag – Freitag</span>
-                      <strong>11:00 – 22:30</strong>
-                    </div>
-                    <div className="hours-row">
-                      <span>Samstag – Sonntag</span>
-                      <strong>14:00 – 22:30</strong>
-                    </div>
-                  </div>
-                </div>
+                  </button>
+                ))}
               </div>
             </section>
 
             <footer className="site-footer">
               <div className="container footer-inner">
                 <div>
-                  <strong>La Rosa</strong>
-                  <p>Premium Bestellsystem</p>
+                  <strong>La Rosa GmbH</strong>
                 </div>
                 <div className="footer-links">
                   <a href="/datenschutz">Datenschutz</a>
@@ -1332,6 +1141,123 @@ export default function HomePage() {
               </div>
             </footer>
           </>
+        )}
+
+        {viewStep === "categories" &&
+          activeCuisine &&
+          activeCuisine !== "Getränke" && (
+            <section className="container category-page-section">
+              <div className="section-topline inner-page-topline">
+                <div>
+                  <h3 className="section-title">{activeCuisine}</h3>
+                </div>
+
+                <button
+                  className="back-button"
+                  onClick={backFromCategories}
+                  type="button"
+                >
+                  ← Zurück
+                </button>
+              </div>
+
+              <div className="category-grid">
+                {kategorienMap[activeCuisine].map((kategorie) => (
+                  <button
+                    key={kategorie}
+                    className="category-card"
+                    onClick={() => openCategory(kategorie)}
+                    type="button"
+                  >
+                    <div className="category-card-inner">
+                      <span className="category-badge">{activeCuisine}</span>
+                      <h4>{kategorie}</h4>
+                      <p>
+                        {
+                          produkte.filter(
+                            (produkt) =>
+                              produkt.cuisine === activeCuisine &&
+                              produkt.category === kategorie
+                          ).length
+                        }{" "}
+                        Artikel
+                      </p>
+                      <span className="category-link">Jetzt öffnen</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+        {viewStep === "products" && activeCuisine && activeCategory && (
+          <section className="container product-page-section">
+            <div className="section-topline inner-page-topline">
+              <div>
+                <h3 className="section-title">{activeCategory}</h3>
+              </div>
+
+              <button
+                className="back-button"
+                onClick={backFromProducts}
+                type="button"
+              >
+                ← Zurück
+              </button>
+            </div>
+
+            <div className="products-grid">
+              {activeProducts.map((produkt) => (
+                <article className="product-card" key={produkt.id}>
+                  <div className="product-card-shine" />
+                  <div className="product-card-top">
+                    <div>
+                      <span className="product-number">
+                        {produkt.number ? `${produkt.number}` : "La Rosa"}
+                      </span>
+                      <h4>
+                        {produkt.number ? `${produkt.number} ` : ""}
+                        {produkt.name}
+                      </h4>
+                    </div>
+                    <span className="product-price">
+                      {getProductBasePrice(produkt).toFixed(2)} €
+                    </span>
+                  </div>
+
+                  <p className="product-desc">{produkt.description}</p>
+
+                  {produkt.variants && (
+                    <div className="mini-chip-row">
+                      {produkt.variants.map((variant) => (
+                        <span className="mini-chip" key={variant.name}>
+                          {variant.name}: {variant.price.toFixed(2)} €
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {produkt.options && (
+                    <div className="mini-chip-row">
+                      {produkt.options.map((option) => (
+                        <span className="mini-chip soft" key={option.group}>
+                          {option.group}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    className="add-button"
+                    onClick={() => openProductModal(produkt)}
+                    type="button"
+                  >
+                    Hinzufügen
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
         )}
 
         {viewStep === "checkout" && (
@@ -1606,7 +1532,8 @@ export default function HomePage() {
 
                       <div className="preorder-note">
                         {(() => {
-                          const { isWeekend } = getPreorderWindowForDate(vorbestellungDatum);
+                          const { isWeekend } =
+                            getPreorderWindowForDate(vorbestellungDatum);
                           return isWeekend
                             ? "Vorbestellungen am Wochenende: 15:00 bis 22:00 Uhr."
                             : "Vorbestellungen Montag bis Freitag: 12:00 bis 22:00 Uhr.";
@@ -1797,8 +1724,8 @@ export default function HomePage() {
         body {
           margin: 0;
           background:
-            radial-gradient(circle at top left, rgba(60, 60, 60, 0.05), transparent 24%),
-            linear-gradient(180deg, #fcfcfd 0%, #f5f7fa 100%);
+            radial-gradient(circle at top left, rgba(60, 60, 60, 0.04), transparent 24%),
+            linear-gradient(180deg, #fcfcfd 0%, #f6f7f9 100%);
           color: #101214;
           font-family: Inter, Arial, sans-serif;
         }
@@ -1828,9 +1755,9 @@ export default function HomePage() {
         .premium-header {
           position: sticky;
           top: 0;
-          z-index: 60;
+          z-index: 80;
           backdrop-filter: blur(18px);
-          background: rgba(255, 255, 255, 0.84);
+          background: rgba(255, 255, 255, 0.86);
           border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
 
@@ -1838,8 +1765,8 @@ export default function HomePage() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 18px;
-          min-height: 82px;
+          gap: 16px;
+          min-height: 78px;
           padding: 10px 0;
         }
 
@@ -1851,16 +1778,12 @@ export default function HomePage() {
           flex: 1;
         }
 
-        .brand-text {
-          min-width: 0;
-        }
-
         .logo-img {
-          width: 54px;
-          height: 54px;
+          width: 52px;
+          height: 52px;
           border-radius: 16px;
           object-fit: cover;
-          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
           border: 1px solid rgba(0, 0, 0, 0.06);
           background: white;
           flex-shrink: 0;
@@ -1868,44 +1791,17 @@ export default function HomePage() {
 
         .brand-title {
           margin: 0;
-          font-size: 1.1rem;
+          font-size: 1.08rem;
           font-weight: 800;
-          letter-spacing: 0.02em;
-          color: #101214;
-        }
-
-        .brand-subtitle {
-          margin: 4px 0 0;
-          color: #6b7280;
-          font-size: 0.86rem;
+          letter-spacing: 0.01em;
+          color: #111827;
         }
 
         .nav-right {
           display: flex;
           align-items: center;
           gap: 10px;
-          flex-wrap: nowrap;
-          justify-content: flex-end;
           flex-shrink: 0;
-        }
-
-        .promo-pill {
-          padding: 9px 13px;
-          border-radius: 999px;
-          font-size: 0.83rem;
-          font-weight: 700;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          white-space: nowrap;
-        }
-
-        .promo-pill.dark {
-          background: #111827;
-          color: white;
-        }
-
-        .promo-pill.light {
-          background: rgba(255, 255, 255, 0.94);
-          color: #374151;
         }
 
         .cart-button,
@@ -1925,6 +1821,14 @@ export default function HomePage() {
           box-shadow: 0 14px 30px rgba(17, 24, 39, 0.14);
         }
 
+        .cart-button:hover,
+        .offer-cart-button:hover,
+        .add-button:hover,
+        .checkout-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 18px 34px rgba(17, 24, 39, 0.18);
+        }
+
         .cart-button.compact {
           display: inline-flex;
           align-items: center;
@@ -1936,21 +1840,13 @@ export default function HomePage() {
           border-radius: 14px;
         }
 
+        .cart-button.pulse {
+          animation: cartPulseAnim 0.7s ease;
+        }
+
         .cart-icon {
           font-size: 1rem;
           line-height: 1;
-        }
-
-        .cart-button:hover,
-        .offer-cart-button:hover,
-        .add-button:hover,
-        .checkout-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 18px 32px rgba(17, 24, 39, 0.18);
-        }
-
-        .cart-button.pulse {
-          animation: cartPulseAnim 0.7s ease;
         }
 
         .cart-count {
@@ -1961,104 +1857,35 @@ export default function HomePage() {
           line-height: 1;
         }
 
-        .hero-banner {
-          min-height: 72vh;
+        .hero-image-section {
+          padding-top: 22px;
+        }
+
+        .hero-image-card {
+          width: 100%;
+          min-height: 540px;
+          border-radius: 34px;
           background-size: cover;
           background-position: center;
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-
-        .hero-noise {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.18)),
-            radial-gradient(circle at 20% 20%, rgba(255,255,255,0.24), transparent 25%);
-        }
-
-        .hero-content {
-          position: relative;
-          z-index: 2;
-          padding: 72px 0 82px;
-        }
-
-        .hero-badge-row {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-bottom: 18px;
-          animation: fadeUp 0.7s ease both;
-        }
-
-        .hero-chip {
-          background: rgba(255, 255, 255, 0.86);
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          padding: 9px 13px;
-          border-radius: 999px;
-          font-weight: 700;
-          color: #374151;
-          backdrop-filter: blur(10px);
-        }
-
-        .hero-chip.accent {
-          color: #111827;
-          background: rgba(243, 244, 246, 0.94);
-        }
-
-        .hero-headline {
-          max-width: 760px;
-          margin: 0;
-          font-size: clamp(2.25rem, 5vw, 4.6rem);
-          line-height: 0.98;
-          letter-spacing: -0.05em;
-          font-weight: 900;
-          color: #111827;
-          animation: fadeUp 0.9s ease both;
-        }
-
-        .hero-copy {
-          margin: 20px 0 0;
-          max-width: 700px;
-          font-size: 1.02rem;
-          line-height: 1.8;
-          color: #4b5563;
-          animation: fadeUp 1.1s ease both;
-        }
-
-        .hero-stats {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 16px;
-          margin-top: 30px;
-          animation: fadeUp 1.25s ease both;
-        }
-
-        .hero-stat-card {
-          padding: 20px;
-          border-radius: 22px;
-          background: rgba(255, 255, 255, 0.82);
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          box-shadow: 0 16px 36px rgba(0, 0, 0, 0.06);
-          backdrop-filter: blur(12px);
-        }
-
-        .hero-stat-card span {
-          display: block;
-          color: #6b7280;
-          margin-bottom: 8px;
-          font-size: 0.9rem;
-        }
-
-        .hero-stat-card strong {
-          font-size: 0.98rem;
-          color: #111827;
+          box-shadow: 0 24px 72px rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.04);
         }
 
         .section-spacing {
-          padding: 84px 0 0;
+          padding: 78px 0 0;
+        }
+
+        .offers-section {
+          padding-top: 34px;
+        }
+
+        .kitchens-section {
+          padding-bottom: 12px;
+        }
+
+        .category-page-section,
+        .product-page-section {
+          padding: 36px 0 72px;
         }
 
         .section-topline {
@@ -2067,6 +1894,11 @@ export default function HomePage() {
           justify-content: space-between;
           gap: 18px;
           margin-bottom: 22px;
+        }
+
+        .inner-page-topline {
+          align-items: center;
+          margin-bottom: 28px;
         }
 
         .eyebrow {
@@ -2081,71 +1913,66 @@ export default function HomePage() {
 
         .section-title {
           margin: 0;
-          font-size: clamp(1.7rem, 3vw, 2.8rem);
+          font-size: clamp(1.75rem, 3vw, 2.8rem);
           font-weight: 900;
           letter-spacing: -0.04em;
           color: #111827;
         }
 
-        .section-text {
-          max-width: 420px;
-          color: #6b7280;
-          line-height: 1.7;
+        .offers-headline {
+          margin-bottom: 18px;
         }
 
-        .slide-dots {
-          display: flex;
-          gap: 9px;
-          align-items: center;
+        .offers-nav-desktop {
+          display: inline-flex;
+          gap: 10px;
         }
 
-        .slide-dot {
-          width: 10px;
-          height: 10px;
+        .offer-nav-button {
+          width: 44px;
+          height: 44px;
           border-radius: 999px;
-          border: none;
-          background: rgba(17, 24, 39, 0.14);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.94);
+          color: #111827;
+          font-size: 1.1rem;
           cursor: pointer;
-          transition: all 0.25s ease;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05);
         }
 
-        .slide-dot.active {
-          width: 30px;
-          background: #111827;
-        }
-
-        .offer-slider-text-card {
-          position: relative;
-          min-height: 320px;
-          border-radius: 30px;
-          overflow: hidden;
-          border: 1px solid rgba(0, 0, 0, 0.05);
-          background:
-            radial-gradient(circle at top right, rgba(17, 24, 39, 0.04), transparent 24%),
-            linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(245, 247, 250, 0.98));
-          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.06);
-        }
-
-        .offer-text-slide {
-          position: absolute;
-          inset: 0;
-          opacity: 0;
-          pointer-events: none;
-          transition: opacity 0.7s ease, transform 0.7s ease;
-          transform: translateY(14px) scale(0.988);
+        .offers-track {
           display: flex;
-          align-items: center;
+          gap: 18px;
+          overflow-x: auto;
+          padding: 6px 2px 10px;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
         }
 
-        .offer-text-slide.active {
-          opacity: 1;
-          pointer-events: auto;
-          transform: translateY(0) scale(1);
+        .offers-track::-webkit-scrollbar {
+          display: none;
         }
 
-        .offer-text-inner {
-          width: 100%;
-          padding: 36px;
+        .offer-card {
+          min-width: 360px;
+          max-width: 360px;
+          scroll-snap-align: start;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 24px;
+          border-radius: 28px;
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        .offer-card-top {
+          display: flex;
+          align-items: start;
+          justify-content: space-between;
+          gap: 14px;
         }
 
         .offer-label {
@@ -2155,39 +1982,27 @@ export default function HomePage() {
           background: #111827;
           color: white;
           font-weight: 800;
-          margin-bottom: 18px;
-        }
-
-        .offer-text-inner h4 {
-          margin: 0;
-          font-size: clamp(1.8rem, 3vw, 3rem);
-          line-height: 1.04;
-          font-weight: 900;
-          color: #111827;
+          font-size: 0.85rem;
         }
 
         .offer-price {
-          margin-top: 14px;
-          font-size: 1.65rem;
+          font-size: 1.35rem;
           font-weight: 900;
+          color: #111827;
+          white-space: nowrap;
+        }
+
+        .offer-card h4 {
+          margin: 0;
+          font-size: 1.55rem;
+          line-height: 1.05;
           color: #111827;
         }
 
-        .offer-text-inner p {
-          margin: 16px 0 0;
-          max-width: 780px;
+        .offer-card p {
+          margin: 0;
           line-height: 1.78;
           color: #4b5563;
-          font-size: 1rem;
-        }
-
-        .offer-actions {
-          display: flex;
-          justify-content: space-between;
-          gap: 18px;
-          align-items: end;
-          margin-top: 24px;
-          flex-wrap: wrap;
         }
 
         .offer-tags {
@@ -2203,7 +2018,7 @@ export default function HomePage() {
           border: 1px solid rgba(0, 0, 0, 0.06);
           font-weight: 700;
           color: #4b5563;
-          font-size: 0.9rem;
+          font-size: 0.88rem;
         }
 
         .cuisine-grid {
@@ -2223,12 +2038,12 @@ export default function HomePage() {
           background-size: cover;
           background-position: center;
           transition: transform 0.28s ease, box-shadow 0.28s ease;
-          box-shadow: 0 16px 38px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 18px 42px rgba(0, 0, 0, 0.08);
         }
 
         .cuisine-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 24px 52px rgba(0, 0, 0, 0.12);
         }
 
         .cuisine-card::after {
@@ -2284,7 +2099,6 @@ export default function HomePage() {
 
         .category-card,
         .product-card,
-        .hours-card,
         .glass-card {
           background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
           border: 1px solid rgba(0, 0, 0, 0.05);
@@ -2307,7 +2121,6 @@ export default function HomePage() {
 
         .category-card-inner,
         .product-card,
-        .hours-card,
         .glass-card {
           padding: 22px;
         }
@@ -2324,7 +2137,6 @@ export default function HomePage() {
 
         .category-card h4,
         .product-card h4,
-        .hours-card h4,
         .glass-card h3 {
           margin: 0;
           color: #111827;
@@ -2435,58 +2247,8 @@ export default function HomePage() {
           transform: translateY(-2px);
         }
 
-        .hours-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 20px;
-        }
-
-        .hours-card-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .status-pill {
-          border-radius: 999px;
-          padding: 8px 13px;
-          font-size: 0.82rem;
-          font-weight: 800;
-        }
-
-        .status-pill.open {
-          background: rgba(22, 163, 74, 0.12);
-          color: #166534;
-        }
-
-        .status-pill.closed {
-          background: rgba(239, 68, 68, 0.12);
-          color: #991b1b;
-        }
-
-        .hours-list {
-          display: grid;
-          gap: 12px;
-        }
-
-        .hours-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 14px;
-          padding: 15px;
-          border-radius: 18px;
-          background: rgba(255, 255, 255, 0.86);
-        }
-
-        .hours-row span {
-          color: #4b5563;
-        }
-
         .site-footer {
-          margin-top: 84px;
+          margin-top: 80px;
           border-top: 1px solid rgba(0, 0, 0, 0.05);
           background: rgba(255, 255, 255, 0.78);
           backdrop-filter: blur(12px);
@@ -2500,9 +2262,8 @@ export default function HomePage() {
           padding: 24px 0;
         }
 
-        .footer-inner p,
         .footer-copy {
-          margin: 4px 0 0;
+          margin: 0;
           color: #6b7280;
         }
 
@@ -2941,23 +2702,10 @@ export default function HomePage() {
           }
         }
 
-        @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(16px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
         @media (max-width: 1100px) {
-          .hero-stats,
           .cuisine-grid,
           .category-grid,
           .products-grid,
-          .hours-grid,
           .checkout-layout,
           .footer-inner {
             grid-template-columns: 1fr;
@@ -2972,25 +2720,14 @@ export default function HomePage() {
           }
         }
 
-        @media (max-width: 820px) {
-          .promo-pill {
-            display: none;
+        @media (max-width: 900px) {
+          .hero-image-card {
+            min-height: 430px;
           }
 
-          .hero-banner {
-            min-height: auto;
-          }
-
-          .hero-content {
-            padding: 48px 0 56px;
-          }
-
-          .hero-stats {
-            gap: 12px;
-          }
-
-          .offer-slider-text-card {
-            min-height: 380px;
+          .offer-card {
+            min-width: 320px;
+            max-width: 320px;
           }
         }
 
@@ -3004,10 +2741,6 @@ export default function HomePage() {
             gap: 10px;
           }
 
-          .brand-box {
-            gap: 10px;
-          }
-
           .logo-img {
             width: 44px;
             height: 44px;
@@ -3016,15 +2749,6 @@ export default function HomePage() {
 
           .brand-title {
             font-size: 0.98rem;
-          }
-
-          .brand-subtitle {
-            font-size: 0.74rem;
-            margin-top: 2px;
-          }
-
-          .nav-right {
-            gap: 8px;
           }
 
           .cart-button.compact {
@@ -3042,49 +2766,86 @@ export default function HomePage() {
             font-size: 0.76rem;
           }
 
+          .hero-image-section {
+            padding-top: 14px;
+          }
+
+          .hero-image-card {
+            min-height: 240px;
+            border-radius: 24px;
+            background-position: center;
+          }
+
+          .section-spacing {
+            padding-top: 42px;
+          }
+
+          .offers-section {
+            padding-top: 20px;
+          }
+
+          .category-page-section,
+          .product-page-section,
+          .checkout-section {
+            padding: 24px 0 64px;
+          }
+
           .section-topline,
-          .offer-actions {
+          .modal-header,
+          .modal-footer,
+          .cart-item-header {
             flex-direction: column;
             align-items: stretch;
           }
 
-          .hero-headline {
-            font-size: clamp(2rem, 10vw, 3rem);
+          .offers-nav-desktop {
+            display: none;
           }
 
-          .hero-copy {
-            font-size: 0.96rem;
-            line-height: 1.72;
+          .offers-track {
+            gap: 14px;
+            padding-bottom: 6px;
           }
 
-          .offer-text-inner {
-            padding: 22px;
+          .offer-card {
+            min-width: 86%;
+            max-width: 86%;
+            padding: 20px;
+            border-radius: 22px;
           }
 
+          .offer-card h4 {
+            font-size: 1.35rem;
+          }
+
+          .cuisine-grid,
           .form-grid,
           .preorder-grid {
             grid-template-columns: 1fr;
           }
 
-          .cart-item-header,
-          .hours-card-head,
-          .modal-header,
-          .modal-footer {
-            flex-direction: column;
-            align-items: stretch;
+          .cuisine-card {
+            min-height: 280px;
+            border-radius: 24px;
+          }
+
+          .cuisine-card-content {
+            padding: 22px;
+          }
+
+          .glass-card,
+          .product-card,
+          .category-card-inner {
+            padding: 18px;
+          }
+
+          .switch-row button {
+            min-width: 0;
           }
 
           .product-modal {
             padding: 18px;
             border-radius: 22px;
-          }
-
-          .section-spacing {
-            padding-top: 60px;
-          }
-
-          .site-footer {
-            margin-top: 56px;
           }
 
           .footer-inner {
@@ -3102,52 +2863,24 @@ export default function HomePage() {
             bottom: 12px;
             min-width: auto;
           }
-
-          .checkout-section {
-            padding: 24px 0 66px;
-          }
-
-          .glass-card,
-          .hours-card,
-          .product-card,
-          .category-card-inner {
-            padding: 18px;
-          }
-
-          .switch-row button {
-            min-width: 0;
-          }
-
-          .hours-row {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .cuisine-card {
-            min-height: 300px;
-          }
         }
 
         @media (max-width: 480px) {
-          .hero-badge-row {
-            gap: 8px;
-          }
-
-          .hero-chip {
-            padding: 8px 10px;
-            font-size: 0.76rem;
+          .hero-image-card {
+            min-height: 210px;
           }
 
           .section-title {
-            font-size: 1.58rem;
+            font-size: 1.55rem;
           }
 
-          .offer-text-inner h4 {
-            font-size: 1.6rem;
+          .offer-card {
+            min-width: 90%;
+            max-width: 90%;
           }
 
           .offer-price {
-            font-size: 1.35rem;
+            font-size: 1.2rem;
           }
 
           .product-price {
