@@ -24,25 +24,25 @@ type CartItem = {
   uniqueKey: string;
 };
 
-const erlaubtePLZ = [
-  "64546",
-  "64331",
-  "64572",
-  "63263",
-  "63225",
-  "64283",
-  "64285",
-  "64287",
-  "64289",
-  "64291",
-  "64293",
-  "64295",
-  "64297",
-  "64521",
-];
+const lieferzonen: Record<string, { ort: string; mindestbestellwert: number }> = {
+  "64546": { ort: "Mörfelden-Walldorf", mindestbestellwert: 10 },
 
-const liefergebuehr = 2.5;
-const mindestbestellwertLieferung = 15;
+  "64331": { ort: "Gräfenhausen / Schneppenhausen / Braunshardt / Weiterstadt", mindestbestellwert: 40 },
+  "64572": { ort: "Worfelden / Büttelborn", mindestbestellwert: 50 },
+  "63263": { ort: "Zeppelinheim / Neu-Isenburg", mindestbestellwert: 50 },
+  "63225": { ort: "Langen", mindestbestellwert: 40 },
+
+  "64283": { ort: "Darmstadt", mindestbestellwert: 50 },
+  "64285": { ort: "Darmstadt", mindestbestellwert: 50 },
+  "64287": { ort: "Darmstadt", mindestbestellwert: 50 },
+  "64289": { ort: "Darmstadt", mindestbestellwert: 50 },
+  "64291": { ort: "Darmstadt", mindestbestellwert: 50 },
+  "64293": { ort: "Darmstadt", mindestbestellwert: 50 },
+  "64295": { ort: "Darmstadt", mindestbestellwert: 50 },
+  "64297": { ort: "Darmstadt", mindestbestellwert: 50 },
+
+  "64521": { ort: "Groß-Gerau", mindestbestellwert: 50 },
+};
 
 function getJetztStatus(bestellart: Bestellart) {
   const jetzt = new Date();
@@ -87,26 +87,31 @@ function pruefeLiefergebiet(adresse: string) {
     return {
       ok: false,
       message: "Bitte gib eine Adresse mit Postleitzahl ein.",
+      plz: null,
+      regel: null,
     };
   }
 
   const plz = plzMatch[0];
+  const regel = lieferzonen[plz];
 
-  if (!erlaubtePLZ.includes(plz)) {
+  if (!regel) {
     return {
       ok: false,
       message: "Diese Adresse liegt aktuell außerhalb unseres Liefergebiets.",
+      plz,
+      regel: null,
     };
   }
 
   return {
     ok: true,
-    message: "Adresse liegt im Liefergebiet.",
+    message: `Lieferung nach ${regel.ort} möglich. Mindestbestellwert ${regel.mindestbestellwert.toFixed(2)} €`,
+    plz,
+    regel,
   };
 }
-
-function getProductBasePrice(produkt: Product) {
-  function validiereTelefonnummer(telefon: string) {
+function validiereTelefonnummer(telefon: string) {
   const erlaubt = /^[\d\s()+/-]+$/;
 
   if (!telefon.trim()) {
@@ -144,6 +149,8 @@ function getProductBasePrice(produkt: Product) {
     message: "Telefonnummer sieht gültig aus.",
   };
 }
+
+function getProductBasePrice(produkt: Product) {
   if (typeof produkt.price === "number") return produkt.price;
   if (produkt.variants?.length) return produkt.variants[0].price;
   if (produkt.options?.length) {
@@ -152,6 +159,8 @@ function getProductBasePrice(produkt: Product) {
   }
   return 0;
 }
+
+
 function getMinVorbestellzeit() {
   const now = new Date();
   now.setMinutes(now.getMinutes() + 60);
@@ -495,8 +504,7 @@ const [minVorbestellzeit, setMinVorbestellzeit] = useState(getMinVorbestellzeit(
     return pruefeLiefergebiet(adresse);
   }, [bestellart, adresse]);
 
-  const finaleLiefergebuehr =
-    bestellart === "lieferung" && lieferPruefung?.ok ? liefergebuehr : 0;
+  const finaleLiefergebuehr = 0;
 
   const gesamtpreis = gesamtpreisProdukte + finaleLiefergebuehr;
 
@@ -558,14 +566,16 @@ useEffect(() => {
         return;
       }
 
-      if (gesamtpreisProdukte < mindestbestellwertLieferung) {
-        setFehlermeldung(
-          `Für Lieferung gilt ein Mindestbestellwert von ${mindestbestellwertLieferung.toFixed(
-            2
-          )} €.`
-        );
-        return;
-      }
+      const mindestbestellwert = gebiet.regel?.mindestbestellwert || 0;
+
+if (gesamtpreisProdukte < mindestbestellwert) {
+  setFehlermeldung(
+    `Für diese Adresse gilt ein Mindestbestellwert von ${mindestbestellwert.toFixed(
+      2
+    )} €.`
+  );
+  return;
+}
     }
 
     if (!status.isOpen && vorbestellung === "sofort") {
