@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import {
-  addDoc,
-  collection,
-  serverTimestamp,
-} from "firebase/firestore";
-import { kategorienMap, produkte, type Cuisine, type Product } from "./data/menu";
+  kategorienMap,
+  produkte,
+  type Cuisine,
+  type Product,
+} from "./data/menu";
 import { db } from "./lib/firebase";
 
 type Bestellart = "abholung" | "lieferung";
@@ -24,24 +25,28 @@ type CartItem = {
   uniqueKey: string;
 };
 
-const lieferzonen: Record<string, { ort: string; mindestbestellwert: number }> = {
-  "64546": { ort: "Mörfelden-Walldorf", mindestbestellwert: 10 },
+type LiefergebietConfig = {
+  city: string;
+  minOrder: number;
+};
 
-  "64331": { ort: "Gräfenhausen / Schneppenhausen / Braunshardt / Weiterstadt", mindestbestellwert: 40 },
-  "64572": { ort: "Worfelden / Büttelborn", mindestbestellwert: 50 },
-  "63263": { ort: "Zeppelinheim / Neu-Isenburg", mindestbestellwert: 50 },
-  "63225": { ort: "Langen", mindestbestellwert: 40 },
+const liefergebuehr = 2.5;
 
-  "64283": { ort: "Darmstadt", mindestbestellwert: 50 },
-  "64285": { ort: "Darmstadt", mindestbestellwert: 50 },
-  "64287": { ort: "Darmstadt", mindestbestellwert: 50 },
-  "64289": { ort: "Darmstadt", mindestbestellwert: 50 },
-  "64291": { ort: "Darmstadt", mindestbestellwert: 50 },
-  "64293": { ort: "Darmstadt", mindestbestellwert: 50 },
-  "64295": { ort: "Darmstadt", mindestbestellwert: 50 },
-  "64297": { ort: "Darmstadt", mindestbestellwert: 50 },
-
-  "64521": { ort: "Groß-Gerau", mindestbestellwert: 50 },
+const liefergebiete: Record<string, LiefergebietConfig> = {
+  "64546": { city: "Mörfelden-Walldorf", minOrder: 12 },
+  "64331": { city: "Weiterstadt", minOrder: 30 },
+  "64572": { city: "Büttelborn", minOrder: 30 },
+  "63263": { city: "Neu-Isenburg", minOrder: 40 },
+  "63225": { city: "Langen", minOrder: 40 },
+  "64283": { city: "Darmstadt", minOrder: 15 },
+  "64285": { city: "Darmstadt", minOrder: 15 },
+  "64287": { city: "Darmstadt", minOrder: 15 },
+  "64289": { city: "Darmstadt", minOrder: 15 },
+  "64291": { city: "Darmstadt", minOrder: 15 },
+  "64293": { city: "Darmstadt", minOrder: 15 },
+  "64295": { city: "Darmstadt", minOrder: 15 },
+  "64297": { city: "Darmstadt", minOrder: 15 },
+  "64521": { city: "Groß-Gerau", minOrder: 30 },
 };
 
 function getJetztStatus(bestellart: Bestellart) {
@@ -80,37 +85,6 @@ function getJetztStatus(bestellart: Bestellart) {
   };
 }
 
-function pruefeLiefergebiet(adresse: string) {
-  const plzMatch = adresse.match(/\b\d{5}\b/);
-
-  if (!plzMatch) {
-    return {
-      ok: false,
-      message: "Bitte gib eine Adresse mit Postleitzahl ein.",
-      plz: null,
-      regel: null,
-    };
-  }
-
-  const plz = plzMatch[0];
-  const regel = lieferzonen[plz];
-
-  if (!regel) {
-    return {
-      ok: false,
-      message: "Diese Adresse liegt aktuell außerhalb unseres Liefergebiets.",
-      plz,
-      regel: null,
-    };
-  }
-
-  return {
-    ok: true,
-    message: `Lieferung nach ${regel.ort} möglich. Mindestbestellwert ${regel.mindestbestellwert.toFixed(2)} €`,
-    plz,
-    regel,
-  };
-}
 function validiereTelefonnummer(telefon: string) {
   const erlaubt = /^[\d\s()+/-]+$/;
 
@@ -150,6 +124,48 @@ function validiereTelefonnummer(telefon: string) {
   };
 }
 
+function pruefeLiefergebiet(plz: string) {
+  const plzBereinigt = plz.trim();
+
+  if (!plzBereinigt) {
+    return {
+      ok: false,
+      message: "Bitte gib eine Postleitzahl ein.",
+      city: "",
+      minOrder: null as number | null,
+    };
+  }
+
+  if (!/^\d{5}$/.test(plzBereinigt)) {
+    return {
+      ok: false,
+      message: "Bitte gib eine gültige 5-stellige Postleitzahl ein.",
+      city: "",
+      minOrder: null as number | null,
+    };
+  }
+
+  const gebiet = liefergebiete[plzBereinigt];
+
+  if (!gebiet) {
+    return {
+      ok: false,
+      message: "Diese Postleitzahl liegt aktuell außerhalb unseres Liefergebiets.",
+      city: "",
+      minOrder: null as number | null,
+    };
+  }
+
+  return {
+    ok: true,
+    message: `Lieferung nach ${gebiet.city} (${plzBereinigt}) möglich. Mindestbestellwert: ${gebiet.minOrder.toFixed(
+      2
+    )} €.`,
+    city: gebiet.city,
+    minOrder: gebiet.minOrder,
+  };
+}
+
 function getProductBasePrice(produkt: Product) {
   if (typeof produkt.price === "number") return produkt.price;
   if (produkt.variants?.length) return produkt.variants[0].price;
@@ -159,7 +175,6 @@ function getProductBasePrice(produkt: Product) {
   }
   return 0;
 }
-
 
 function getMinVorbestellzeit() {
   const now = new Date();
@@ -188,7 +203,10 @@ export default function HomePage() {
   const [bestellart, setBestellart] = useState<Bestellart>("abholung");
   const [name, setName] = useState("");
   const [telefon, setTelefon] = useState("");
-  const [adresse, setAdresse] = useState("");
+  const [strasse, setStrasse] = useState("");
+  const [hausnummer, setHausnummer] = useState("");
+  const [plz, setPlz] = useState("");
+  const [stadt, setStadt] = useState("");
   const [hinweis, setHinweis] = useState("");
   const [vorbestellung, setVorbestellung] = useState("sofort");
   const [uhrzeit, setUhrzeit] = useState("");
@@ -204,15 +222,25 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariantName, setSelectedVariantName] = useState("");
   const [selectedVariantPrice, setSelectedVariantPrice] = useState(0);
-  const [selectedOptionsMap, setSelectedOptionsMap] = useState<Record<string, string[]>>({});
+  const [selectedOptionsMap, setSelectedOptionsMap] = useState<
+    Record<string, string[]>
+  >({});
   const [selectedOptionsPriceMap, setSelectedOptionsPriceMap] = useState<
     Record<string, number[]>
   >({});
   const [modalError, setModalError] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
-const [minVorbestellzeit, setMinVorbestellzeit] = useState(getMinVorbestellzeit());
+  const [minVorbestellzeit, setMinVorbestellzeit] = useState(
+    getMinVorbestellzeit()
+  );
+
   const status = getJetztStatus(bestellart);
+
+  const zusammengesetzteAdresse = useMemo(() => {
+    if (!strasse && !hausnummer && !plz && !stadt) return "";
+    return `${strasse.trim()} ${hausnummer.trim()}, ${plz.trim()} ${stadt.trim()}`.trim();
+  }, [strasse, hausnummer, plz, stadt]);
 
   function openCuisine(cuisine: Cuisine) {
     setActiveCuisine(cuisine);
@@ -454,8 +482,8 @@ const [minVorbestellzeit, setMinVorbestellzeit] = useState(getMinVorbestellzeit(
       }
     }
 
-    const selectedOptions = Object.entries(selectedOptionsMap).flatMap(([group, items]) =>
-      items.map((item) => `${group}: ${item}`)
+    const selectedOptions = Object.entries(selectedOptionsMap).flatMap(
+      ([group, items]) => items.map((item) => `${group}: ${item}`)
     );
 
     addConfiguredProductToCart({
@@ -500,11 +528,12 @@ const [minVorbestellzeit, setMinVorbestellzeit] = useState(getMinVorbestellzeit(
 
   const lieferPruefung = useMemo(() => {
     if (bestellart !== "lieferung") return null;
-    if (!adresse.trim()) return null;
-    return pruefeLiefergebiet(adresse);
-  }, [bestellart, adresse]);
+    if (!plz.trim()) return null;
+    return pruefeLiefergebiet(plz);
+  }, [bestellart, plz]);
 
-  const finaleLiefergebuehr = 0;
+  const finaleLiefergebuehr =
+    bestellart === "lieferung" && lieferPruefung?.ok ? liefergebuehr : 0;
 
   const gesamtpreis = gesamtpreisProdukte + finaleLiefergebuehr;
 
@@ -515,13 +544,15 @@ const [minVorbestellzeit, setMinVorbestellzeit] = useState(getMinVorbestellzeit(
         produkt.cuisine === activeCuisine && produkt.category === activeCategory
     );
   }, [activeCuisine, activeCategory]);
-useEffect(() => {
-  const interval = setInterval(() => {
-    setMinVorbestellzeit(getMinVorbestellzeit());
-  }, 60000);
 
-  return () => clearInterval(interval);
-}, []);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMinVorbestellzeit(getMinVorbestellzeit());
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (!status.isOpen) {
       setVorbestellung("spaeter");
@@ -534,6 +565,20 @@ useEffect(() => {
       window.location.href = "/admin";
     }
   }, [adminClicks]);
+
+  useEffect(() => {
+    if (bestellart !== "lieferung") return;
+
+    const plzBereinigt = plz.trim();
+
+    if (plzBereinigt.length !== 5) {
+      setStadt("");
+      return;
+    }
+
+    const gebiet = liefergebiete[plzBereinigt];
+    setStadt(gebiet ? gebiet.city : "");
+  }, [plz, bestellart]);
 
   async function handleStripeCheckout() {
     setFehlermeldung("");
@@ -549,33 +594,49 @@ useEffect(() => {
       return;
     }
 
-    if (!telefon.trim()) {
-      setFehlermeldung("Bitte gib deine Telefonnummer ein.");
+    const telefonValidierung = validiereTelefonnummer(telefon);
+    if (!telefonValidierung.ok) {
+      setFehlermeldung(telefonValidierung.message);
       return;
     }
 
     if (bestellart === "lieferung") {
-      if (!adresse.trim()) {
-        setFehlermeldung("Bitte gib deine Lieferadresse ein.");
+      if (!strasse.trim()) {
+        setFehlermeldung("Bitte gib deine Straße ein.");
         return;
       }
 
-      const gebiet = pruefeLiefergebiet(adresse);
+      if (!hausnummer.trim()) {
+        setFehlermeldung("Bitte gib deine Hausnummer ein.");
+        return;
+      }
+
+      if (!plz.trim()) {
+        setFehlermeldung("Bitte gib deine Postleitzahl ein.");
+        return;
+      }
+
+      if (!stadt.trim()) {
+        setFehlermeldung(
+          "Für diese Postleitzahl konnten wir keine belieferbare Stadt finden."
+        );
+        return;
+      }
+
+      const gebiet = pruefeLiefergebiet(plz);
       if (!gebiet.ok) {
         setFehlermeldung(gebiet.message);
         return;
       }
 
-      const mindestbestellwert = gebiet.regel?.mindestbestellwert || 0;
-
-if (gesamtpreisProdukte < mindestbestellwert) {
-  setFehlermeldung(
-    `Für diese Adresse gilt ein Mindestbestellwert von ${mindestbestellwert.toFixed(
-      2
-    )} €.`
-  );
-  return;
-}
+      if (gesamtpreisProdukte < gebiet.minOrder!) {
+        setFehlermeldung(
+          `Für ${gebiet.city} (${plz.trim()}) gilt ein Mindestbestellwert von ${gebiet.minOrder!.toFixed(
+            2
+          )} €.`
+        );
+        return;
+      }
     }
 
     if (!status.isOpen && vorbestellung === "sofort") {
@@ -584,18 +645,18 @@ if (gesamtpreisProdukte < mindestbestellwert) {
     }
 
     if (vorbestellung === "spaeter") {
-  if (!uhrzeit.trim()) {
-    setFehlermeldung("Bitte wähle eine Uhrzeit für die Vorbestellung.");
-    return;
-  }
+      if (!uhrzeit.trim()) {
+        setFehlermeldung("Bitte wähle eine Uhrzeit für die Vorbestellung.");
+        return;
+      }
 
-  if (!istVorbestellungMindestensEineStundeSpaeter(uhrzeit)) {
-    setFehlermeldung(
-      "Vorbestellungen müssen mindestens 1 Stunde in der Zukunft liegen."
-    );
-    return;
-  }
-}
+      if (!istVorbestellungMindestensEineStundeSpaeter(uhrzeit)) {
+        setFehlermeldung(
+          "Vorbestellungen müssen mindestens 1 Stunde in der Zukunft liegen."
+        );
+        return;
+      }
+    }
 
     const artikelOhneUndefined = cart.map((item) => ({
       id: item.id,
@@ -618,7 +679,18 @@ if (gesamtpreisProdukte < mindestbestellwert) {
         kunde: {
           name,
           telefon,
-          adresse: bestellart === "lieferung" ? adresse : "Abholung",
+          adresse:
+            bestellart === "lieferung" ? zusammengesetzteAdresse : "Abholung",
+          ...(bestellart === "lieferung"
+            ? {
+                lieferadresse: {
+                  strasse: strasse.trim(),
+                  hausnummer: hausnummer.trim(),
+                  plz: plz.trim(),
+                  stadt: stadt.trim(),
+                },
+              }
+            : {}),
         },
         bestellart,
         hinweis,
@@ -652,7 +724,9 @@ if (gesamtpreisProdukte < mindestbestellwert) {
       const data = await response.json();
 
       if (!response.ok) {
-        setFehlermeldung(data.error || "Stripe Checkout konnte nicht gestartet werden.");
+        setFehlermeldung(
+          data.error || "Stripe Checkout konnte nicht gestartet werden."
+        );
         return;
       }
 
@@ -664,7 +738,9 @@ if (gesamtpreisProdukte < mindestbestellwert) {
       setFehlermeldung("Keine Stripe-URL erhalten.");
     } catch (error: any) {
       console.error("Fehler bei pending order oder Stripe:", error);
-      setFehlermeldung(error?.message || "Bestellung konnte nicht verarbeitet werden.");
+      setFehlermeldung(
+        error?.message || "Bestellung konnte nicht verarbeitet werden."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -854,7 +930,6 @@ if (gesamtpreisProdukte < mindestbestellwert) {
                             {produkt.name}
                           </h4>
                           <span>{getProductBasePrice(produkt).toFixed(2)} €</span>
-                          
                         </div>
                         <p>{produkt.description}</p>
 
@@ -1024,11 +1099,61 @@ if (gesamtpreisProdukte < mindestbestellwert) {
                 </div>
 
                 {bestellart === "lieferung" && (
-  <div className="form-group">
-    <label htmlFor="adresse">Lieferadresse</label>
-    <GoogleAddressInput value={adresse} onChange={setAdresse} />
-  </div>
-)}
+                  <>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="strasse">Straße</label>
+                        <input
+                          id="strasse"
+                          type="text"
+                          placeholder="Straße"
+                          value={strasse}
+                          onChange={(e) => setStrasse(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="hausnummer">Hausnummer</label>
+                        <input
+                          id="hausnummer"
+                          type="text"
+                          placeholder="Hausnummer"
+                          value={hausnummer}
+                          onChange={(e) => setHausnummer(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="plz">Postleitzahl</label>
+                        <input
+                          id="plz"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={5}
+                          placeholder="PLZ"
+                          value={plz}
+                          onChange={(e) =>
+                            setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))
+                          }
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="stadt">Stadt</label>
+                        <input
+                          id="stadt"
+                          type="text"
+                          placeholder="Wird automatisch ausgefüllt"
+                          value={stadt}
+                          readOnly
+                          disabled
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {bestellart === "lieferung" && lieferPruefung && (
                   <p
@@ -1083,15 +1208,15 @@ if (gesamtpreisProdukte < mindestbestellwert) {
                   <div className="form-group">
                     <label htmlFor="uhrzeit">Uhrzeit</label>
                     <input
-  id="uhrzeit"
-  type="time"
-  value={uhrzeit}
-  min={minVorbestellzeit}
-  onChange={(e) => setUhrzeit(e.target.value)}
-/>
-<p style={{ marginTop: 8, fontSize: 14, color: "#64748b" }}>
-  Früheste Vorbestellung: {minVorbestellzeit} Uhr
-</p>
+                      id="uhrzeit"
+                      type="time"
+                      value={uhrzeit}
+                      min={minVorbestellzeit}
+                      onChange={(e) => setUhrzeit(e.target.value)}
+                    />
+                    <p style={{ marginTop: 8, fontSize: 14, color: "#64748b" }}>
+                      Früheste Vorbestellung: {minVorbestellzeit} Uhr
+                    </p>
                   </div>
                 )}
               </div>
@@ -1110,6 +1235,13 @@ if (gesamtpreisProdukte < mindestbestellwert) {
                   <span>Zwischensumme</span>
                   <span>{gesamtpreisProdukte.toFixed(2)} €</span>
                 </div>
+
+                {bestellart === "lieferung" && lieferPruefung?.minOrder ? (
+                  <div className="summary-row">
+                    <span>Mindestbestellwert</span>
+                    <span>{lieferPruefung.minOrder.toFixed(2)} €</span>
+                  </div>
+                ) : null}
 
                 <div className="summary-row">
                   <span>Liefergebühr</span>
