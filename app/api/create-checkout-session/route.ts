@@ -6,55 +6,34 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { pendingOrderId, gesamtpreis, gesamtpreisProdukte, rabattBetrag } = body;
+    const { pendingOrderId, artikel } = body;
 
     if (!pendingOrderId) {
       return NextResponse.json({ error: "pendingOrderId fehlt" }, { status: 400 });
     }
 
-    if (typeof gesamtpreis !== "number" || Number.isNaN(gesamtpreis) || gesamtpreis <= 0) {
-      return NextResponse.json(
-        { error: "Gesamtpreis fehlt oder ist ungültig" },
-        { status: 400 }
-      );
+    if (!artikel || !Array.isArray(artikel) || artikel.length === 0) {
+      return NextResponse.json({ error: "Artikel fehlen" }, { status: 400 });
     }
 
     const origin =
       req.headers.get("origin") || "https://restaurant-bestellsystem.vercel.app";
 
-    const descriptionParts: string[] = [];
-
-    if (typeof gesamtpreisProdukte === "number") {
-      descriptionParts.push(`Zwischensumme: ${gesamtpreisProdukte.toFixed(2)} €`);
-    }
-
-    if (typeof rabattBetrag === "number" && rabattBetrag > 0) {
-      descriptionParts.push(`10% Rabatt: -${rabattBetrag.toFixed(2)} €`);
-    }
-
-    descriptionParts.push(`Endpreis: ${gesamtpreis.toFixed(2)} €`);
-
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: "La Rosa Bestellung",
-              description: descriptionParts.join(" | "),
-            },
-            unit_amount: Math.round(gesamtpreis * 100),
+      line_items: artikel.map((item: any) => ({
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: item.name || "Artikel",
           },
-          quantity: 1,
+          unit_amount: Math.round((item.price || 0) * 100),
         },
-      ],
+        quantity: item.quantity || 1,
+      })),
       metadata: {
         pendingOrderId,
-        gesamtpreis: gesamtpreis.toFixed(2),
-        rabattBetrag:
-          typeof rabattBetrag === "number" ? rabattBetrag.toFixed(2) : "0.00",
       },
       success_url: `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}`,
       cancel_url: `${origin}`,
