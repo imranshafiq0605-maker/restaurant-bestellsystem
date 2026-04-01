@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { pendingOrderId, artikel, gesamtpreis } = body;
+    const { pendingOrderId, artikel } = body;
 
     if (!pendingOrderId) {
       return NextResponse.json({ error: "pendingOrderId fehlt" }, { status: 400 });
@@ -16,7 +16,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Artikel fehlen" }, { status: 400 });
     }
 
-    const origin = req.headers.get("origin") || "https://restaurant-bestellsystem.vercel.app";
+    const origin =
+      req.headers.get("origin") || "https://restaurant-bestellsystem.vercel.app";
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -34,8 +35,8 @@ export async function POST(req: NextRequest) {
       metadata: {
         pendingOrderId,
       },
-      success_url: `${origin}/order-status?paid=true`,
-      cancel_url: `${origin}/checkout?cancelled=true`,
+      success_url: `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}`,
+      cancel_url: `${origin}`,
     });
 
     return NextResponse.json({ url: session.url });
