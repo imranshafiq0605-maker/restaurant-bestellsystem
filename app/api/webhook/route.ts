@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import {
-  addDoc,
-  collection,
   deleteDoc,
   doc,
   getDoc,
   runTransaction,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
@@ -76,11 +75,11 @@ export async function POST(req: NextRequest) {
         createdAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, "bestellungen"), finaleBestellung);
+      await setDoc(doc(db, "bestellungen", pendingOrderId), finaleBestellung);
 
       await deleteDoc(pendingOrderRef);
 
-      console.log("✅ Bestellung erfolgreich aus pendingOrders übernommen");
+      console.log("✅ Bestellung erfolgreich aus pendingOrders übernommen:", pendingOrderId);
     } catch (error) {
       console.error("Fehler beim Verarbeiten des Webhooks:", error);
     }
