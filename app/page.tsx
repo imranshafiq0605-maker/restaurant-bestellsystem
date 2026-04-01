@@ -604,8 +604,8 @@ export default function HomePage() {
 
       setFehlermeldung("Keine Stripe-URL erhalten.");
     } catch (error) {
-      console.error("Stripe Fehler:", error);
-      setFehlermeldung("Stripe Checkout konnte nicht gestartet werden.");
+      console.error("Fehler bei Bestellung oder Stripe:", error);
+      setFehlermeldung("Bestellung konnte nicht verarbeitet werden.");
     } finally {
       setIsSubmitting(false);
     }
