@@ -1126,29 +1126,67 @@ export default function HomePage() {
               </div>
             </section>
 <section className="container opening-hours-section">
-  <div className="opening-hours-card">
-    <div className="opening-hours-header">
+  <div className="opening-hours-topline">
+    <div>
       <span className="eyebrow">Öffnungszeiten</span>
-      <h3 className="section-title small">Heute</h3>
-
-      <span
-        className={`status-badge ${status.isOpen ? "open" : "closed"}`}
-      >
-        {status.isOpen ? "Geöffnet" : "Geschlossen"}
-      </span>
+      <h3 className="section-title">Abholung & Lieferung</h3>
     </div>
+  </div>
 
-    <div className="opening-hours-grid">
-      <div className="opening-col">
-        <h4>Abholung</h4>
-        <p>Mo–Fr: 11:00 – 23:00</p>
-        <p>Sa–So: 14:00 – 23:00</p>
+  <div className="opening-hours-grid">
+    <div className="opening-hours-clean-card">
+      <div className="opening-hours-card-head">
+        <div>
+          <span className="opening-hours-label">Service</span>
+          <h4>Abholung</h4>
+        </div>
+
+        <span
+          className={`opening-status-pill ${
+            getServiceStatus("abholung").isOpen ? "open" : "closed"
+          }`}
+        >
+          {getServiceStatus("abholung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
+        </span>
       </div>
 
-      <div className="opening-col">
-        <h4>Lieferung</h4>
-        <p>Mo–Fr: 11:00 – 22:30</p>
-        <p>Sa–So: 14:00 – 22:30</p>
+      <div className="opening-hours-rows">
+        <div className="opening-hours-row">
+          <span>Montag – Freitag</span>
+          <strong>11:00 – 23:00</strong>
+        </div>
+        <div className="opening-hours-row">
+          <span>Samstag – Sonntag</span>
+          <strong>14:00 – 23:00</strong>
+        </div>
+      </div>
+    </div>
+
+    <div className="opening-hours-clean-card">
+      <div className="opening-hours-card-head">
+        <div>
+          <span className="opening-hours-label">Service</span>
+          <h4>Lieferung</h4>
+        </div>
+
+        <span
+          className={`opening-status-pill ${
+            getServiceStatus("lieferung").isOpen ? "open" : "closed"
+          }`}
+        >
+          {getServiceStatus("lieferung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
+        </span>
+      </div>
+
+      <div className="opening-hours-rows">
+        <div className="opening-hours-row">
+          <span>Montag – Freitag</span>
+          <strong>11:00 – 22:30</strong>
+        </div>
+        <div className="opening-hours-row">
+          <span>Samstag – Sonntag</span>
+          <strong>14:00 – 22:30</strong>
+        </div>
       </div>
     </div>
   </div>
