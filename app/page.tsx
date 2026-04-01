@@ -49,19 +49,39 @@ const liefergebiete: Record<string, LiefergebietConfig> = {
 
 const offerSlides = [
   {
-    title: "Immer 10% Rabatt auf jede Bestellung",
-    text: "Premium Genuss, starke Preise und ein Bestellerlebnis auf höchstem Niveau.",
-    image: "/Images/offer-1.jpg",
+    title: "Angebot 1",
+    price: "34,50 €",
+    text: "2 Familien Pizzen 36 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
   },
   {
-    title: "Versand immer kostenlos",
-    text: "Keine Liefergebühr, keine Überraschungen. Du zahlst nur dein Essen.",
-    image: "/Images/offer-2.jpg",
+    title: "Angebot 2",
+    price: "22,50 €",
+    text: "3 kleine Pizzen 24 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
   },
   {
-    title: "Italienisch, Indisch & Getränke",
-    text: "Wähle deine Küche, entdecke Kategorien und bestelle stilvoll in wenigen Klicks.",
-    image: "/Images/offer-3.jpg",
+    title: "Angebot 3",
+    price: "37,50 €",
+    text: "3 normale Pizzen 31 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
+  },
+  {
+    title: "Angebot 4",
+    price: "23,50 €",
+    text: "2 Nudeln nach Wahl / 1 Liter Cola, Fanta oder Bizzi",
+  },
+  {
+    title: "Angebot 5",
+    price: "32,50 €",
+    text: "2x Schnitzel nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
+  },
+  {
+    title: "Angebot 6",
+    price: "53,50 €",
+    text: "1 normale Pizza 31 cm nach Ihrer Wahl / 1 Schnitzel nach Ihrer Wahl / 1 Nudel nach Ihrer Wahl / 1 Salat nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzi",
+  },
+  {
+    title: "Angebot 452",
+    price: "33,50 €",
+    text: "2 indische Gerichte nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzi",
   },
 ];
 
@@ -102,8 +122,6 @@ function getServiceStatus(bestellart: Bestellart) {
 
   return {
     isOpen: minuten >= offenAb && minuten <= offenBis,
-    openFrom: istWochenende ? "14:00" : "11:00",
-    openUntil: bestellart === "abholung" ? "23:00" : "22:30",
   };
 }
 
@@ -817,7 +835,7 @@ export default function HomePage() {
 
             <div className="nav-right">
               <div className="promo-pill gold">10% Rabatt auf alles</div>
-              <div className="promo-pill dark">Versand kostenlos</div>
+              <div className="promo-pill light">Versand kostenlos</div>
               <button
                 className={`cart-button ${cartPulse ? "pulse" : ""}`}
                 onClick={openCheckout}
@@ -832,7 +850,6 @@ export default function HomePage() {
 
         {showAddedEffect && (
           <div className="added-toast">
-            <div className="added-toast-glow" />
             <strong>{addedProductName}</strong>
             <span>wurde zum Warenkorb hinzugefügt</span>
           </div>
@@ -844,22 +861,22 @@ export default function HomePage() {
               className="hero-banner"
               style={{
                 backgroundImage:
-                  "linear-gradient(180deg, rgba(7,7,10,0.28), rgba(7,7,10,0.82)), url('/Images/hero-main.jpg')",
+                  "linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.78)), url('/Images/hero-main.jpg')",
               }}
             >
               <div className="container hero-content">
                 <div className="hero-badge-row">
-                  <span className="hero-chip">High End Food Ordering</span>
-                  <span className="hero-chip accent">Italienisch · Indisch · Getränke</span>
+                  <span className="hero-chip">Premium Genuss</span>
+                  <span className="hero-chip accent">10% Rabatt & kostenloser Versand</span>
                 </div>
 
                 <h2 className="hero-headline">
-                  Premium Genuss. Elegante Bestellung. Ein Auftritt, der im Kopf bleibt.
+                  Frisch. Stilvoll. Einfach online bestellen.
                 </h2>
 
                 <p className="hero-copy">
-                  Bestelle deine Lieblingsgerichte stilvoll online. Immer mit 10%
-                  Rabatt und immer ohne Versandkosten.
+                  Italienische Küche, indische Küche und Getränke in einer hellen,
+                  eleganten und modernen Bestelloberfläche.
                 </p>
 
                 <div className="hero-actions">
@@ -892,7 +909,7 @@ export default function HomePage() {
               <div className="section-topline">
                 <div>
                   <span className="eyebrow">Angebote & Highlights</span>
-                  <h3 className="section-title">Slideshow mit deinen Angeboten</h3>
+                  <h3 className="section-title">Unsere Angebote</h3>
                 </div>
                 <div className="slide-dots">
                   {offerSlides.map((_, index) => (
@@ -906,23 +923,22 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="offer-slider-card">
+              <div className="offer-slider-text-card">
                 {offerSlides.map((slide, index) => (
                   <div
                     key={slide.title}
-                    className={`offer-slide ${activeSlide === index ? "active" : ""}`}
-                    style={{
-                      backgroundImage: `linear-gradient(90deg, rgba(10,10,14,0.84), rgba(10,10,14,0.35)), url('${slide.image}')`,
-                    }}
+                    className={`offer-text-slide ${activeSlide === index ? "active" : ""}`}
                   >
-                    <div className="offer-slide-content">
-                      <span className="offer-label">La Rosa Special</span>
+                    <div className="offer-text-inner">
+                      <span className="offer-label">La Rosa Angebot</span>
                       <h4>{slide.title}</h4>
+                      <div className="offer-price">{slide.price}</div>
                       <p>{slide.text}</p>
+
                       <div className="offer-tags">
                         <span>10% Rabatt</span>
-                        <span>Kostenloser Versand</span>
-                        <span>Premium Design</span>
+                        <span>Versand kostenlos</span>
+                        <span>Beliebtes Angebot</span>
                       </div>
                     </div>
                   </div>
@@ -939,7 +955,7 @@ export default function HomePage() {
                       <h3 className="section-title">Küchen & Getränke</h3>
                     </div>
                     <p className="section-text">
-                      Wähle deinen Bereich und gehe direkt in die passende Auswahl.
+                      Wähle deinen Bereich und starte direkt mit deiner Bestellung.
                     </p>
                   </div>
 
@@ -951,10 +967,9 @@ export default function HomePage() {
                         onClick={() => openCuisine(card.cuisine)}
                         type="button"
                         style={{
-                          backgroundImage: `linear-gradient(180deg, rgba(8,8,12,0.1), rgba(8,8,12,0.78)), url('${card.image}')`,
+                          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.72)), url('${card.image}')`,
                         }}
                       >
-                        <div className="cuisine-card-overlay" />
                         <div className="cuisine-card-content">
                           <span className="cuisine-tag">{card.cuisine}</span>
                           <h4>{card.title}</h4>
@@ -1565,9 +1580,9 @@ export default function HomePage() {
         body {
           margin: 0;
           background:
-            radial-gradient(circle at top left, rgba(184, 134, 11, 0.14), transparent 28%),
-            linear-gradient(180deg, #060608 0%, #0d0d11 100%);
-          color: #f7f3e9;
+            radial-gradient(circle at top left, rgba(214, 170, 76, 0.14), transparent 26%),
+            linear-gradient(180deg, #fffdf8 0%, #f8f4ea 100%);
+          color: #2c2418;
           font-family: Inter, Arial, sans-serif;
         }
 
@@ -1592,9 +1607,9 @@ export default function HomePage() {
           position: sticky;
           top: 0;
           z-index: 50;
-          backdrop-filter: blur(18px);
-          background: rgba(8, 8, 12, 0.68);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+          backdrop-filter: blur(16px);
+          background: rgba(255, 251, 243, 0.86);
+          border-bottom: 1px solid rgba(120, 90, 30, 0.08);
         }
 
         .nav-inner {
@@ -1616,8 +1631,9 @@ export default function HomePage() {
           height: 58px;
           border-radius: 18px;
           object-fit: cover;
-          box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 10px 28px rgba(159, 123, 51, 0.16);
+          border: 1px solid rgba(140, 105, 33, 0.12);
+          background: white;
         }
 
         .brand-title {
@@ -1625,11 +1641,12 @@ export default function HomePage() {
           font-size: 1.2rem;
           font-weight: 800;
           letter-spacing: 0.04em;
+          color: #2c2418;
         }
 
         .brand-subtitle {
           margin: 4px 0 0;
-          color: rgba(255, 255, 255, 0.66);
+          color: #7f7057;
           font-size: 0.9rem;
         }
 
@@ -1646,17 +1663,17 @@ export default function HomePage() {
           border-radius: 999px;
           font-size: 0.88rem;
           font-weight: 700;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(140, 105, 33, 0.1);
         }
 
         .promo-pill.gold {
-          background: linear-gradient(135deg, rgba(205, 147, 22, 0.28), rgba(255, 211, 105, 0.16));
-          color: #ffe8a6;
+          background: linear-gradient(135deg, #fff2c6, #fde8a7);
+          color: #7c5710;
         }
 
-        .promo-pill.dark {
-          background: rgba(255, 255, 255, 0.05);
-          color: #ffffff;
+        .promo-pill.light {
+          background: rgba(255, 255, 255, 0.78);
+          color: #5f523f;
         }
 
         .cart-button {
@@ -1665,16 +1682,16 @@ export default function HomePage() {
           border-radius: 999px;
           padding: 14px 18px;
           background: linear-gradient(135deg, #d6a437, #f4d17e);
-          color: #18120a;
+          color: #2e210a;
           font-weight: 800;
           cursor: pointer;
-          box-shadow: 0 14px 30px rgba(214, 164, 55, 0.26);
+          box-shadow: 0 14px 30px rgba(214, 164, 55, 0.24);
           transition: transform 0.22s ease, box-shadow 0.22s ease;
         }
 
         .cart-button:hover {
           transform: translateY(-2px);
-          box-shadow: 0 18px 34px rgba(214, 164, 55, 0.34);
+          box-shadow: 0 18px 34px rgba(214, 164, 55, 0.32);
         }
 
         .cart-button.pulse {
@@ -1683,13 +1700,13 @@ export default function HomePage() {
 
         .cart-count {
           margin-left: 10px;
-          background: rgba(0, 0, 0, 0.14);
+          background: rgba(255, 255, 255, 0.34);
           padding: 4px 10px;
           border-radius: 999px;
         }
 
         .hero-banner {
-          min-height: 86vh;
+          min-height: 84vh;
           background-size: cover;
           background-position: center;
           position: relative;
@@ -1698,7 +1715,7 @@ export default function HomePage() {
         }
 
         .hero-content {
-          padding: 70px 0 90px;
+          padding: 72px 0 90px;
         }
 
         .hero-badge-row {
@@ -1709,17 +1726,17 @@ export default function HomePage() {
         }
 
         .hero-chip {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.09);
+          background: rgba(255, 255, 255, 0.82);
+          border: 1px solid rgba(140, 105, 33, 0.08);
           padding: 10px 14px;
           border-radius: 999px;
           font-weight: 700;
-          color: rgba(255, 255, 255, 0.88);
+          color: #5f513d;
         }
 
         .hero-chip.accent {
-          color: #ffe3a0;
-          background: rgba(214, 164, 55, 0.16);
+          color: #946600;
+          background: rgba(255, 238, 187, 0.88);
         }
 
         .hero-headline {
@@ -1729,6 +1746,7 @@ export default function HomePage() {
           line-height: 0.98;
           letter-spacing: -0.04em;
           font-weight: 900;
+          color: #2a2013;
         }
 
         .hero-copy {
@@ -1736,7 +1754,7 @@ export default function HomePage() {
           max-width: 720px;
           font-size: 1.1rem;
           line-height: 1.75;
-          color: rgba(255, 255, 255, 0.8);
+          color: #665844;
         }
 
         .hero-actions {
@@ -1752,7 +1770,7 @@ export default function HomePage() {
           padding: 16px 22px;
           font-weight: 800;
           cursor: pointer;
-          transition: transform 0.22s ease, opacity 0.22s ease;
+          transition: transform 0.2s ease;
         }
 
         .hero-cta:hover {
@@ -1761,13 +1779,13 @@ export default function HomePage() {
 
         .hero-cta.primary {
           background: linear-gradient(135deg, #d6a437, #f4d17e);
-          color: #1c1408;
+          color: #261c0d;
         }
 
         .hero-cta.secondary {
-          background: rgba(255, 255, 255, 0.08);
-          color: #fff;
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.82);
+          color: #4c4031;
+          border: 1px solid rgba(140, 105, 33, 0.08);
         }
 
         .hero-stats {
@@ -1780,20 +1798,21 @@ export default function HomePage() {
         .hero-stat-card {
           padding: 20px;
           border-radius: 22px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(10px);
+          background: rgba(255, 255, 255, 0.76);
+          border: 1px solid rgba(140, 105, 33, 0.08);
+          box-shadow: 0 16px 36px rgba(188, 156, 91, 0.12);
         }
 
         .hero-stat-card span {
           display: block;
-          color: rgba(255, 255, 255, 0.62);
+          color: #85755f;
           margin-bottom: 8px;
           font-size: 0.92rem;
         }
 
         .hero-stat-card strong {
           font-size: 1rem;
+          color: #2d2419;
         }
 
         .section-spacing {
@@ -1810,7 +1829,7 @@ export default function HomePage() {
 
         .eyebrow {
           display: inline-block;
-          color: #d8a83a;
+          color: #b07a12;
           text-transform: uppercase;
           letter-spacing: 0.18em;
           font-size: 0.78rem;
@@ -1823,11 +1842,12 @@ export default function HomePage() {
           font-size: clamp(1.8rem, 3vw, 3rem);
           font-weight: 900;
           letter-spacing: -0.03em;
+          color: #2c2418;
         }
 
         .section-text {
           max-width: 440px;
-          color: rgba(255, 255, 255, 0.7);
+          color: #756854;
           line-height: 1.7;
         }
 
@@ -1842,7 +1862,7 @@ export default function HomePage() {
           height: 12px;
           border-radius: 999px;
           border: none;
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(176, 122, 18, 0.2);
           cursor: pointer;
         }
 
@@ -1851,38 +1871,38 @@ export default function HomePage() {
           background: linear-gradient(90deg, #d6a437, #f3d07c);
         }
 
-        .offer-slider-card {
+        .offer-slider-text-card {
           position: relative;
-          height: 400px;
+          min-height: 320px;
           border-radius: 34px;
           overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(140, 105, 33, 0.08);
+          background:
+            radial-gradient(circle at top right, rgba(214, 164, 55, 0.12), transparent 24%),
+            radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.7), transparent 22%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(250, 244, 232, 0.94));
+          box-shadow: 0 24px 70px rgba(184, 154, 96, 0.14);
         }
 
-        .offer-slide {
+        .offer-text-slide {
           position: absolute;
           inset: 0;
           opacity: 0;
           pointer-events: none;
-          transition: opacity 0.75s ease, transform 0.75s ease;
-          transform: scale(1.04);
-          background-size: cover;
-          background-position: center;
+          transition: opacity 0.7s ease, transform 0.7s ease;
+          transform: translateY(12px) scale(0.98);
+          display: flex;
+          align-items: center;
         }
 
-        .offer-slide.active {
+        .offer-text-slide.active {
           opacity: 1;
           pointer-events: auto;
-          transform: scale(1);
+          transform: translateY(0) scale(1);
         }
 
-        .offer-slide-content {
-          height: 100%;
-          max-width: 640px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
+        .offer-text-inner {
+          width: 100%;
           padding: 42px;
         }
 
@@ -1891,39 +1911,49 @@ export default function HomePage() {
           align-self: flex-start;
           padding: 8px 12px;
           border-radius: 999px;
-          background: rgba(214, 164, 55, 0.18);
-          color: #ffe8a6;
+          background: rgba(214, 164, 55, 0.14);
+          color: #9b6904;
           font-weight: 800;
           margin-bottom: 18px;
         }
 
-        .offer-slide h4 {
+        .offer-text-inner h4 {
           margin: 0;
-          font-size: clamp(2rem, 3.3vw, 3.5rem);
+          font-size: clamp(2rem, 3vw, 3.2rem);
           line-height: 1.04;
           font-weight: 900;
+          color: #2d2418;
         }
 
-        .offer-slide p {
-          margin: 16px 0 0;
-          max-width: 560px;
-          line-height: 1.7;
-          color: rgba(255, 255, 255, 0.8);
+        .offer-price {
+          margin-top: 14px;
+          font-size: 1.8rem;
+          font-weight: 900;
+          color: #b57900;
+        }
+
+        .offer-text-inner p {
+          margin: 18px 0 0;
+          max-width: 760px;
+          line-height: 1.8;
+          color: #665947;
+          font-size: 1.05rem;
         }
 
         .offer-tags {
           display: flex;
           gap: 12px;
           flex-wrap: wrap;
-          margin-top: 20px;
+          margin-top: 24px;
         }
 
         .offer-tags span {
           padding: 10px 12px;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.78);
+          border: 1px solid rgba(140, 105, 33, 0.08);
           font-weight: 700;
+          color: #685943;
         }
 
         .cuisine-grid {
@@ -1943,31 +1973,24 @@ export default function HomePage() {
           background-size: cover;
           background-position: center;
           transition: transform 0.28s ease, box-shadow 0.28s ease;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+          box-shadow: 0 18px 44px rgba(188, 156, 91, 0.18);
         }
 
         .cuisine-card:hover {
           transform: translateY(-8px) scale(1.01);
-          box-shadow: 0 28px 60px rgba(0, 0, 0, 0.36);
-        }
-
-        .cuisine-card-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.56));
+          box-shadow: 0 26px 52px rgba(188, 156, 91, 0.24);
         }
 
         .cuisine-card-content {
           position: absolute;
           inset: auto 0 0 0;
           padding: 28px;
-          z-index: 1;
         }
 
         .cuisine-tag {
           display: inline-block;
-          background: rgba(214, 164, 55, 0.2);
-          color: #ffe6a0;
+          background: rgba(255, 238, 187, 0.94);
+          color: #9b6904;
           border-radius: 999px;
           padding: 8px 12px;
           font-weight: 800;
@@ -1978,18 +2001,19 @@ export default function HomePage() {
           margin: 0;
           font-size: 2rem;
           font-weight: 900;
+          color: #2d2418;
         }
 
         .cuisine-card p {
           margin: 14px 0 0;
           line-height: 1.7;
-          color: rgba(255, 255, 255, 0.85);
+          color: #665947;
         }
 
         .cuisine-link {
           display: inline-block;
           margin-top: 18px;
-          color: #ffe4a0;
+          color: #9c6800;
           font-weight: 800;
         }
 
@@ -2004,10 +2028,10 @@ export default function HomePage() {
         .product-card,
         .hours-card,
         .glass-card {
-          background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(250,245,235,0.92));
+          border: 1px solid rgba(140, 105, 33, 0.08);
           border-radius: 26px;
-          box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+          box-shadow: 0 18px 40px rgba(188, 156, 91, 0.12);
         }
 
         .category-card {
@@ -2020,7 +2044,7 @@ export default function HomePage() {
 
         .category-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 24px 48px rgba(188, 156, 91, 0.18);
         }
 
         .category-card-inner,
@@ -2035,8 +2059,8 @@ export default function HomePage() {
           margin-bottom: 14px;
           padding: 8px 12px;
           border-radius: 999px;
-          background: rgba(214, 164, 55, 0.14);
-          color: #ffd875;
+          background: rgba(214, 164, 55, 0.12);
+          color: #a06b00;
           font-weight: 800;
         }
 
@@ -2045,11 +2069,12 @@ export default function HomePage() {
         .hours-card h4,
         .glass-card h3 {
           margin: 0;
+          color: #2d2418;
         }
 
         .category-card p,
         .product-desc {
-          color: rgba(255, 255, 255, 0.72);
+          color: #6d5e4b;
           line-height: 1.7;
         }
 
@@ -2057,7 +2082,7 @@ export default function HomePage() {
           display: inline-block;
           margin-top: 10px;
           font-weight: 800;
-          color: #ffe4a0;
+          color: #9b6904;
         }
 
         .product-card {
@@ -2076,7 +2101,7 @@ export default function HomePage() {
         .product-number {
           display: inline-block;
           font-size: 0.78rem;
-          color: #d6a437;
+          color: #b07a12;
           text-transform: uppercase;
           letter-spacing: 0.18em;
           margin-bottom: 8px;
@@ -2086,8 +2111,8 @@ export default function HomePage() {
         .product-price {
           padding: 10px 12px;
           border-radius: 14px;
-          background: rgba(214, 164, 55, 0.14);
-          color: #ffe39b;
+          background: rgba(214, 164, 55, 0.12);
+          color: #9b6904;
           font-weight: 800;
           white-space: nowrap;
         }
@@ -2103,13 +2128,14 @@ export default function HomePage() {
           border-radius: 999px;
           font-size: 0.82rem;
           font-weight: 700;
-          background: rgba(255, 255, 255, 0.07);
-          color: rgba(255, 255, 255, 0.86);
+          background: rgba(255, 255, 255, 0.88);
+          color: #675842;
+          border: 1px solid rgba(140, 105, 33, 0.08);
         }
 
         .mini-chip.soft {
-          background: rgba(214, 164, 55, 0.12);
-          color: #ffe4a0;
+          background: rgba(255, 238, 187, 0.74);
+          color: #9a6800;
         }
 
         .add-button,
@@ -2132,13 +2158,13 @@ export default function HomePage() {
         .add-button,
         .checkout-button {
           background: linear-gradient(135deg, #d6a437, #f4d17e);
-          color: #1c1408;
+          color: #2a1d0a;
         }
 
         .back-button {
-          background: rgba(255, 255, 255, 0.08);
-          color: #fff;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.9);
+          color: #5b4e3b;
+          border: 1px solid rgba(140, 105, 33, 0.08);
         }
 
         .hours-grid {
@@ -2163,13 +2189,13 @@ export default function HomePage() {
         }
 
         .status-pill.open {
-          background: rgba(29, 181, 88, 0.15);
-          color: #8ff0b3;
+          background: rgba(29, 181, 88, 0.12);
+          color: #16703a;
         }
 
         .status-pill.closed {
-          background: rgba(255, 77, 77, 0.14);
-          color: #ffadad;
+          background: rgba(255, 77, 77, 0.12);
+          color: #b64d4d;
         }
 
         .hours-list {
@@ -2184,11 +2210,11 @@ export default function HomePage() {
           gap: 16px;
           padding: 16px;
           border-radius: 18px;
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.7);
         }
 
         .hours-row span {
-          color: rgba(255, 255, 255, 0.72);
+          color: #726351;
         }
 
         .checkout-section {
@@ -2223,7 +2249,7 @@ export default function HomePage() {
         .cart-item {
           padding: 18px;
           border-radius: 20px;
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.74);
         }
 
         .cart-item-header {
@@ -2236,7 +2262,7 @@ export default function HomePage() {
         .cart-item-header small {
           display: inline-block;
           margin-top: 6px;
-          color: rgba(255, 255, 255, 0.64);
+          color: #80715f;
         }
 
         .cart-option-list {
@@ -2250,7 +2276,7 @@ export default function HomePage() {
           padding: 7px 10px;
           border-radius: 999px;
           background: rgba(214, 164, 55, 0.12);
-          color: #ffe29d;
+          color: #9a6800;
           font-size: 0.8rem;
           font-weight: 700;
         }
@@ -2260,9 +2286,10 @@ export default function HomePage() {
           align-items: center;
           gap: 12px;
           margin-top: 16px;
-          background: rgba(255, 255, 255, 0.06);
+          background: rgba(255, 255, 255, 0.9);
           border-radius: 999px;
           padding: 8px 12px;
+          border: 1px solid rgba(140, 105, 33, 0.08);
         }
 
         .quantity-box button {
@@ -2270,8 +2297,8 @@ export default function HomePage() {
           height: 34px;
           border: none;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
+          background: rgba(214, 164, 55, 0.14);
+          color: #8d6100;
           cursor: pointer;
           font-size: 1.1rem;
         }
@@ -2285,9 +2312,9 @@ export default function HomePage() {
         .switch-row button {
           flex: 1;
           min-width: 130px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.05);
-          color: #fff;
+          border: 1px solid rgba(140, 105, 33, 0.08);
+          background: rgba(255, 255, 255, 0.82);
+          color: #5a4d3a;
           border-radius: 16px;
           padding: 14px 16px;
           cursor: pointer;
@@ -2296,7 +2323,7 @@ export default function HomePage() {
 
         .switch-row button.active {
           background: linear-gradient(135deg, #d6a437, #f4d17e);
-          color: #1c1408;
+          color: #251b0b;
           border-color: transparent;
         }
 
@@ -2307,14 +2334,14 @@ export default function HomePage() {
 
         .helper-box,
         .helper-text {
-          color: rgba(255, 255, 255, 0.68);
+          color: #776956;
         }
 
         .helper-box {
           margin-top: 14px;
           padding: 14px 16px;
           border-radius: 16px;
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.7);
         }
 
         .helper-text {
@@ -2335,7 +2362,7 @@ export default function HomePage() {
         }
 
         .form-group label {
-          color: rgba(255, 255, 255, 0.84);
+          color: #5a4c39;
           font-weight: 700;
         }
 
@@ -2343,20 +2370,20 @@ export default function HomePage() {
         .form-group textarea {
           width: 100%;
           border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.06);
-          color: #fff;
+          border: 1px solid rgba(140, 105, 33, 0.08);
+          background: rgba(255, 255, 255, 0.92);
+          color: #2f251a;
           padding: 15px 16px;
           outline: none;
         }
 
         .form-group input::placeholder,
         .form-group textarea::placeholder {
-          color: rgba(255, 255, 255, 0.4);
+          color: #a59682;
         }
 
         .form-group input:disabled {
-          opacity: 0.75;
+          opacity: 0.8;
         }
 
         .summary-row {
@@ -2364,16 +2391,16 @@ export default function HomePage() {
           justify-content: space-between;
           gap: 16px;
           padding: 14px 0;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          border-bottom: 1px solid rgba(140, 105, 33, 0.08);
         }
 
         .summary-row.discount span:last-child {
-          color: #8ff0b3;
+          color: #16703a;
           font-weight: 800;
         }
 
         .summary-row.free span:last-child {
-          color: #ffe6a0;
+          color: #9b6904;
           font-weight: 800;
         }
 
@@ -2392,30 +2419,31 @@ export default function HomePage() {
         }
 
         .message.error {
-          background: rgba(255, 71, 87, 0.13);
-          color: #ffb8c0;
-          border: 1px solid rgba(255, 71, 87, 0.18);
+          background: rgba(255, 71, 87, 0.1);
+          color: #b84f57;
+          border: 1px solid rgba(255, 71, 87, 0.12);
         }
 
         .message.success {
-          background: rgba(29, 181, 88, 0.13);
-          color: #9ff4bd;
-          border: 1px solid rgba(29, 181, 88, 0.18);
+          background: rgba(29, 181, 88, 0.1);
+          color: #1c7a45;
+          border: 1px solid rgba(29, 181, 88, 0.12);
         }
 
         .empty-state {
-          color: rgba(255, 255, 255, 0.68);
+          color: #7d6f5d;
         }
 
         .modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.72);
+          background: rgba(77, 65, 44, 0.24);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 20px;
           z-index: 100;
+          backdrop-filter: blur(8px);
         }
 
         .product-modal {
@@ -2423,9 +2451,9 @@ export default function HomePage() {
           max-height: 90vh;
           overflow-y: auto;
           border-radius: 28px;
-          background: linear-gradient(180deg, #121218, #0c0c10);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 28px 80px rgba(0, 0, 0, 0.4);
+          background: linear-gradient(180deg, #fffdfa, #f8f2e8);
+          border: 1px solid rgba(140, 105, 33, 0.08);
+          box-shadow: 0 28px 80px rgba(188, 156, 91, 0.16);
           padding: 24px;
         }
 
@@ -2443,14 +2471,14 @@ export default function HomePage() {
           height: 42px;
           border-radius: 999px;
           cursor: pointer;
-          background: rgba(255, 255, 255, 0.08);
-          color: #fff;
+          background: rgba(214, 164, 55, 0.12);
+          color: #8f6202;
           font-size: 1.4rem;
         }
 
         .modal-description {
           margin: 18px 0 0;
-          color: rgba(255, 255, 255, 0.76);
+          color: #6c5e4c;
           line-height: 1.7;
         }
 
@@ -2460,6 +2488,7 @@ export default function HomePage() {
 
         .modal-section h4 {
           margin: 0 0 12px;
+          color: #2d2418;
         }
 
         .modal-choice-list {
@@ -2473,17 +2502,17 @@ export default function HomePage() {
           gap: 12px;
           align-items: center;
           width: 100%;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(140, 105, 33, 0.08);
           border-radius: 18px;
-          background: rgba(255, 255, 255, 0.04);
-          color: #fff;
+          background: rgba(255, 255, 255, 0.84);
+          color: #2d2418;
           padding: 14px 16px;
           cursor: pointer;
         }
 
         .modal-choice.active {
-          border-color: rgba(214, 164, 55, 0.65);
-          background: rgba(214, 164, 55, 0.14);
+          border-color: rgba(214, 164, 55, 0.55);
+          background: rgba(255, 244, 214, 0.9);
         }
 
         .modal-footer {
@@ -2496,11 +2525,12 @@ export default function HomePage() {
         }
 
         .modal-price-box span {
-          color: rgba(255, 255, 255, 0.66);
+          color: #7d6e5b;
         }
 
         .modal-price-box strong {
           font-size: 1.2rem;
+          color: #9b6904;
         }
 
         .added-toast {
@@ -2511,35 +2541,20 @@ export default function HomePage() {
           min-width: 280px;
           padding: 18px 18px;
           border-radius: 22px;
-          overflow: hidden;
-          background: linear-gradient(135deg, rgba(19, 19, 24, 0.92), rgba(31, 23, 10, 0.92));
-          border: 1px solid rgba(214, 164, 55, 0.22);
-          box-shadow: 0 20px 55px rgba(0, 0, 0, 0.42);
+          background: linear-gradient(135deg, #fff8e8, #fff1c9);
+          border: 1px solid rgba(214, 164, 55, 0.2);
+          box-shadow: 0 20px 40px rgba(188, 156, 91, 0.18);
           animation: toastIn 1.8s ease forwards;
-        }
-
-        .added-toast-glow {
-          position: absolute;
-          inset: -30%;
-          background: radial-gradient(circle, rgba(214, 164, 55, 0.28), transparent 48%);
-          pointer-events: none;
-          animation: rotateGlow 2.5s linear infinite;
         }
 
         .added-toast strong,
         .added-toast span {
-          position: relative;
-          z-index: 1;
           display: block;
+          color: #6b520f;
         }
 
         .added-toast strong {
-          color: #ffe8a8;
           margin-bottom: 6px;
-        }
-
-        .added-toast span {
-          color: rgba(255, 255, 255, 0.8);
         }
 
         .secret-admin-dot {
@@ -2577,15 +2592,6 @@ export default function HomePage() {
           100% {
             opacity: 0;
             transform: translateY(12px) scale(0.98);
-          }
-        }
-
-        @keyframes rotateGlow {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
           }
         }
 
@@ -2629,11 +2635,7 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
 
-          .offer-slider-card {
-            height: 440px;
-          }
-
-          .offer-slide-content {
+          .offer-text-inner {
             padding: 24px;
           }
 
