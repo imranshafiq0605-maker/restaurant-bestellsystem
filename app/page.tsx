@@ -5,8 +5,6 @@ import {
   addDoc,
   collection,
   serverTimestamp,
-  runTransaction,
-  doc,
 } from "firebase/firestore";
 import { kategorienMap, produkte, type Cuisine, type Product } from "./data/menu";
 import { db } from "./lib/firebase";
@@ -529,28 +527,10 @@ export default function HomePage() {
         : {}),
     }));
 
-    const counterRef = doc(db, "system", "orderCounter");
-
     try {
       setIsSubmitting(true);
 
-      const neueBestellnummer = await runTransaction(db, async (transaction) => {
-        const counterSnap = await transaction.get(counterRef);
-
-        if (!counterSnap.exists()) {
-          transaction.set(counterRef, { current: 1001 });
-          return 1001;
-        }
-
-        const current = counterSnap.data().current || 1000;
-        const next = current + 1;
-
-        transaction.update(counterRef, { current: next });
-        return next;
-      });
-
-      const bestellung = {
-        orderNumber: neueBestellnummer,
+      const pendingBestellung = {
         kunde: {
           name,
           telefon,
@@ -564,12 +544,14 @@ export default function HomePage() {
         gesamtpreisProdukte,
         liefergebuehr: finaleLiefergebuehr,
         gesamtpreis,
-        status: "neu",
-      
+        status: "pending_payment",
         createdAt: serverTimestamp(),
       };
 
-      const orderRef = await addDoc(collection(db, "bestellungen"), bestellung);
+      const pendingOrderRef = await addDoc(
+        collection(db, "pendingOrders"),
+        pendingBestellung
+      );
 
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
@@ -577,16 +559,9 @@ export default function HomePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          orderId: orderRef.id,
-          orderNumber: neueBestellnummer,
+          pendingOrderId: pendingOrderRef.id,
           artikel: artikelOhneUndefined,
           gesamtpreis,
-          kunde: {
-            name,
-            adresse: bestellart === "lieferung" ? adresse : "Abholung",
-            telefon,
-          },
-          bestellung,
         }),
       });
 
@@ -603,9 +578,9 @@ export default function HomePage() {
       }
 
       setFehlermeldung("Keine Stripe-URL erhalten.");
-    } catch (error) {
-      console.error("Fehler bei Bestellung oder Stripe:", error);
-      setFehlermeldung("Bestellung konnte nicht verarbeitet werden.");
+    } catch (error: any) {
+      console.error("Fehler bei pending order oder Stripe:", error);
+      setFehlermeldung(error?.message || "Bestellung konnte nicht verarbeitet werden.");
     } finally {
       setIsSubmitting(false);
     }
