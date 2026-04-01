@@ -121,6 +121,32 @@ function formatEuro(value: number) {
   return `${value.toFixed(2).replace(".", ",")} €`;
 }
 
+function formatDateInput(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatDateLabel(dateString: string) {
+  const date = new Date(`${dateString}T12:00:00`);
+  return new Intl.DateTimeFormat("de-DE", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function roundUpToNextFiveMinutes(date: Date) {
+  const rounded = new Date(date);
+  rounded.setSeconds(0, 0);
+  const minutes = rounded.getMinutes();
+  const next = Math.ceil(minutes / 5) * 5;
+  rounded.setMinutes(next);
+  return rounded;
+}
+
 function getServiceStatus(bestellart: Bestellart) {
   const jetzt = new Date();
   const tag = jetzt.getDay();
@@ -237,26 +263,91 @@ function getProductBasePrice(produkt: Product) {
   return 0;
 }
 
-function getMinVorbestellzeit() {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() + 60);
+function getPreorderWindowForDate(dateString: string) {
+  const date = new Date(`${dateString}T12:00:00`);
+  const day = date.getDay();
+  const isWeekend = day === 0 || day === 6;
 
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return `${hours}:${minutes}`;
+  return {
+    startHour: isWeekend ? 15 : 12,
+    endHour: 22,
+    isWeekend,
+  };
 }
 
-function istVorbestellungMindestensEineStundeSpaeter(uhrzeit: string) {
-  if (!uhrzeit) return false;
+function getAvailablePreorderDates(days = 21) {
+  const today = new Date();
+  return Array.from({ length: days }, (_, index) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + index);
+    return formatDateInput(d);
+  });
+}
 
-  const now = new Date();
-  const [hours, minutes] = uhrzeit.split(":").map(Number);
+function getAvailableTimeSlots(dateString: string) {
+  if (!dateString) return [];
 
-  const selected = new Date();
-  selected.setHours(hours, minutes, 0, 0);
+  const { startHour, endHour } = getPreorderWindowForDate(dateString);
+  const selectedDate = new Date(`${dateString}T00:00:00`);
+  const nowPlusOneHour = new Date(Date.now() + 60 * 60 * 1000);
 
-  return selected.getTime() - now.getTime() >= 60 * 60 * 1000;
+  const slotStart = new Date(selectedDate);
+  slotStart.setHours(startHour, 0, 0, 0);
+
+  const slotEnd = new Date(selectedDate);
+  slotEnd.setHours(endHour, 0, 0, 0);
+
+  const effectiveStart =
+    selectedDate.toDateString() === new Date().toDateString()
+      ? new Date(Math.max(slotStart.getTime(), roundUpToNextFiveMinutes(nowPlusOneHour).getTime()))
+      : slotStart;
+
+  if (effectiveStart.getTime() > slotEnd.getTime()) return [];
+
+  const slots: string[] = [];
+  const cursor = new Date(effectiveStart);
+
+  while (cursor.getTime() <= slotEnd.getTime()) {
+    const hours = String(cursor.getHours()).padStart(2, "0");
+    const minutes = String(cursor.getMinutes()).padStart(2, "0");
+    slots.push(`${hours}:${minutes}`);
+    cursor.setMinutes(cursor.getMinutes() + 15);
+  }
+
+  return slots;
+}
+
+function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
+  if (!datum || !uhrzeit) {
+    return {
+      ok: false,
+      message: "Bitte wähle Datum und Uhrzeit für die Vorbestellung.",
+    };
+  }
+
+  const slots = getAvailableTimeSlots(datum);
+  if (!slots.includes(uhrzeit)) {
+    return {
+      ok: false,
+      message:
+        "Die gewählte Vorbestellzeit ist nicht gültig. Bitte wähle einen verfügbaren Slot.",
+    };
+  }
+
+  const selected = new Date(`${datum}T${uhrzeit}:00`);
+  const minAllowed = new Date(Date.now() + 60 * 60 * 1000);
+
+  if (selected.getTime() < minAllowed.getTime()) {
+    return {
+      ok: false,
+      message: "Vorbestellungen müssen mindestens 1 Stunde in der Zukunft liegen.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: "Vorbestellung ist gültig.",
+  };
 }
 
 export default function HomePage() {
@@ -270,6 +361,7 @@ export default function HomePage() {
   const [stadt, setStadt] = useState("");
   const [hinweis, setHinweis] = useState("");
   const [vorbestellung, setVorbestellung] = useState("sofort");
+  const [vorbestellungDatum, setVorbestellungDatum] = useState(formatDateInput(new Date()));
   const [uhrzeit, setUhrzeit] = useState("");
   const [fehlermeldung, setFehlermeldung] = useState("");
   const [erfolgsmeldung, setErfolgsmeldung] = useState("");
@@ -281,6 +373,7 @@ export default function HomePage() {
   const [cartPulse, setCartPulse] = useState(false);
   const [showAddedEffect, setShowAddedEffect] = useState(false);
   const [addedProductName, setAddedProductName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariantName, setSelectedVariantName] = useState("");
@@ -290,12 +383,17 @@ export default function HomePage() {
   const [modalError, setModalError] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
-  const [minVorbestellzeit, setMinVorbestellzeit] = useState(getMinVorbestellzeit());
   const [activeSlide, setActiveSlide] = useState(0);
 
   const abholungStatus = getServiceStatus("abholung");
   const lieferStatus = getServiceStatus("lieferung");
   const status = getServiceStatus(bestellart);
+
+  const availablePreorderDates = useMemo(() => getAvailablePreorderDates(21), []);
+  const availableTimeSlots = useMemo(
+    () => getAvailableTimeSlots(vorbestellungDatum),
+    [vorbestellungDatum]
+  );
 
   const zusammengesetzteAdresse = useMemo(() => {
     if (!strasse && !hausnummer && !plz && !stadt) return "";
@@ -650,13 +748,31 @@ export default function HomePage() {
     );
   }, [activeCuisine, activeCategory]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMinVorbestellzeit(getMinVorbestellzeit());
-    }, 60000);
+  const suchbegriff = searchQuery.trim().toLowerCase();
 
-    return () => clearInterval(interval);
-  }, []);
+  const searchResultsProducts = useMemo(() => {
+    if (!suchbegriff) return [];
+    return produkte.filter((produkt) => {
+      const haystack = [
+        produkt.name,
+        produkt.description,
+        produkt.category,
+        produkt.cuisine,
+        produkt.number ? String(produkt.number) : "",
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(suchbegriff);
+    });
+  }, [suchbegriff]);
+
+  const searchResultsOffers = useMemo(() => {
+    if (!suchbegriff) return [];
+    return offerSlides.filter((offer) =>
+      `${offer.title} ${offer.text}`.toLowerCase().includes(suchbegriff)
+    );
+  }, [suchbegriff]);
 
   useEffect(() => {
     if (!status.isOpen) {
@@ -692,6 +808,31 @@ export default function HomePage() {
     const gebiet = liefergebiete[plzBereinigt];
     setStadt(gebiet ? gebiet.city : "");
   }, [plz, bestellart]);
+
+  useEffect(() => {
+    if (!availablePreorderDates.includes(vorbestellungDatum)) {
+      setVorbestellungDatum(availablePreorderDates[0]);
+    }
+  }, [availablePreorderDates, vorbestellungDatum]);
+
+  useEffect(() => {
+    if (vorbestellung !== "spaeter") return;
+
+    if (availableTimeSlots.length === 0) {
+      const nextDateWithSlots = availablePreorderDates.find(
+        (date) => getAvailableTimeSlots(date).length > 0
+      );
+
+      if (nextDateWithSlots && nextDateWithSlots !== vorbestellungDatum) {
+        setVorbestellungDatum(nextDateWithSlots);
+        return;
+      }
+    }
+
+    if (!availableTimeSlots.includes(uhrzeit)) {
+      setUhrzeit(availableTimeSlots[0] || "");
+    }
+  }, [vorbestellung, availableTimeSlots, uhrzeit, availablePreorderDates, vorbestellungDatum]);
 
   async function handleStripeCheckout() {
     setFehlermeldung("");
@@ -758,15 +899,9 @@ export default function HomePage() {
     }
 
     if (vorbestellung === "spaeter") {
-      if (!uhrzeit.trim()) {
-        setFehlermeldung("Bitte wähle eine Uhrzeit für die Vorbestellung.");
-        return;
-      }
-
-      if (!istVorbestellungMindestensEineStundeSpaeter(uhrzeit)) {
-        setFehlermeldung(
-          "Vorbestellungen müssen mindestens 1 Stunde in der Zukunft liegen."
-        );
+      const pruefung = istGueltigeVorbestellung(vorbestellungDatum, uhrzeit);
+      if (!pruefung.ok) {
+        setFehlermeldung(pruefung.message);
         return;
       }
     }
@@ -808,6 +943,7 @@ export default function HomePage() {
         bestellart,
         hinweis,
         vorbestellung,
+        datum: vorbestellung === "spaeter" ? vorbestellungDatum : formatDateInput(new Date()),
         uhrzeit: vorbestellung === "spaeter" ? uhrzeit : "sofort",
         artikel: artikelOhneUndefined,
         gesamtpreisProdukte,
@@ -878,14 +1014,15 @@ export default function HomePage() {
             </div>
 
             <div className="nav-right">
-              <div className="promo-pill dark">10% Rabatt auf alles</div>
+              <div className="promo-pill dark">10% Rabatt</div>
               <div className="promo-pill light">Versand kostenlos</div>
               <button
-                className={`cart-button ${cartPulse ? "pulse" : ""}`}
+                className={`cart-button compact ${cartPulse ? "pulse" : ""}`}
                 onClick={openCheckout}
                 type="button"
               >
-                Warenkorb
+                <span className="cart-icon">🛒</span>
+                <span className="cart-label">Warenkorb</span>
                 <span className="cart-count">{gesamtAnzahl}</span>
               </button>
             </div>
@@ -924,6 +1061,27 @@ export default function HomePage() {
                   hochwertigen Oberfläche mit flüssigen Animationen und elegantem Checkout.
                 </p>
 
+                <div className="hero-search-wrap">
+                  <div className="hero-search">
+                    <span className="hero-search-icon">⌕</span>
+                    <input
+                      type="text"
+                      placeholder="Suche nach Pizza, Pasta, Curry, Getränken ..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        className="search-clear"
+                        onClick={() => setSearchQuery("")}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="hero-stats">
                   <div className="hero-stat-card">
                     <span>Rabatt</span>
@@ -940,6 +1098,112 @@ export default function HomePage() {
                 </div>
               </div>
             </section>
+
+            {!!suchbegriff && (
+              <section className="container section-spacing">
+                <div className="section-topline">
+                  <div>
+                    <span className="eyebrow">Suche</span>
+                    <h3 className="section-title">Suchergebnisse</h3>
+                  </div>
+                  <p className="section-text">
+                    {searchResultsProducts.length + searchResultsOffers.length} Treffer für „{searchQuery}“
+                  </p>
+                </div>
+
+                {searchResultsOffers.length > 0 && (
+                  <>
+                    <div className="search-subtitle">Angebote</div>
+                    <div className="products-grid">
+                      {searchResultsOffers.map((offer) => (
+                        <article className="product-card" key={offer.title}>
+                          <div className="product-card-top">
+                            <div>
+                              <span className="product-number">Angebot</span>
+                              <h4>{offer.title}</h4>
+                            </div>
+                            <span className="product-price">{offer.price.toFixed(2)} €</span>
+                          </div>
+                          <p className="product-desc">{offer.text}</p>
+                          <button
+                            className="add-button"
+                            onClick={() => addOfferToCart(offer)}
+                            type="button"
+                          >
+                            In den Warenkorb
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {searchResultsProducts.length > 0 && (
+                  <>
+                    <div className="search-subtitle">Gerichte & Getränke</div>
+                    <div className="products-grid">
+                      {searchResultsProducts.map((produkt) => (
+                        <article className="product-card" key={`search-${produkt.id}`}>
+                          <div className="product-card-shine" />
+                          <div className="product-card-top">
+                            <div>
+                              <span className="product-number">
+                                {produkt.number ? `${produkt.number}` : "La Rosa"}
+                              </span>
+                              <h4>
+                                {produkt.number ? `${produkt.number} ` : ""}
+                                {produkt.name}
+                              </h4>
+                            </div>
+                            <span className="product-price">
+                              {getProductBasePrice(produkt).toFixed(2)} €
+                            </span>
+                          </div>
+
+                          <p className="product-desc">{produkt.description}</p>
+
+                          {produkt.variants && (
+                            <div className="mini-chip-row">
+                              {produkt.variants.map((variant) => (
+                                <span className="mini-chip" key={variant.name}>
+                                  {variant.name}: {variant.price.toFixed(2)} €
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {produkt.options && (
+                            <div className="mini-chip-row">
+                              {produkt.options.map((option) => (
+                                <span className="mini-chip soft" key={option.group}>
+                                  {option.group}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <button
+                            className="add-button"
+                            onClick={() => openProductModal(produkt)}
+                            type="button"
+                          >
+                            Hinzufügen
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {searchResultsProducts.length === 0 && searchResultsOffers.length === 0 && (
+                  <div className="glass-card">
+                    <p className="empty-state">
+                      Keine Treffer gefunden. Probiere einen anderen Suchbegriff.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
 
             <section className="container section-spacing">
               <div className="section-topline">
@@ -993,7 +1257,7 @@ export default function HomePage() {
             </section>
 
             <section className="container section-spacing">
-              {viewStep === "kitchens" && (
+              {viewStep === "kitchens" && !suchbegriff && (
                 <>
                   <div className="section-topline">
                     <div>
@@ -1034,7 +1298,8 @@ export default function HomePage() {
 
               {viewStep === "categories" &&
                 activeCuisine &&
-                activeCuisine !== "Getränke" && (
+                activeCuisine !== "Getränke" &&
+                !suchbegriff && (
                   <>
                     <div className="section-topline">
                       <div>
@@ -1080,7 +1345,7 @@ export default function HomePage() {
                   </>
                 )}
 
-              {viewStep === "products" && activeCuisine && activeCategory && (
+              {viewStep === "products" && activeCuisine && activeCategory && !suchbegriff && (
                 <>
                   <div className="section-topline">
                     <div>
@@ -1459,18 +1724,53 @@ export default function HomePage() {
                   )}
 
                   {vorbestellung === "spaeter" && (
-                    <div className="form-group">
-                      <label htmlFor="uhrzeit">Uhrzeit</label>
-                      <input
-                        id="uhrzeit"
-                        type="time"
-                        value={uhrzeit}
-                        min={minVorbestellzeit}
-                        onChange={(e) => setUhrzeit(e.target.value)}
-                      />
-                      <p className="helper-text">
-                        Früheste Vorbestellung: {minVorbestellzeit} Uhr
-                      </p>
+                    <div className="preorder-grid">
+                      <div className="form-group">
+                        <label htmlFor="vorbestellungDatum">Datum</label>
+                        <select
+                          id="vorbestellungDatum"
+                          value={vorbestellungDatum}
+                          onChange={(e) => setVorbestellungDatum(e.target.value)}
+                        >
+                          {availablePreorderDates.map((date) => (
+                            <option key={date} value={date}>
+                              {formatDateLabel(date)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="uhrzeit">Uhrzeit</label>
+                        <select
+                          id="uhrzeit"
+                          value={uhrzeit}
+                          onChange={(e) => setUhrzeit(e.target.value)}
+                        >
+                          {availableTimeSlots.length > 0 ? (
+                            availableTimeSlots.map((slot) => (
+                              <option key={slot} value={slot}>
+                                {slot} Uhr
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">Keine Uhrzeiten verfügbar</option>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="preorder-note">
+                        {(() => {
+                          const { isWeekend } = getPreorderWindowForDate(vorbestellungDatum);
+                          return isWeekend
+                            ? "Vorbestellungen am Wochenende: 15:00 bis 22:00 Uhr."
+                            : "Vorbestellungen Montag bis Freitag: 12:00 bis 22:00 Uhr.";
+                        })()}
+                      </div>
+
+                      <div className="preorder-note secondary">
+                        Vorbestellungen werden nur angezeigt, wenn sie mindestens 1 Stunde in der Zukunft liegen.
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1511,6 +1811,15 @@ export default function HomePage() {
                     <span>Gesamt</span>
                     <span>{gesamtpreis.toFixed(2)} €</span>
                   </div>
+
+                  {vorbestellung === "spaeter" && (
+                    <div className="selected-preorder-box">
+                      <span>Vorbestellung</span>
+                      <strong>
+                        {formatDateLabel(vorbestellungDatum)} · {uhrzeit || "--:--"} Uhr
+                      </strong>
+                    </div>
+                  )}
 
                   {fehlermeldung && <p className="message error">{fehlermeldung}</p>}
                   {erfolgsmeldung && (
@@ -1651,8 +1960,13 @@ export default function HomePage() {
 
         button,
         input,
-        textarea {
+        textarea,
+        select {
           font: inherit;
+        }
+
+        select {
+          appearance: none;
         }
 
         .page-shell {
@@ -1681,12 +1995,14 @@ export default function HomePage() {
           justify-content: space-between;
           gap: 20px;
           min-height: 88px;
+          padding: 10px 0;
         }
 
         .brand-box {
           display: flex;
           align-items: center;
           gap: 14px;
+          min-width: 0;
         }
 
         .logo-img {
@@ -1697,6 +2013,7 @@ export default function HomePage() {
           box-shadow: 0 12px 34px rgba(0, 0, 0, 0.08);
           border: 1px solid rgba(0, 0, 0, 0.08);
           background: white;
+          flex-shrink: 0;
         }
 
         .brand-title {
@@ -1727,6 +2044,7 @@ export default function HomePage() {
           font-size: 0.88rem;
           font-weight: 700;
           border: 1px solid rgba(0, 0, 0, 0.08);
+          white-space: nowrap;
         }
 
         .promo-pill.dark {
@@ -1756,6 +2074,25 @@ export default function HomePage() {
           box-shadow: 0 14px 30px rgba(17, 24, 39, 0.16);
         }
 
+        .cart-button.compact {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 14px;
+          min-height: 46px;
+          white-space: nowrap;
+        }
+
+        .cart-icon {
+          display: inline-flex;
+          font-size: 1rem;
+          line-height: 1;
+        }
+
+        .cart-label {
+          display: inline-flex;
+        }
+
         .cart-button:hover,
         .offer-cart-button:hover,
         .add-button:hover,
@@ -1769,7 +2106,7 @@ export default function HomePage() {
         }
 
         .cart-count {
-          margin-left: 10px;
+          margin-left: 2px;
           background: rgba(255, 255, 255, 0.14);
           padding: 4px 10px;
           border-radius: 999px;
@@ -1842,6 +2179,55 @@ export default function HomePage() {
           animation: fadeUp 1.1s ease both;
         }
 
+        .hero-search-wrap {
+          margin-top: 26px;
+          animation: fadeUp 1.2s ease both;
+        }
+
+        .hero-search {
+          width: min(760px, 100%);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 18px;
+          border-radius: 22px;
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+          backdrop-filter: blur(12px);
+        }
+
+        .hero-search-icon {
+          color: #6b7280;
+          font-size: 1.05rem;
+          flex-shrink: 0;
+        }
+
+        .hero-search input {
+          flex: 1;
+          border: none;
+          background: transparent;
+          outline: none;
+          color: #111827;
+          font-size: 1rem;
+          min-width: 0;
+        }
+
+        .hero-search input::placeholder {
+          color: #9ca3af;
+        }
+
+        .search-clear {
+          border: none;
+          background: #111827;
+          color: white;
+          width: 32px;
+          height: 32px;
+          border-radius: 999px;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
         .hero-stats {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1905,6 +2291,13 @@ export default function HomePage() {
           max-width: 440px;
           color: #6b7280;
           line-height: 1.7;
+        }
+
+        .search-subtitle {
+          margin: 22px 0 14px;
+          font-size: 1rem;
+          font-weight: 800;
+          color: #111827;
         }
 
         .slide-dots {
@@ -2463,7 +2856,8 @@ export default function HomePage() {
           font-size: 0.9rem;
         }
 
-        .form-grid {
+        .form-grid,
+        .preorder-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 16px;
@@ -2481,7 +2875,8 @@ export default function HomePage() {
         }
 
         .form-group input,
-        .form-group textarea {
+        .form-group textarea,
+        .form-group select {
           width: 100%;
           border-radius: 16px;
           border: 1px solid rgba(0, 0, 0, 0.08);
@@ -2493,7 +2888,8 @@ export default function HomePage() {
         }
 
         .form-group input:focus,
-        .form-group textarea:focus {
+        .form-group textarea:focus,
+        .form-group select:focus {
           border-color: rgba(17, 24, 39, 0.24);
           box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.06);
         }
@@ -2505,6 +2901,20 @@ export default function HomePage() {
 
         .form-group input:disabled {
           opacity: 0.82;
+        }
+
+        .preorder-note {
+          grid-column: 1 / -1;
+          padding: 14px 16px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.72);
+          color: #374151;
+          line-height: 1.6;
+          border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .preorder-note.secondary {
+          color: #6b7280;
         }
 
         .summary-row {
@@ -2530,6 +2940,24 @@ export default function HomePage() {
           font-weight: 900;
           border-bottom: none;
           padding-bottom: 0;
+        }
+
+        .selected-preorder-box {
+          margin-top: 18px;
+          padding: 16px;
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.84);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .selected-preorder-box span {
+          display: block;
+          color: #6b7280;
+          margin-bottom: 6px;
+        }
+
+        .selected-preorder-box strong {
+          color: #111827;
         }
 
         .message {
@@ -2660,6 +3088,7 @@ export default function HomePage() {
           bottom: 20px;
           z-index: 120;
           min-width: 280px;
+          max-width: calc(100vw - 32px);
           padding: 18px 18px;
           border-radius: 22px;
           background: rgba(17, 24, 39, 0.96);
@@ -2741,35 +3170,112 @@ export default function HomePage() {
           .sticky-card {
             position: static;
           }
+
+          .checkout-sidebar {
+            order: -1;
+          }
         }
 
         @media (max-width: 760px) {
-          .nav-inner,
+          .container {
+            width: min(100%, calc(100% - 20px));
+          }
+
+          .nav-inner {
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            min-height: 74px;
+          }
+
+          .brand-box {
+            flex: 1;
+            min-width: 0;
+            gap: 10px;
+          }
+
+          .logo-img {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+          }
+
+          .brand-title {
+            font-size: 1rem;
+          }
+
+          .brand-subtitle {
+            font-size: 0.76rem;
+            margin-top: 2px;
+          }
+
+          .nav-right {
+            flex-shrink: 0;
+            gap: 8px;
+          }
+
+          .promo-pill {
+            display: none;
+          }
+
+          .cart-button.compact {
+            padding: 10px 12px;
+            min-height: 42px;
+            border-radius: 14px;
+          }
+
+          .cart-label {
+            display: none;
+          }
+
+          .cart-count {
+            margin-left: 0;
+            padding: 4px 8px;
+          }
+
           .section-topline,
-          .nav-right,
           .offer-actions {
             flex-direction: column;
             align-items: stretch;
           }
 
-          .brand-box {
-            justify-content: center;
-          }
-
           .hero-banner {
-            min-height: 74vh;
+            min-height: auto;
           }
 
           .hero-content {
-            padding: 50px 0 70px;
+            padding: 40px 0 54px;
           }
 
-          .form-grid {
-            grid-template-columns: 1fr;
+          .hero-headline {
+            font-size: clamp(2rem, 10vw, 3.2rem);
+          }
+
+          .hero-copy {
+            font-size: 0.97rem;
+            line-height: 1.7;
+          }
+
+          .hero-search {
+            padding: 14px 14px;
+            border-radius: 18px;
+          }
+
+          .hero-search input {
+            font-size: 0.96rem;
           }
 
           .offer-text-inner {
             padding: 24px;
+          }
+
+          .offer-slider-text-card {
+            min-height: 420px;
+          }
+
+          .form-grid,
+          .preorder-grid {
+            grid-template-columns: 1fr;
           }
 
           .cart-item-header,
@@ -2778,6 +3284,82 @@ export default function HomePage() {
           .modal-footer {
             flex-direction: column;
             align-items: stretch;
+          }
+
+          .product-modal {
+            padding: 18px;
+            border-radius: 22px;
+          }
+
+          .section-spacing {
+            padding-top: 62px;
+          }
+
+          .site-footer {
+            margin-top: 60px;
+          }
+
+          .footer-inner {
+            gap: 14px;
+            padding: 22px 0;
+          }
+
+          .footer-links {
+            gap: 12px;
+          }
+
+          .added-toast {
+            right: 10px;
+            left: 10px;
+            bottom: 12px;
+            min-width: auto;
+          }
+
+          .checkout-section {
+            padding: 26px 0 70px;
+          }
+
+          .glass-card,
+          .hours-card,
+          .product-card,
+          .category-card-inner {
+            padding: 18px;
+          }
+
+          .switch-row button {
+            min-width: 0;
+          }
+
+          .quantity-box {
+            width: fit-content;
+          }
+
+          .hours-row {
+            flex-direction: column;
+            align-items: stretch;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .hero-badge-row {
+            gap: 8px;
+          }
+
+          .hero-chip {
+            padding: 8px 10px;
+            font-size: 0.78rem;
+          }
+
+          .section-title {
+            font-size: 1.7rem;
+          }
+
+          .offer-text-inner h4 {
+            font-size: 1.7rem;
+          }
+
+          .offer-price {
+            font-size: 1.45rem;
           }
         }
       `}</style>
