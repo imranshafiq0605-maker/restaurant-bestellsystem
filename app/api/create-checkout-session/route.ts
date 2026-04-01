@@ -15,7 +15,6 @@ export async function POST(req: Request) {
     }
 
     const stripe = new Stripe(secretKey);
-
     const data = await req.json();
 
     if (!data?.artikel || !Array.isArray(data.artikel) || data.artikel.length === 0) {
@@ -28,6 +27,18 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!data?.orderId) {
+      return new Response(
+        JSON.stringify({ error: "orderId fehlt" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const origin = new URL(req.url).origin;
+
     const lineItems = data.artikel.map((item: any) => ({
       price_data: {
         currency: "eur",
@@ -39,14 +50,39 @@ export async function POST(req: Request) {
       quantity: item.quantity || 1,
     }));
 
+    if (data.gesamtpreis && data.artikel) {
+      const artikelSumme = data.artikel.reduce(
+        (sum: number, item: any) =>
+          sum + (item.price || 0) * (item.quantity || 1),
+        0
+      );
+
+      const differenz = Math.round((data.gesamtpreis - artikelSumme) * 100);
+
+      if (differenz > 0) {
+        lineItems.push({
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: "Liefergebühr",
+            },
+            unit_amount: differenz,
+          },
+          quantity: 1,
+        });
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       line_items: lineItems,
-      success_url:
-        "https://restaurant-bestellsystem.vercel.app/order-status",
-      cancel_url:
-        "https://restaurant-bestellsystem.vercel.app",
+      success_url: `${origin}/order-status?id=${data.orderId}&paid=true`,
+      cancel_url: `${origin}`,
+      metadata: {
+        orderId: String(data.orderId),
+        orderNumber: String(data.orderNumber || ""),
+      },
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
