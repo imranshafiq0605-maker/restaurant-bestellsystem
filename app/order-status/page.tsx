@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function OrderStatusPage() {
+function OrderStatusContent() {
   const searchParams = useSearchParams();
   const amount = searchParams.get("amount") || "5.50";
 
-  const [timeLeft, setTimeLeft] = useState(900); // 15 Minuten
+  const [timeLeft, setTimeLeft] = useState(900);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,14 +25,11 @@ export default function OrderStatusPage() {
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-
   const progress = ((900 - timeLeft) / 900) * 100;
 
   return (
     <main className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
       <div className="max-w-3xl w-full space-y-6">
-
-        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Dein Bestellstatus</h1>
           <p className="text-gray-500">
@@ -40,7 +37,6 @@ export default function OrderStatusPage() {
           </p>
         </div>
 
-        {/* Status Card */}
         <div className="bg-white rounded-2xl p-6 shadow space-y-4">
           <div className="flex justify-between">
             <div>
@@ -56,7 +52,6 @@ export default function OrderStatusPage() {
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
             <div
               className="bg-black h-3 transition-all"
@@ -64,7 +59,6 @@ export default function OrderStatusPage() {
             />
           </div>
 
-          {/* Countdown */}
           <div className="text-center text-xl font-semibold">
             {timeLeft === 0
               ? "Bereit zur Abholung"
@@ -72,7 +66,6 @@ export default function OrderStatusPage() {
           </div>
         </div>
 
-        {/* Bestellung */}
         <div className="bg-white rounded-2xl p-6 shadow">
           <h2 className="font-semibold mb-4">Bestellübersicht</h2>
           <div className="flex justify-between">
@@ -82,5 +75,13 @@ export default function OrderStatusPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function OrderStatusPage() {
+  return (
+    <Suspense fallback={<p style={{ padding: 40 }}>Lädt...</p>}>
+      <OrderStatusContent />
+    </Suspense>
   );
 }
