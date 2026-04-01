@@ -26,6 +26,8 @@ type OrderData = {
   bestellart?: "abholung" | "lieferung";
   status?: string;
   bezahlt?: boolean;
+  vorbestellung?: string;
+uhrzeit?: string;
   confirmedMinutes?: number;
   lieferzeitMinuten?: number;
   estimatedMinutes?: number;
@@ -225,6 +227,8 @@ function OrderStatusContent() {
 
   const displayStatus = (() => {
     const bezahlt = order?.bezahlt || paidFromUrl;
+    const istVorbestellung = order?.vorbestellung === "spaeter";
+  const vorbestellUhrzeit = order?.uhrzeit;
 
     if (!bezahlt) {
       return {
@@ -235,7 +239,15 @@ function OrderStatusContent() {
         soft: "#fef2f2",
       };
     }
-
+if (istVorbestellung && vorbestellUhrzeit) {
+  return {
+    badge: "Vorbestellung",
+    title: `${vorbestellUhrzeit} Uhr`,
+    subtitle: "Deine Bestellung wurde als Vorbestellung gespeichert.",
+    tone: "#7c3aed",
+    soft: "#f5f3ff",
+  };
+}
     if (!confirmedMinutes || remainingSeconds === null) {
       return {
         badge: "Bezahlt",
