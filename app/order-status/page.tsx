@@ -26,12 +26,9 @@ type OrderData = {
   bestellart?: "abholung" | "lieferung";
   status?: string;
   bezahlt?: boolean;
-
-  // mögliche Zeitfelder
   confirmedMinutes?: number;
   lieferzeitMinuten?: number;
   estimatedMinutes?: number;
-
   confirmedAt?: any;
   updatedAt?: any;
   createdAt?: any;
@@ -63,13 +60,13 @@ function getDateFromFirestoreField(value: any): Date | null {
 function OrderStatusContent() {
   const searchParams = useSearchParams();
   const orderId =
-  searchParams.get("id") || searchParams.get("pendingOrderId");
-
+    searchParams.get("id") || searchParams.get("pendingOrderId");
   const paidFromUrl = searchParams.get("paid") === "true";
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [waitedTooLong, setWaitedTooLong] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -97,6 +94,19 @@ function OrderStatusContent() {
 
     return () => unsubscribe();
   }, [orderId]);
+
+  useEffect(() => {
+    if (!paidFromUrl || order) {
+      setWaitedTooLong(false);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setWaitedTooLong(true);
+    }, 15000);
+
+    return () => clearTimeout(timeout);
+  }, [paidFromUrl, order]);
 
   const confirmedMinutes = useMemo(() => {
     if (!order) return null;
@@ -149,8 +159,70 @@ function OrderStatusContent() {
     return Math.min(100, Math.max(0, ((total - remainingSeconds) / total) * 100));
   }, [confirmedMinutes, remainingSeconds]);
 
-  const displayStatus = useMemo(() => {
-    const bestellart = order?.bestellart || "abholung";
+  if (!orderId) {
+    return (
+      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "0 auto",
+            background: "#fff",
+            borderRadius: 28,
+            padding: 32,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
+          }}
+        >
+          Bestellung nicht gefunden.
+        </div>
+      </main>
+    );
+  }
+
+  if (loading) {
+    return (
+      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "0 auto",
+            background: "#fff",
+            borderRadius: 28,
+            padding: 32,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
+          }}
+        >
+          Zahlung wird verarbeitet. Bestellung wird geladen...
+        </div>
+      </main>
+    );
+  }
+
+  if (!order) {
+    return (
+      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "0 auto",
+            background: "#fff",
+            borderRadius: 28,
+            padding: 32,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
+          }}
+        >
+          {paidFromUrl && !waitedTooLong
+            ? "Zahlung erfolgreich. Bestellung wird gerade verarbeitet..."
+            : "Bestellung nicht gefunden."}
+        </div>
+      </main>
+    );
+  }
+
+  const artikel = order.artikel || [];
+  const kunde = order.kunde || {};
+  const bestellart = order.bestellart || "abholung";
+
+  const displayStatus = (() => {
     const bezahlt = order?.bezahlt || paidFromUrl;
 
     if (!bezahlt) {
@@ -203,49 +275,7 @@ function OrderStatusContent() {
       tone: "#7c3aed",
       soft: "#f5f3ff",
     };
-  }, [order, paidFromUrl, confirmedMinutes, remainingSeconds, minutes, seconds]);
-
-  if (loading) {
-    return (
-      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
-        <div
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            background: "#fff",
-            borderRadius: 28,
-            padding: 32,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-          }}
-        >
-          Lädt...
-        </div>
-      </main>
-    );
-  }
-
-  if (!orderId || !order) {
-    return (
-      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
-        <div
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            background: "#fff",
-            borderRadius: 28,
-            padding: 32,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-          }}
-        >
-          Bestellung nicht gefunden.
-        </div>
-      </main>
-    );
-  }
-
-  const artikel = order.artikel || [];
-  const kunde = order.kunde || {};
-  const bestellart = order.bestellart || "abholung";
+  })();
 
   return (
     <main
