@@ -1027,12 +1027,7 @@ if (gesamtpreisProdukte < mindestbestellwert) {
                 {bestellart === "lieferung" && (
   <div className="form-group">
     <label htmlFor="adresse">Lieferadresse</label>
-
-    <GoogleAddressInput
-      value={adresse}
-      onChange={(val) => setAdresse(val)}
-    />
-
+    <GoogleAddressInput value={adresse} onChange={setAdresse} />
   </div>
 )}
 

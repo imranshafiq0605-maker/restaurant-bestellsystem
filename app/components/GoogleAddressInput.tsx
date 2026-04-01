@@ -14,87 +14,48 @@ type Props = {
 };
 
 export default function GoogleAddressInput({ value, onChange }: Props) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let autocomplete: any = null;
 
-    async function setup() {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      if (!apiKey || !containerRef.current) return;
-
-      if (!window.google?.maps?.importLibrary) {
-        await new Promise<void>((resolve, reject) => {
-          const existing = document.querySelector(
-            'script[data-google-maps="true"]'
-          ) as HTMLScriptElement | null;
-
-          if (existing) {
-            existing.addEventListener("load", () => resolve(), { once: true });
-            existing.addEventListener("error", () => reject(), { once: true });
-            return;
-          }
-
-          const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async`;
-          script.async = true;
-          script.defer = true;
-          script.setAttribute("data-google-maps", "true");
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Google Maps konnte nicht geladen werden."));
-          document.head.appendChild(script);
-        });
+    const setupAutocomplete = () => {
+      if (!window.google || !window.google.maps || !window.google.maps.places) {
+        return;
       }
 
-      if (cancelled || !window.google?.maps?.importLibrary) return;
+      if (!inputRef.current) {
+        return;
+      }
 
-      const { PlaceAutocompleteElement } =
-        await window.google.maps.importLibrary("places");
-
-      if (cancelled || !containerRef.current) return;
-
-      containerRef.current.innerHTML = "";
-
-      const autocomplete = new PlaceAutocompleteElement({
-        includedRegionCodes: ["de"],
+      autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+        types: ["address"],
+        componentRestrictions: { country: "de" },
+        fields: ["formatted_address"],
       });
 
-      autocomplete.style.width = "100%";
-
-      autocomplete.addEventListener("gmp-select", async (event: any) => {
-        const place = event.placePrediction?.toPlace?.();
-        if (!place) return;
-
-        await place.fetchFields({
-          fields: ["formattedAddress"],
-        });
-
-        const formattedAddress = place.formattedAddress || "";
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        const formattedAddress = place?.formatted_address || "";
         onChange(formattedAddress);
       });
+    };
 
-      containerRef.current.appendChild(autocomplete);
-    }
-
-    setup().catch((error) => {
-      console.error("Google Maps Fehler:", error);
-    });
+    const timeout = setTimeout(setupAutocomplete, 300);
 
     return () => {
-      cancelled = true;
+      clearTimeout(timeout);
     };
   }, [onChange]);
 
   return (
-    <div>
-      <div ref={containerRef} />
-      <input
-        type="text"
-        placeholder="Straße, Hausnummer, PLZ, Ort"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ marginTop: 8, width: "100%" }}
-      />
-    </div>
+    <input
+      ref={inputRef}
+      id="adresse"
+      type="text"
+      placeholder="Straße, Hausnummer, PLZ, Ort"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }
