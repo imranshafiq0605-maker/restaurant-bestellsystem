@@ -106,6 +106,44 @@ function pruefeLiefergebiet(adresse: string) {
 }
 
 function getProductBasePrice(produkt: Product) {
+  function validiereTelefonnummer(telefon: string) {
+  const erlaubt = /^[\d\s()+/-]+$/;
+
+  if (!telefon.trim()) {
+    return {
+      ok: false,
+      message: "Bitte gib deine Telefonnummer ein.",
+    };
+  }
+
+  if (!erlaubt.test(telefon)) {
+    return {
+      ok: false,
+      message: "Die Telefonnummer enthält ungültige Zeichen.",
+    };
+  }
+
+  const nurZiffern = telefon.replace(/\D/g, "");
+
+  if (nurZiffern.length < 8) {
+    return {
+      ok: false,
+      message: "Die Telefonnummer ist zu kurz.",
+    };
+  }
+
+  if (nurZiffern.length > 15) {
+    return {
+      ok: false,
+      message: "Die Telefonnummer ist zu lang.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: "Telefonnummer sieht gültig aus.",
+  };
+}
   if (typeof produkt.price === "number") return produkt.price;
   if (produkt.variants?.length) return produkt.variants[0].price;
   if (produkt.options?.length) {
@@ -806,6 +844,7 @@ useEffect(() => {
                             {produkt.name}
                           </h4>
                           <span>{getProductBasePrice(produkt).toFixed(2)} €</span>
+                          
                         </div>
                         <p>{produkt.description}</p>
 
