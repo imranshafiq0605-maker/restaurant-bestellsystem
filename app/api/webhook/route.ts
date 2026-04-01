@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { doc, updateDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  runTransaction,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const signature = req.headers.get("stripe-signature")!;
+  const signature = req.headers.get("stripe-signature");
 
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
       body,
-      signature,
+      signature!,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: any) {
@@ -23,24 +31,58 @@ export async function POST(req: NextRequest) {
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
+    try {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const pendingOrderId = session.metadata?.pendingOrderId;
 
-    const orderId = session.metadata?.orderId;
-
-    if (orderId) {
-      try {
-        const orderRef = doc(db, "bestellungen", orderId);
-
-        await updateDoc(orderRef, {
-          status: "bezahlt",
-          bezahlt: true,
-          stripeSessionId: session.id,
-        });
-
-        console.log("✅ Bestellung erfolgreich auf bezahlt gesetzt:", orderId);
-      } catch (error) {
-        console.error("Fehler beim Aktualisieren der Bestellung:", error);
+      if (!pendingOrderId) {
+        console.error("pendingOrderId fehlt in Stripe metadata");
+        return NextResponse.json({ received: true });
       }
+
+      const pendingOrderRef = doc(db, "pendingOrders", pendingOrderId);
+      const pendingOrderSnap = await getDoc(pendingOrderRef);
+
+      if (!pendingOrderSnap.exists()) {
+        console.error("pendingOrder nicht gefunden:", pendingOrderId);
+        return NextResponse.json({ received: true });
+      }
+
+      const pendingOrderData = pendingOrderSnap.data();
+
+      const counterRef = doc(db, "system", "orderCounter");
+
+      const neueBestellnummer = await runTransaction(db, async (transaction) => {
+        const counterSnap = await transaction.get(counterRef);
+
+        if (!counterSnap.exists()) {
+          transaction.set(counterRef, { current: 1001 });
+          return 1001;
+        }
+
+        const current = counterSnap.data().current || 1000;
+        const next = current + 1;
+
+        transaction.update(counterRef, { current: next });
+        return next;
+      });
+
+      const finaleBestellung = {
+        ...pendingOrderData,
+        orderNumber: neueBestellnummer,
+        status: "neu",
+        bezahlt: true,
+        stripeSessionId: session.id,
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, "bestellungen"), finaleBestellung);
+
+      await deleteDoc(pendingOrderRef);
+
+      console.log("✅ Bestellung erfolgreich aus pendingOrders übernommen");
+    } catch (error) {
+      console.error("Fehler beim Verarbeiten des Webhooks:", error);
     }
   }
 
