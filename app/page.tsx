@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import GoogleAddressInput from "./components/GoogleAddressInput";
 import {
   addDoc,
   collection,
@@ -1024,17 +1025,16 @@ if (gesamtpreisProdukte < mindestbestellwert) {
                 </div>
 
                 {bestellart === "lieferung" && (
-                  <div className="form-group">
-                    <label htmlFor="adresse">Lieferadresse</label>
-                    <input
-                      id="adresse"
-                      type="text"
-                      placeholder="Straße, Hausnummer, PLZ, Ort"
-                      value={adresse}
-                      onChange={(e) => setAdresse(e.target.value)}
-                    />
-                  </div>
-                )}
+  <div className="form-group">
+    <label htmlFor="adresse">Lieferadresse</label>
+
+    <GoogleAddressInput
+      value={adresse}
+      onChange={(val) => setAdresse(val)}
+    />
+
+  </div>
+)}
 
                 {bestellart === "lieferung" && lieferPruefung && (
                   <p

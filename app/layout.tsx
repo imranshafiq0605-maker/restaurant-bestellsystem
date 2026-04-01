@@ -16,3 +16,6 @@ export default function RootLayout({
     </html>
   );
 }
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDL67NztFMAEL5Rh6OVOmnVfWLY7OHKNUY&libraries=places"
+></script>
