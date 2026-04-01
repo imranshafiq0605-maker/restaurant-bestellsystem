@@ -62,7 +62,9 @@ function getDateFromFirestoreField(value: any): Date | null {
 
 function OrderStatusContent() {
   const searchParams = useSearchParams();
-  const orderId = searchParams.get("id");
+  const orderId =
+  searchParams.get("id") || searchParams.get("pendingOrderId");
+
   const paidFromUrl = searchParams.get("paid") === "true";
 
   const [order, setOrder] = useState<OrderData | null>(null);
