@@ -25,65 +25,82 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err: any) {
-    console.error("Webhook Fehler:", err.message);
+    console.error("❌ Webhook Signatur Fehler:", err.message);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
-    try {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const pendingOrderId = session.metadata?.pendingOrderId;
-
-      if (!pendingOrderId) {
-        console.error("pendingOrderId fehlt in Stripe metadata");
-        return NextResponse.json({ received: true });
-      }
-
-      const pendingOrderRef = doc(db, "pendingOrders", pendingOrderId);
-      const pendingOrderSnap = await getDoc(pendingOrderRef);
-
-      if (!pendingOrderSnap.exists()) {
-        console.error("pendingOrder nicht gefunden:", pendingOrderId);
-        return NextResponse.json({ received: true });
-      }
-
-      const pendingOrderData = pendingOrderSnap.data();
-
-      const counterRef = doc(db, "system", "orderCounter");
-
-      const neueBestellnummer = await runTransaction(db, async (transaction) => {
-        const counterSnap = await transaction.get(counterRef);
-
-        if (!counterSnap.exists()) {
-          transaction.set(counterRef, { current: 1001 });
-          return 1001;
-        }
-
-        const current = counterSnap.data().current || 1000;
-        const next = current + 1;
-
-        transaction.update(counterRef, { current: next });
-        return next;
-      });
-
-      const finaleBestellung = {
-        ...pendingOrderData,
-        orderNumber: neueBestellnummer,
-        status: "neu",
-        bezahlt: true,
-        stripeSessionId: session.id,
-        createdAt: serverTimestamp(),
-      };
-
-      await setDoc(doc(db, "bestellungen", pendingOrderId), finaleBestellung);
-
-      await deleteDoc(pendingOrderRef);
-
-      console.log("✅ Bestellung erfolgreich aus pendingOrders übernommen:", pendingOrderId);
-    } catch (error) {
-      console.error("Fehler beim Verarbeiten des Webhooks:", error);
-    }
+  if (event.type !== "checkout.session.completed") {
+    return NextResponse.json({ received: true, ignored: true });
   }
 
-  return NextResponse.json({ received: true });
+  try {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const pendingOrderId = session.metadata?.pendingOrderId;
+
+    console.log("👉 checkout.session.completed erhalten");
+    console.log("👉 pendingOrderId:", pendingOrderId);
+
+    if (!pendingOrderId) {
+      throw new Error("pendingOrderId fehlt in Stripe metadata");
+    }
+
+    const pendingOrderRef = doc(db, "pendingOrders", pendingOrderId);
+    const pendingOrderSnap = await getDoc(pendingOrderRef);
+
+    if (!pendingOrderSnap.exists()) {
+      throw new Error(`pendingOrder nicht gefunden: ${pendingOrderId}`);
+    }
+
+    const pendingOrderData = pendingOrderSnap.data();
+    console.log("✅ pendingOrder gefunden");
+
+    const counterRef = doc(db, "system", "orderCounter");
+
+    const neueBestellnummer = await runTransaction(db, async (transaction) => {
+      const counterSnap = await transaction.get(counterRef);
+
+      if (!counterSnap.exists()) {
+        transaction.set(counterRef, { current: 1001 });
+        return 1001;
+      }
+
+      const current = counterSnap.data().current || 1000;
+      const next = current + 1;
+
+      transaction.update(counterRef, { current: next });
+      return next;
+    });
+
+    console.log("✅ neue Bestellnummer:", neueBestellnummer);
+
+    const finaleBestellung = {
+      ...pendingOrderData,
+      orderNumber: neueBestellnummer,
+      status: "neu",
+      bezahlt: true,
+      stripeSessionId: session.id,
+      createdAt: serverTimestamp(),
+    };
+
+    await setDoc(doc(db, "bestellungen", pendingOrderId), finaleBestellung);
+    console.log("✅ Bestellung in bestellungen gespeichert");
+
+    await deleteDoc(pendingOrderRef);
+    console.log("✅ pendingOrder gelöscht");
+
+    return NextResponse.json({
+      received: true,
+      success: true,
+      pendingOrderId,
+    });
+  } catch (error: any) {
+    console.error("❌ Fehler im Webhook:", error);
+    return NextResponse.json(
+      {
+        received: false,
+        error: error?.message || "Unbekannter Webhook-Fehler",
+      },
+      { status: 500 }
+    );
+  }
 }
