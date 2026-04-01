@@ -373,7 +373,6 @@ export default function HomePage() {
   const [cartPulse, setCartPulse] = useState(false);
   const [showAddedEffect, setShowAddedEffect] = useState(false);
   const [addedProductName, setAddedProductName] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariantName, setSelectedVariantName] = useState("");
@@ -748,32 +747,6 @@ export default function HomePage() {
     );
   }, [activeCuisine, activeCategory]);
 
-  const suchbegriff = searchQuery.trim().toLowerCase();
-
-  const searchResultsProducts = useMemo(() => {
-    if (!suchbegriff) return [];
-    return produkte.filter((produkt) => {
-      const haystack = [
-        produkt.name,
-        produkt.description,
-        produkt.category,
-        produkt.cuisine,
-        produkt.number ? String(produkt.number) : "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(suchbegriff);
-    });
-  }, [suchbegriff]);
-
-  const searchResultsOffers = useMemo(() => {
-    if (!suchbegriff) return [];
-    return offerSlides.filter((offer) =>
-      `${offer.title} ${offer.text}`.toLowerCase().includes(suchbegriff)
-    );
-  }, [suchbegriff]);
-
   useEffect(() => {
     if (!status.isOpen) {
       setVorbestellung("spaeter");
@@ -1007,7 +980,7 @@ export default function HomePage() {
           <div className="container nav-inner">
             <div className="brand-box">
               <img src="/images/logo.jpg" alt="La Rosa Logo" className="logo-img" />
-              <div>
+              <div className="brand-text">
                 <h1 className="brand-title">La Rosa</h1>
                 <p className="brand-subtitle">Premium Bestellsystem</p>
               </div>
@@ -1020,9 +993,9 @@ export default function HomePage() {
                 className={`cart-button compact ${cartPulse ? "pulse" : ""}`}
                 onClick={openCheckout}
                 type="button"
+                aria-label="Warenkorb öffnen"
               >
                 <span className="cart-icon">🛒</span>
-                <span className="cart-label">Warenkorb</span>
                 <span className="cart-count">{gesamtAnzahl}</span>
               </button>
             </div>
@@ -1042,7 +1015,7 @@ export default function HomePage() {
               className="hero-banner"
               style={{
                 backgroundImage:
-                  "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.72)), url('/images/hero-main.jpg')",
+                  "linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.82)), url('/images/hero-main.jpg')",
               }}
             >
               <div className="hero-noise" />
@@ -1053,34 +1026,13 @@ export default function HomePage() {
                 </div>
 
                 <h2 className="hero-headline">
-                  Modern. Klar. Ultra Premium.
+                  Modern. Klar. Hochwertig.
                 </h2>
 
                 <p className="hero-copy">
                   Italienische Küche, indische Küche und Getränke in einer modernen,
-                  hochwertigen Oberfläche mit flüssigen Animationen und elegantem Checkout.
+                  hellen und hochwertigen Oberfläche mit ruhigen Animationen und elegantem Checkout.
                 </p>
-
-                <div className="hero-search-wrap">
-                  <div className="hero-search">
-                    <span className="hero-search-icon">⌕</span>
-                    <input
-                      type="text"
-                      placeholder="Suche nach Pizza, Pasta, Curry, Getränken ..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        className="search-clear"
-                        onClick={() => setSearchQuery("")}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                </div>
 
                 <div className="hero-stats">
                   <div className="hero-stat-card">
@@ -1098,112 +1050,6 @@ export default function HomePage() {
                 </div>
               </div>
             </section>
-
-            {!!suchbegriff && (
-              <section className="container section-spacing">
-                <div className="section-topline">
-                  <div>
-                    <span className="eyebrow">Suche</span>
-                    <h3 className="section-title">Suchergebnisse</h3>
-                  </div>
-                  <p className="section-text">
-                    {searchResultsProducts.length + searchResultsOffers.length} Treffer für „{searchQuery}“
-                  </p>
-                </div>
-
-                {searchResultsOffers.length > 0 && (
-                  <>
-                    <div className="search-subtitle">Angebote</div>
-                    <div className="products-grid">
-                      {searchResultsOffers.map((offer) => (
-                        <article className="product-card" key={offer.title}>
-                          <div className="product-card-top">
-                            <div>
-                              <span className="product-number">Angebot</span>
-                              <h4>{offer.title}</h4>
-                            </div>
-                            <span className="product-price">{offer.price.toFixed(2)} €</span>
-                          </div>
-                          <p className="product-desc">{offer.text}</p>
-                          <button
-                            className="add-button"
-                            onClick={() => addOfferToCart(offer)}
-                            type="button"
-                          >
-                            In den Warenkorb
-                          </button>
-                        </article>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {searchResultsProducts.length > 0 && (
-                  <>
-                    <div className="search-subtitle">Gerichte & Getränke</div>
-                    <div className="products-grid">
-                      {searchResultsProducts.map((produkt) => (
-                        <article className="product-card" key={`search-${produkt.id}`}>
-                          <div className="product-card-shine" />
-                          <div className="product-card-top">
-                            <div>
-                              <span className="product-number">
-                                {produkt.number ? `${produkt.number}` : "La Rosa"}
-                              </span>
-                              <h4>
-                                {produkt.number ? `${produkt.number} ` : ""}
-                                {produkt.name}
-                              </h4>
-                            </div>
-                            <span className="product-price">
-                              {getProductBasePrice(produkt).toFixed(2)} €
-                            </span>
-                          </div>
-
-                          <p className="product-desc">{produkt.description}</p>
-
-                          {produkt.variants && (
-                            <div className="mini-chip-row">
-                              {produkt.variants.map((variant) => (
-                                <span className="mini-chip" key={variant.name}>
-                                  {variant.name}: {variant.price.toFixed(2)} €
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {produkt.options && (
-                            <div className="mini-chip-row">
-                              {produkt.options.map((option) => (
-                                <span className="mini-chip soft" key={option.group}>
-                                  {option.group}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          <button
-                            className="add-button"
-                            onClick={() => openProductModal(produkt)}
-                            type="button"
-                          >
-                            Hinzufügen
-                          </button>
-                        </article>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {searchResultsProducts.length === 0 && searchResultsOffers.length === 0 && (
-                  <div className="glass-card">
-                    <p className="empty-state">
-                      Keine Treffer gefunden. Probiere einen anderen Suchbegriff.
-                    </p>
-                  </div>
-                )}
-              </section>
-            )}
 
             <section className="container section-spacing">
               <div className="section-topline">
@@ -1257,7 +1103,7 @@ export default function HomePage() {
             </section>
 
             <section className="container section-spacing">
-              {viewStep === "kitchens" && !suchbegriff && (
+              {viewStep === "kitchens" && (
                 <>
                   <div className="section-topline">
                     <div>
@@ -1277,7 +1123,7 @@ export default function HomePage() {
                         onClick={() => openCuisine(card.cuisine)}
                         type="button"
                         style={{
-                          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.74)), url('${card.image}')`,
+                          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.82)), url('${card.image}')`,
                         }}
                       >
                         <div className="cuisine-card-content">
@@ -1298,8 +1144,7 @@ export default function HomePage() {
 
               {viewStep === "categories" &&
                 activeCuisine &&
-                activeCuisine !== "Getränke" &&
-                !suchbegriff && (
+                activeCuisine !== "Getränke" && (
                   <>
                     <div className="section-topline">
                       <div>
@@ -1312,7 +1157,7 @@ export default function HomePage() {
                         onClick={backFromCategories}
                         type="button"
                       >
-                        ← Zurück zu Küchen
+                        ← Zurück
                       </button>
                     </div>
 
@@ -1345,7 +1190,7 @@ export default function HomePage() {
                   </>
                 )}
 
-              {viewStep === "products" && activeCuisine && activeCategory && !suchbegriff && (
+              {viewStep === "products" && activeCuisine && activeCategory && (
                 <>
                   <div className="section-topline">
                     <div>
@@ -1952,8 +1797,8 @@ export default function HomePage() {
         body {
           margin: 0;
           background:
-            radial-gradient(circle at top left, rgba(60, 60, 60, 0.08), transparent 24%),
-            linear-gradient(180deg, #fcfcfd 0%, #f3f4f6 100%);
+            radial-gradient(circle at top left, rgba(60, 60, 60, 0.05), transparent 24%),
+            linear-gradient(180deg, #fcfcfd 0%, #f5f7fa 100%);
           color: #101214;
           font-family: Inter, Arial, sans-serif;
         }
@@ -1976,7 +1821,7 @@ export default function HomePage() {
         }
 
         .container {
-          width: min(1280px, calc(100% - 32px));
+          width: min(1220px, calc(100% - 32px));
           margin: 0 auto;
         }
 
@@ -1985,65 +1830,71 @@ export default function HomePage() {
           top: 0;
           z-index: 60;
           backdrop-filter: blur(18px);
-          background: rgba(255, 255, 255, 0.78);
-          border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.84);
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .nav-inner {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 20px;
-          min-height: 88px;
+          gap: 18px;
+          min-height: 82px;
           padding: 10px 0;
         }
 
         .brand-box {
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 12px;
+          min-width: 0;
+          flex: 1;
+        }
+
+        .brand-text {
           min-width: 0;
         }
 
         .logo-img {
-          width: 58px;
-          height: 58px;
-          border-radius: 18px;
+          width: 54px;
+          height: 54px;
+          border-radius: 16px;
           object-fit: cover;
-          box-shadow: 0 12px 34px rgba(0, 0, 0, 0.08);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.06);
           background: white;
           flex-shrink: 0;
         }
 
         .brand-title {
           margin: 0;
-          font-size: 1.2rem;
+          font-size: 1.1rem;
           font-weight: 800;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.02em;
           color: #101214;
         }
 
         .brand-subtitle {
           margin: 4px 0 0;
           color: #6b7280;
-          font-size: 0.9rem;
+          font-size: 0.86rem;
         }
 
         .nav-right {
           display: flex;
           align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
+          gap: 10px;
+          flex-wrap: nowrap;
           justify-content: flex-end;
+          flex-shrink: 0;
         }
 
         .promo-pill {
-          padding: 10px 14px;
+          padding: 9px 13px;
           border-radius: 999px;
-          font-size: 0.88rem;
+          font-size: 0.83rem;
           font-weight: 700;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.06);
           white-space: nowrap;
         }
 
@@ -2053,7 +1904,7 @@ export default function HomePage() {
         }
 
         .promo-pill.light {
-          background: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.94);
           color: #374151;
         }
 
@@ -2065,32 +1916,29 @@ export default function HomePage() {
           overflow: hidden;
           border: none;
           border-radius: 16px;
-          padding: 15px 18px;
+          padding: 14px 18px;
           background: #111827;
           color: #fff;
           font-weight: 800;
           cursor: pointer;
           transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
-          box-shadow: 0 14px 30px rgba(17, 24, 39, 0.16);
+          box-shadow: 0 14px 30px rgba(17, 24, 39, 0.14);
         }
 
         .cart-button.compact {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
-          padding: 12px 14px;
-          min-height: 46px;
-          white-space: nowrap;
+          padding: 11px 13px;
+          min-width: 48px;
+          min-height: 44px;
+          border-radius: 14px;
         }
 
         .cart-icon {
-          display: inline-flex;
           font-size: 1rem;
           line-height: 1;
-        }
-
-        .cart-label {
-          display: inline-flex;
         }
 
         .cart-button:hover,
@@ -2098,7 +1946,7 @@ export default function HomePage() {
         .add-button:hover,
         .checkout-button:hover {
           transform: translateY(-2px);
-          box-shadow: 0 20px 34px rgba(17, 24, 39, 0.22);
+          box-shadow: 0 18px 32px rgba(17, 24, 39, 0.18);
         }
 
         .cart-button.pulse {
@@ -2106,14 +1954,15 @@ export default function HomePage() {
         }
 
         .cart-count {
-          margin-left: 2px;
-          background: rgba(255, 255, 255, 0.14);
-          padding: 4px 10px;
+          background: rgba(255, 255, 255, 0.16);
+          padding: 4px 8px;
           border-radius: 999px;
+          font-size: 0.82rem;
+          line-height: 1;
         }
 
         .hero-banner {
-          min-height: 84vh;
+          min-height: 72vh;
           background-size: cover;
           background-position: center;
           position: relative;
@@ -2126,28 +1975,28 @@ export default function HomePage() {
           inset: 0;
           pointer-events: none;
           background:
-            linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.14)),
-            radial-gradient(circle at 20% 20%, rgba(255,255,255,0.35), transparent 25%);
+            linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.18)),
+            radial-gradient(circle at 20% 20%, rgba(255,255,255,0.24), transparent 25%);
         }
 
         .hero-content {
           position: relative;
           z-index: 2;
-          padding: 84px 0 96px;
+          padding: 72px 0 82px;
         }
 
         .hero-badge-row {
           display: flex;
-          gap: 12px;
+          gap: 10px;
           flex-wrap: wrap;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
           animation: fadeUp 0.7s ease both;
         }
 
         .hero-chip {
-          background: rgba(255, 255, 255, 0.84);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          padding: 10px 14px;
+          background: rgba(255, 255, 255, 0.86);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          padding: 9px 13px;
           border-radius: 999px;
           font-weight: 700;
           color: #374151;
@@ -2156,14 +2005,14 @@ export default function HomePage() {
 
         .hero-chip.accent {
           color: #111827;
-          background: rgba(243, 244, 246, 0.92);
+          background: rgba(243, 244, 246, 0.94);
         }
 
         .hero-headline {
-          max-width: 860px;
+          max-width: 760px;
           margin: 0;
-          font-size: clamp(2.5rem, 5vw, 5.1rem);
-          line-height: 0.96;
+          font-size: clamp(2.25rem, 5vw, 4.6rem);
+          line-height: 0.98;
           letter-spacing: -0.05em;
           font-weight: 900;
           color: #111827;
@@ -2171,77 +2020,28 @@ export default function HomePage() {
         }
 
         .hero-copy {
-          margin: 22px 0 0;
-          max-width: 720px;
-          font-size: 1.08rem;
+          margin: 20px 0 0;
+          max-width: 700px;
+          font-size: 1.02rem;
           line-height: 1.8;
           color: #4b5563;
           animation: fadeUp 1.1s ease both;
         }
 
-        .hero-search-wrap {
-          margin-top: 26px;
-          animation: fadeUp 1.2s ease both;
-        }
-
-        .hero-search {
-          width: min(760px, 100%);
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px 18px;
-          border-radius: 22px;
-          background: rgba(255, 255, 255, 0.88);
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
-          backdrop-filter: blur(12px);
-        }
-
-        .hero-search-icon {
-          color: #6b7280;
-          font-size: 1.05rem;
-          flex-shrink: 0;
-        }
-
-        .hero-search input {
-          flex: 1;
-          border: none;
-          background: transparent;
-          outline: none;
-          color: #111827;
-          font-size: 1rem;
-          min-width: 0;
-        }
-
-        .hero-search input::placeholder {
-          color: #9ca3af;
-        }
-
-        .search-clear {
-          border: none;
-          background: #111827;
-          color: white;
-          width: 32px;
-          height: 32px;
-          border-radius: 999px;
-          cursor: pointer;
-          flex-shrink: 0;
-        }
-
         .hero-stats {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 18px;
-          margin-top: 34px;
+          gap: 16px;
+          margin-top: 30px;
           animation: fadeUp 1.25s ease both;
         }
 
         .hero-stat-card {
           padding: 20px;
           border-radius: 22px;
-          background: rgba(255, 255, 255, 0.8);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+          background: rgba(255, 255, 255, 0.82);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-shadow: 0 16px 36px rgba(0, 0, 0, 0.06);
           backdrop-filter: blur(12px);
         }
 
@@ -2249,24 +2049,24 @@ export default function HomePage() {
           display: block;
           color: #6b7280;
           margin-bottom: 8px;
-          font-size: 0.92rem;
+          font-size: 0.9rem;
         }
 
         .hero-stat-card strong {
-          font-size: 1rem;
+          font-size: 0.98rem;
           color: #111827;
         }
 
         .section-spacing {
-          padding: 92px 0 0;
+          padding: 84px 0 0;
         }
 
         .section-topline {
           display: flex;
           align-items: end;
           justify-content: space-between;
-          gap: 20px;
-          margin-bottom: 24px;
+          gap: 18px;
+          margin-bottom: 22px;
         }
 
         .eyebrow {
@@ -2274,63 +2074,56 @@ export default function HomePage() {
           color: #6b7280;
           text-transform: uppercase;
           letter-spacing: 0.18em;
-          font-size: 0.78rem;
+          font-size: 0.75rem;
           font-weight: 800;
           margin-bottom: 8px;
         }
 
         .section-title {
           margin: 0;
-          font-size: clamp(1.8rem, 3vw, 3rem);
+          font-size: clamp(1.7rem, 3vw, 2.8rem);
           font-weight: 900;
           letter-spacing: -0.04em;
           color: #111827;
         }
 
         .section-text {
-          max-width: 440px;
+          max-width: 420px;
           color: #6b7280;
           line-height: 1.7;
         }
 
-        .search-subtitle {
-          margin: 22px 0 14px;
-          font-size: 1rem;
-          font-weight: 800;
-          color: #111827;
-        }
-
         .slide-dots {
           display: flex;
-          gap: 10px;
+          gap: 9px;
           align-items: center;
         }
 
         .slide-dot {
-          width: 12px;
-          height: 12px;
+          width: 10px;
+          height: 10px;
           border-radius: 999px;
           border: none;
-          background: rgba(17, 24, 39, 0.16);
+          background: rgba(17, 24, 39, 0.14);
           cursor: pointer;
           transition: all 0.25s ease;
         }
 
         .slide-dot.active {
-          width: 34px;
+          width: 30px;
           background: #111827;
         }
 
         .offer-slider-text-card {
           position: relative;
-          min-height: 360px;
-          border-radius: 34px;
+          min-height: 320px;
+          border-radius: 30px;
           overflow: hidden;
-          border: 1px solid rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(0, 0, 0, 0.05);
           background:
-            radial-gradient(circle at top right, rgba(17, 24, 39, 0.06), transparent 24%),
-            linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(244, 246, 248, 0.96));
-          box-shadow: 0 28px 80px rgba(0, 0, 0, 0.08);
+            radial-gradient(circle at top right, rgba(17, 24, 39, 0.04), transparent 24%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(245, 247, 250, 0.98));
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.06);
         }
 
         .offer-text-slide {
@@ -2339,7 +2132,7 @@ export default function HomePage() {
           opacity: 0;
           pointer-events: none;
           transition: opacity 0.7s ease, transform 0.7s ease;
-          transform: translateY(16px) scale(0.985);
+          transform: translateY(14px) scale(0.988);
           display: flex;
           align-items: center;
         }
@@ -2352,12 +2145,11 @@ export default function HomePage() {
 
         .offer-text-inner {
           width: 100%;
-          padding: 42px;
+          padding: 36px;
         }
 
         .offer-label {
           display: inline-flex;
-          align-self: flex-start;
           padding: 8px 12px;
           border-radius: 999px;
           background: #111827;
@@ -2368,87 +2160,88 @@ export default function HomePage() {
 
         .offer-text-inner h4 {
           margin: 0;
-          font-size: clamp(2rem, 3vw, 3.2rem);
-          line-height: 1.02;
+          font-size: clamp(1.8rem, 3vw, 3rem);
+          line-height: 1.04;
           font-weight: 900;
           color: #111827;
         }
 
         .offer-price {
           margin-top: 14px;
-          font-size: 1.8rem;
+          font-size: 1.65rem;
           font-weight: 900;
           color: #111827;
         }
 
         .offer-text-inner p {
-          margin: 18px 0 0;
-          max-width: 820px;
-          line-height: 1.85;
+          margin: 16px 0 0;
+          max-width: 780px;
+          line-height: 1.78;
           color: #4b5563;
-          font-size: 1.04rem;
+          font-size: 1rem;
         }
 
         .offer-actions {
           display: flex;
           justify-content: space-between;
-          gap: 20px;
+          gap: 18px;
           align-items: end;
-          margin-top: 28px;
+          margin-top: 24px;
           flex-wrap: wrap;
         }
 
         .offer-tags {
           display: flex;
-          gap: 12px;
+          gap: 10px;
           flex-wrap: wrap;
         }
 
         .offer-tags span {
-          padding: 10px 12px;
+          padding: 9px 11px;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.92);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          background: rgba(255, 255, 255, 0.94);
+          border: 1px solid rgba(0, 0, 0, 0.06);
           font-weight: 700;
           color: #4b5563;
+          font-size: 0.9rem;
         }
 
         .cuisine-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 22px;
+          gap: 20px;
         }
 
         .cuisine-card {
           position: relative;
-          min-height: 420px;
+          min-height: 360px;
           border: none;
-          border-radius: 30px;
+          border-radius: 28px;
           overflow: hidden;
           text-align: left;
           cursor: pointer;
           background-size: cover;
           background-position: center;
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-          box-shadow: 0 18px 44px rgba(0, 0, 0, 0.1);
+          transition: transform 0.28s ease, box-shadow 0.28s ease;
+          box-shadow: 0 16px 38px rgba(0, 0, 0, 0.08);
         }
 
         .cuisine-card:hover {
-          transform: translateY(-8px) scale(1.01);
-          box-shadow: 0 28px 60px rgba(0, 0, 0, 0.16);
+          transform: translateY(-5px);
+          box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12);
         }
 
         .cuisine-card::after {
           content: "";
           position: absolute;
           inset: 0;
-          background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.78));
+          background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.82));
         }
 
         .cuisine-card-content {
           position: absolute;
           inset: auto 0 0 0;
-          padding: 28px;
+          padding: 26px;
           z-index: 2;
         }
 
@@ -2464,20 +2257,20 @@ export default function HomePage() {
 
         .cuisine-card h4 {
           margin: 0;
-          font-size: 2rem;
+          font-size: 1.9rem;
           font-weight: 900;
           color: #111827;
         }
 
         .cuisine-card p {
-          margin: 14px 0 0;
-          line-height: 1.7;
+          margin: 12px 0 0;
+          line-height: 1.65;
           color: #374151;
         }
 
         .cuisine-link {
           display: inline-block;
-          margin-top: 18px;
+          margin-top: 16px;
           color: #111827;
           font-weight: 800;
         }
@@ -2486,17 +2279,17 @@ export default function HomePage() {
         .products-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 22px;
+          gap: 20px;
         }
 
         .category-card,
         .product-card,
         .hours-card,
         .glass-card {
-          background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          border-radius: 26px;
-          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          border-radius: 24px;
+          box-shadow: 0 14px 32px rgba(0, 0, 0, 0.05);
         }
 
         .category-card {
@@ -2504,19 +2297,19 @@ export default function HomePage() {
           cursor: pointer;
           color: inherit;
           text-align: left;
-          transition: transform 0.25s ease, box-shadow 0.25s ease;
+          transition: transform 0.24s ease, box-shadow 0.24s ease;
         }
 
         .category-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 26px 50px rgba(0, 0, 0, 0.08);
+          transform: translateY(-4px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.07);
         }
 
         .category-card-inner,
         .product-card,
         .hours-card,
         .glass-card {
-          padding: 24px;
+          padding: 22px;
         }
 
         .category-badge {
@@ -2553,7 +2346,7 @@ export default function HomePage() {
         .product-card {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 14px;
           position: relative;
           overflow: hidden;
         }
@@ -2561,13 +2354,13 @@ export default function HomePage() {
         .product-card-shine {
           position: absolute;
           inset: -200% auto auto -40%;
-          width: 120px;
+          width: 110px;
           height: 240%;
           transform: rotate(18deg);
           background: linear-gradient(
             90deg,
             rgba(255,255,255,0),
-            rgba(255,255,255,0.28),
+            rgba(255,255,255,0.25),
             rgba(255,255,255,0)
           );
           transition: transform 0.7s ease;
@@ -2575,19 +2368,19 @@ export default function HomePage() {
         }
 
         .product-card:hover .product-card-shine {
-          transform: translateX(440px) rotate(18deg);
+          transform: translateX(420px) rotate(18deg);
         }
 
         .product-card-top {
           display: flex;
           justify-content: space-between;
-          gap: 16px;
+          gap: 14px;
           align-items: start;
         }
 
         .product-number {
           display: inline-block;
-          font-size: 0.78rem;
+          font-size: 0.74rem;
           color: #6b7280;
           text-transform: uppercase;
           letter-spacing: 0.18em;
@@ -2596,12 +2389,13 @@ export default function HomePage() {
         }
 
         .product-price {
-          padding: 10px 12px;
-          border-radius: 14px;
+          padding: 9px 11px;
+          border-radius: 13px;
           background: #111827;
           color: white;
           font-weight: 800;
           white-space: nowrap;
+          font-size: 0.94rem;
         }
 
         .mini-chip-row {
@@ -2611,13 +2405,13 @@ export default function HomePage() {
         }
 
         .mini-chip {
-          padding: 8px 10px;
+          padding: 7px 10px;
           border-radius: 999px;
-          font-size: 0.82rem;
+          font-size: 0.8rem;
           font-weight: 700;
-          background: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.94);
           color: #374151;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.06);
         }
 
         .mini-chip.soft {
@@ -2627,14 +2421,14 @@ export default function HomePage() {
 
         .back-button {
           border: none;
-          border-radius: 16px;
-          padding: 15px 18px;
+          border-radius: 15px;
+          padding: 13px 16px;
           font-weight: 800;
           cursor: pointer;
           transition: transform 0.2s ease, opacity 0.2s ease;
-          background: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.94);
           color: #374151;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.06);
         }
 
         .back-button:hover {
@@ -2644,21 +2438,21 @@ export default function HomePage() {
         .hours-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 22px;
+          gap: 20px;
         }
 
         .hours-card-head {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 16px;
-          margin-bottom: 20px;
+          gap: 14px;
+          margin-bottom: 18px;
         }
 
         .status-pill {
           border-radius: 999px;
-          padding: 9px 14px;
-          font-size: 0.84rem;
+          padding: 8px 13px;
+          font-size: 0.82rem;
           font-weight: 800;
         }
 
@@ -2674,17 +2468,17 @@ export default function HomePage() {
 
         .hours-list {
           display: grid;
-          gap: 14px;
+          gap: 12px;
         }
 
         .hours-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 16px;
-          padding: 16px;
+          gap: 14px;
+          padding: 15px;
           border-radius: 18px;
-          background: rgba(255, 255, 255, 0.82);
+          background: rgba(255, 255, 255, 0.86);
         }
 
         .hours-row span {
@@ -2692,18 +2486,18 @@ export default function HomePage() {
         }
 
         .site-footer {
-          margin-top: 90px;
-          border-top: 1px solid rgba(0, 0, 0, 0.06);
-          background: rgba(255, 255, 255, 0.75);
+          margin-top: 84px;
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          background: rgba(255, 255, 255, 0.78);
           backdrop-filter: blur(12px);
         }
 
         .footer-inner {
           display: grid;
           grid-template-columns: 1fr auto auto;
-          gap: 20px;
+          gap: 18px;
           align-items: center;
-          padding: 26px 0;
+          padding: 24px 0;
         }
 
         .footer-inner p,
@@ -2714,7 +2508,7 @@ export default function HomePage() {
 
         .footer-links {
           display: flex;
-          gap: 18px;
+          gap: 16px;
           flex-wrap: wrap;
         }
 
@@ -2725,7 +2519,7 @@ export default function HomePage() {
         }
 
         .checkout-section {
-          padding: 50px 0 90px;
+          padding: 42px 0 82px;
         }
 
         .checkout-topline {
@@ -2734,35 +2528,35 @@ export default function HomePage() {
 
         .checkout-layout {
           display: grid;
-          grid-template-columns: minmax(0, 1.35fr) 400px;
-          gap: 24px;
+          grid-template-columns: minmax(0, 1.35fr) 390px;
+          gap: 22px;
         }
 
         .checkout-main {
           display: grid;
-          gap: 20px;
+          gap: 18px;
         }
 
         .sticky-card {
           position: sticky;
-          top: 110px;
+          top: 104px;
         }
 
         .cart-list {
           display: grid;
-          gap: 16px;
+          gap: 14px;
         }
 
         .cart-item {
-          padding: 18px;
-          border-radius: 20px;
-          background: rgba(255, 255, 255, 0.8);
+          padding: 16px;
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.84);
         }
 
         .cart-item-header {
           display: flex;
           justify-content: space-between;
-          gap: 16px;
+          gap: 14px;
           align-items: start;
         }
 
@@ -2770,6 +2564,7 @@ export default function HomePage() {
           display: inline-block;
           margin-top: 6px;
           color: #6b7280;
+          line-height: 1.5;
         }
 
         .cart-option-list {
@@ -2784,7 +2579,7 @@ export default function HomePage() {
           border-radius: 999px;
           background: #f3f4f6;
           color: #374151;
-          font-size: 0.8rem;
+          font-size: 0.78rem;
           font-weight: 700;
         }
 
@@ -2792,11 +2587,11 @@ export default function HomePage() {
           display: inline-flex;
           align-items: center;
           gap: 12px;
-          margin-top: 16px;
-          background: rgba(255, 255, 255, 0.94);
+          margin-top: 14px;
+          background: rgba(255, 255, 255, 0.96);
           border-radius: 999px;
           padding: 8px 12px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.06);
         }
 
         .quantity-box button {
@@ -2807,7 +2602,7 @@ export default function HomePage() {
           background: #111827;
           color: white;
           cursor: pointer;
-          font-size: 1.1rem;
+          font-size: 1.05rem;
         }
 
         .switch-row {
@@ -2819,11 +2614,11 @@ export default function HomePage() {
         .switch-row button {
           flex: 1;
           min-width: 130px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.94);
           color: #374151;
-          border-radius: 16px;
-          padding: 14px 16px;
+          border-radius: 15px;
+          padding: 13px 15px;
           cursor: pointer;
           font-weight: 800;
         }
@@ -2846,9 +2641,9 @@ export default function HomePage() {
 
         .helper-box {
           margin-top: 14px;
-          padding: 14px 16px;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.72);
+          padding: 14px 15px;
+          border-radius: 15px;
+          background: rgba(255, 255, 255, 0.74);
         }
 
         .helper-text {
@@ -2860,13 +2655,13 @@ export default function HomePage() {
         .preorder-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
+          gap: 14px;
         }
 
         .form-group {
           display: grid;
           gap: 8px;
-          margin-top: 16px;
+          margin-top: 14px;
         }
 
         .form-group label {
@@ -2878,11 +2673,11 @@ export default function HomePage() {
         .form-group textarea,
         .form-group select {
           width: 100%;
-          border-radius: 16px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          background: rgba(255, 255, 255, 0.96);
+          border-radius: 15px;
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.98);
           color: #111827;
-          padding: 15px 16px;
+          padding: 14px 15px;
           outline: none;
           transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
@@ -2890,8 +2685,8 @@ export default function HomePage() {
         .form-group input:focus,
         .form-group textarea:focus,
         .form-group select:focus {
-          border-color: rgba(17, 24, 39, 0.24);
-          box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.06);
+          border-color: rgba(17, 24, 39, 0.18);
+          box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.05);
         }
 
         .form-group input::placeholder,
@@ -2905,9 +2700,9 @@ export default function HomePage() {
 
         .preorder-note {
           grid-column: 1 / -1;
-          padding: 14px 16px;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.72);
+          padding: 14px 15px;
+          border-radius: 15px;
+          background: rgba(255, 255, 255, 0.76);
           color: #374151;
           line-height: 1.6;
           border: 1px solid rgba(0, 0, 0, 0.05);
@@ -2920,8 +2715,8 @@ export default function HomePage() {
         .summary-row {
           display: flex;
           justify-content: space-between;
-          gap: 16px;
-          padding: 14px 0;
+          gap: 14px;
+          padding: 13px 0;
           border-bottom: 1px solid rgba(0, 0, 0, 0.08);
         }
 
@@ -2936,7 +2731,7 @@ export default function HomePage() {
         }
 
         .summary-row.total {
-          font-size: 1.1rem;
+          font-size: 1.08rem;
           font-weight: 900;
           border-bottom: none;
           padding-bottom: 0;
@@ -2944,10 +2739,10 @@ export default function HomePage() {
 
         .selected-preorder-box {
           margin-top: 18px;
-          padding: 16px;
+          padding: 15px;
           border-radius: 18px;
-          background: rgba(255, 255, 255, 0.84);
-          border: 1px solid rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.86);
+          border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .selected-preorder-box span {
@@ -2958,12 +2753,13 @@ export default function HomePage() {
 
         .selected-preorder-box strong {
           color: #111827;
+          line-height: 1.6;
         }
 
         .message {
           margin-top: 16px;
-          padding: 14px 16px;
-          border-radius: 16px;
+          padding: 14px 15px;
+          border-radius: 15px;
           line-height: 1.6;
         }
 
@@ -2986,43 +2782,43 @@ export default function HomePage() {
         .modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(17, 24, 39, 0.18);
+          background: rgba(17, 24, 39, 0.2);
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 18px;
           z-index: 100;
           backdrop-filter: blur(8px);
         }
 
         .product-modal {
-          width: min(760px, 100%);
+          width: min(720px, 100%);
           max-height: 90vh;
           overflow-y: auto;
-          border-radius: 28px;
-          background: linear-gradient(180deg, #ffffff, #f7f8fa);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          box-shadow: 0 28px 80px rgba(0, 0, 0, 0.14);
-          padding: 24px;
+          border-radius: 26px;
+          background: linear-gradient(180deg, #ffffff, #f8f9fb);
+          border: 1px solid rgba(0, 0, 0, 0.07);
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.12);
+          padding: 22px;
         }
 
         .modal-header,
         .modal-footer {
           display: flex;
           justify-content: space-between;
-          gap: 16px;
+          gap: 14px;
           align-items: center;
         }
 
         .modal-close {
           border: none;
-          width: 42px;
-          height: 42px;
+          width: 40px;
+          height: 40px;
           border-radius: 999px;
           cursor: pointer;
           background: #111827;
           color: white;
-          font-size: 1.4rem;
+          font-size: 1.3rem;
         }
 
         .modal-description {
@@ -3032,7 +2828,7 @@ export default function HomePage() {
         }
 
         .modal-section {
-          margin-top: 22px;
+          margin-top: 20px;
         }
 
         .modal-section h4 {
@@ -3051,17 +2847,17 @@ export default function HomePage() {
           gap: 12px;
           align-items: center;
           width: 100%;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          border-radius: 18px;
-          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(0, 0, 0, 0.07);
+          border-radius: 17px;
+          background: rgba(255, 255, 255, 0.94);
           color: #111827;
-          padding: 14px 16px;
+          padding: 14px 15px;
           cursor: pointer;
         }
 
         .modal-choice.active {
-          border-color: rgba(17, 24, 39, 0.3);
-          background: rgba(243, 244, 246, 0.95);
+          border-color: rgba(17, 24, 39, 0.22);
+          background: rgba(243, 244, 246, 0.96);
         }
 
         .modal-footer {
@@ -3078,23 +2874,23 @@ export default function HomePage() {
         }
 
         .modal-price-box strong {
-          font-size: 1.2rem;
+          font-size: 1.15rem;
           color: #111827;
         }
 
         .added-toast {
           position: fixed;
-          right: 20px;
-          bottom: 20px;
+          right: 18px;
+          bottom: 18px;
           z-index: 120;
-          min-width: 280px;
-          max-width: calc(100vw - 32px);
-          padding: 18px 18px;
-          border-radius: 22px;
-          background: rgba(17, 24, 39, 0.96);
+          min-width: 260px;
+          max-width: calc(100vw - 28px);
+          padding: 16px 16px;
+          border-radius: 20px;
+          background: rgba(17, 24, 39, 0.97);
           color: white;
           border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 20px 40px rgba(17, 24, 39, 0.18);
+          box-shadow: 0 18px 38px rgba(17, 24, 39, 0.18);
           animation: toastIn 1.8s ease forwards;
         }
 
@@ -3148,7 +2944,7 @@ export default function HomePage() {
         @keyframes fadeUp {
           from {
             opacity: 0;
-            transform: translateY(18px);
+            transform: translateY(16px);
           }
           to {
             opacity: 1;
@@ -3176,61 +2972,74 @@ export default function HomePage() {
           }
         }
 
-        @media (max-width: 760px) {
-          .container {
-            width: min(100%, calc(100% - 20px));
-          }
-
-          .nav-inner {
-            flex-direction: row;
-            align-items: center;
-            gap: 10px;
-            min-height: 74px;
-          }
-
-          .brand-box {
-            flex: 1;
-            min-width: 0;
-            gap: 10px;
-          }
-
-          .logo-img {
-            width: 46px;
-            height: 46px;
-            border-radius: 14px;
-          }
-
-          .brand-title {
-            font-size: 1rem;
-          }
-
-          .brand-subtitle {
-            font-size: 0.76rem;
-            margin-top: 2px;
-          }
-
-          .nav-right {
-            flex-shrink: 0;
-            gap: 8px;
-          }
-
+        @media (max-width: 820px) {
           .promo-pill {
             display: none;
           }
 
-          .cart-button.compact {
-            padding: 10px 12px;
-            min-height: 42px;
+          .hero-banner {
+            min-height: auto;
+          }
+
+          .hero-content {
+            padding: 48px 0 56px;
+          }
+
+          .hero-stats {
+            gap: 12px;
+          }
+
+          .offer-slider-text-card {
+            min-height: 380px;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .container {
+            width: min(100%, calc(100% - 18px));
+          }
+
+          .nav-inner {
+            min-height: 72px;
+            gap: 10px;
+          }
+
+          .brand-box {
+            gap: 10px;
+          }
+
+          .logo-img {
+            width: 44px;
+            height: 44px;
             border-radius: 14px;
           }
 
-          .cart-label {
-            display: none;
+          .brand-title {
+            font-size: 0.98rem;
+          }
+
+          .brand-subtitle {
+            font-size: 0.74rem;
+            margin-top: 2px;
+          }
+
+          .nav-right {
+            gap: 8px;
+          }
+
+          .cart-button.compact {
+            min-width: 42px;
+            min-height: 42px;
+            padding: 10px 11px;
+          }
+
+          .cart-icon {
+            font-size: 0.95rem;
           }
 
           .cart-count {
-            margin-left: 0;
-            padding: 4px 8px;
+            padding: 4px 7px;
+            font-size: 0.76rem;
           }
 
           .section-topline,
@@ -3239,38 +3048,17 @@ export default function HomePage() {
             align-items: stretch;
           }
 
-          .hero-banner {
-            min-height: auto;
-          }
-
-          .hero-content {
-            padding: 40px 0 54px;
-          }
-
           .hero-headline {
-            font-size: clamp(2rem, 10vw, 3.2rem);
+            font-size: clamp(2rem, 10vw, 3rem);
           }
 
           .hero-copy {
-            font-size: 0.97rem;
-            line-height: 1.7;
-          }
-
-          .hero-search {
-            padding: 14px 14px;
-            border-radius: 18px;
-          }
-
-          .hero-search input {
             font-size: 0.96rem;
+            line-height: 1.72;
           }
 
           .offer-text-inner {
-            padding: 24px;
-          }
-
-          .offer-slider-text-card {
-            min-height: 420px;
+            padding: 22px;
           }
 
           .form-grid,
@@ -3292,11 +3080,11 @@ export default function HomePage() {
           }
 
           .section-spacing {
-            padding-top: 62px;
+            padding-top: 60px;
           }
 
           .site-footer {
-            margin-top: 60px;
+            margin-top: 56px;
           }
 
           .footer-inner {
@@ -3316,7 +3104,7 @@ export default function HomePage() {
           }
 
           .checkout-section {
-            padding: 26px 0 70px;
+            padding: 24px 0 66px;
           }
 
           .glass-card,
@@ -3330,36 +3118,50 @@ export default function HomePage() {
             min-width: 0;
           }
 
-          .quantity-box {
-            width: fit-content;
-          }
-
           .hours-row {
             flex-direction: column;
             align-items: stretch;
           }
+
+          .cuisine-card {
+            min-height: 300px;
+          }
         }
 
-        @media (max-width: 420px) {
+        @media (max-width: 480px) {
           .hero-badge-row {
             gap: 8px;
           }
 
           .hero-chip {
             padding: 8px 10px;
-            font-size: 0.78rem;
+            font-size: 0.76rem;
           }
 
           .section-title {
-            font-size: 1.7rem;
+            font-size: 1.58rem;
           }
 
           .offer-text-inner h4 {
-            font-size: 1.7rem;
+            font-size: 1.6rem;
           }
 
           .offer-price {
-            font-size: 1.45rem;
+            font-size: 1.35rem;
+          }
+
+          .product-price {
+            font-size: 0.86rem;
+            padding: 8px 10px;
+          }
+
+          .quantity-box button {
+            width: 32px;
+            height: 32px;
+          }
+
+          .modal-choice {
+            padding: 13px 14px;
           }
         }
       `}</style>
