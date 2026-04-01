@@ -1125,7 +1125,34 @@ export default function HomePage() {
                 ))}
               </div>
             </section>
+<section className="container opening-hours-section">
+  <div className="opening-hours-card">
+    <div className="opening-hours-header">
+      <span className="eyebrow">Öffnungszeiten</span>
+      <h3 className="section-title small">Heute</h3>
 
+      <span
+        className={`status-badge ${status.isOpen ? "open" : "closed"}`}
+      >
+        {status.isOpen ? "Geöffnet" : "Geschlossen"}
+      </span>
+    </div>
+
+    <div className="opening-hours-grid">
+      <div className="opening-col">
+        <h4>Abholung</h4>
+        <p>Mo–Fr: 11:00 – 23:00</p>
+        <p>Sa–So: 14:00 – 23:00</p>
+      </div>
+
+      <div className="opening-col">
+        <h4>Lieferung</h4>
+        <p>Mo–Fr: 11:00 – 22:30</p>
+        <p>Sa–So: 14:00 – 22:30</p>
+      </div>
+    </div>
+  </div>
+</section>
             <footer className="site-footer">
               <div className="container footer-inner">
                 <div>
