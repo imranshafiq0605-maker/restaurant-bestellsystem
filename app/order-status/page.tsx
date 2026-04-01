@@ -109,15 +109,16 @@ function OrderStatusContent() {
   }, [paidFromUrl, order]);
 
   const confirmedMinutes = useMemo(() => {
-    if (!order) return null;
+  if (!order) return null;
 
-    const value =
-      order.confirmedMinutes ??
-      order.lieferzeitMinuten ??
-      order.estimatedMinutes;
+  const value =
+    (order as any).annahmeZeitMinuten ??
+    (order as any).confirmedMinutes ??
+    (order as any).lieferzeitMinuten ??
+    (order as any).estimatedMinutes;
 
-    return typeof value === "number" && value > 0 ? value : null;
-  }, [order]);
+  return typeof value === "number" && value > 0 ? value : null;
+}, [order]);
 
   const countdownStart = useMemo(() => {
     if (!order || !confirmedMinutes) return null;
