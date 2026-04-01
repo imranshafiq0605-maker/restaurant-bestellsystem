@@ -564,8 +564,8 @@ export default function HomePage() {
         gesamtpreisProdukte,
         liefergebuehr: finaleLiefergebuehr,
         gesamtpreis,
-        status: "payment_pending",
-        bezahlt: false,
+        status: "neu",
+      
         createdAt: serverTimestamp(),
       };
 
