@@ -1,18 +1,15 @@
 export default function Datenschutz() {
   return (
-    <main className="legal-page">
-      <h1>Datenschutzerklärung</h1>
+    <div className="legal-wrapper">
+      <div className="legal-card">
+        <h1>Datenschutzerklärung</h1>
 
-      <section>
         <h2>1. Allgemeine Hinweise</h2>
         <p>
           Der Schutz Ihrer persönlichen Daten ist uns ein besonderes Anliegen.
-          Wir verarbeiten Ihre Daten daher ausschließlich auf Grundlage der
-          gesetzlichen Bestimmungen (DSGVO).
+          Wir verarbeiten Ihre personenbezogenen Daten vertraulich und gemäß den gesetzlichen Datenschutzvorschriften (DSGVO).
         </p>
-      </section>
 
-      <section>
         <h2>2. Verantwortlicher</h2>
         <p>
           La Rosa GmbH<br />
@@ -20,48 +17,46 @@ export default function Datenschutz() {
           [PLZ Ort]<br />
           E-Mail: [DEINE EMAIL]
         </p>
-      </section>
 
-      <section>
-        <h2>3. Datenerfassung auf unserer Website</h2>
+        <h2>3. Hosting</h2>
         <p>
-          Ihre Daten werden zum einen dadurch erhoben, dass Sie uns diese
-          mitteilen, z.B. durch Eingabe in ein Bestellformular.
+          Unsere Website wird über Vercel Inc. gehostet. Dabei können technische Daten wie IP-Adressen verarbeitet werden.
         </p>
-      </section>
 
-      <section>
-        <h2>4. Verarbeitung von Bestellungen</h2>
-        <p>
-          Zur Abwicklung Ihrer Bestellung verarbeiten wir folgende Daten:
-          Name, Telefonnummer, E-Mail-Adresse sowie Lieferadresse.
-        </p>
-      </section>
+        <h2>4. Erhebung von Daten</h2>
+        <p>Beim Besuch unserer Website werden automatisch folgende Daten erfasst:</p>
+        <ul>
+          <li>IP-Adresse</li>
+          <li>Browser</li>
+          <li>Uhrzeit</li>
+          <li>Referrer</li>
+        </ul>
 
-      <section>
-        <h2>5. Zahlungsabwicklung (Stripe)</h2>
+        <h2>5. Bestellung</h2>
         <p>
-          Die Zahlungsabwicklung erfolgt über den Anbieter Stripe.
-          Anbieter ist Stripe Inc., USA.
-          Dabei werden Zahlungsdaten an Stripe übermittelt.
+          Im Rahmen einer Bestellung erfassen wir personenbezogene Daten wie Name, Adresse, Telefonnummer und E-Mail-Adresse.
         </p>
-      </section>
 
-      <section>
-        <h2>6. Speicherdauer</h2>
+        <h2>6. Zahlungsanbieter</h2>
         <p>
-          Ihre Daten werden nur so lange gespeichert, wie dies zur
-          Abwicklung der Bestellung erforderlich ist.
+          Zahlungen erfolgen über Stripe. Dabei werden Zahlungsdaten an Stripe übermittelt.
         </p>
-      </section>
 
-      <section>
-        <h2>7. Ihre Rechte</h2>
+        <h2>7. Speicherung</h2>
         <p>
-          Sie haben jederzeit das Recht auf Auskunft, Berichtigung,
-          Löschung und Einschränkung der Verarbeitung Ihrer Daten.
+          Daten werden nur so lange gespeichert, wie es zur Abwicklung notwendig ist.
         </p>
-      </section>
-    </main>
+
+        <h2>8. Rechte</h2>
+        <p>
+          Sie haben das Recht auf Auskunft, Löschung und Berichtigung Ihrer Daten.
+        </p>
+
+        <h2>9. SSL-Verschlüsselung</h2>
+        <p>
+          Diese Seite nutzt SSL-Verschlüsselung zur sicheren Übertragung von Daten.
+        </p>
+      </div>
+    </div>
   );
 }

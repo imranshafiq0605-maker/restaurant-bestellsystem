@@ -1,29 +1,24 @@
 export default function Widerruf() {
   return (
-    <main className="legal-page">
-      <h1>Widerrufsbelehrung</h1>
+    <div className="legal-wrapper">
+      <div className="legal-card">
+        <h1>Widerrufsbelehrung</h1>
 
-      <section>
         <h2>Widerrufsrecht</h2>
         <p>
-          Verbraucher haben grundsätzlich ein Widerrufsrecht.
+          Verbraucher haben grundsätzlich ein Widerrufsrecht von 14 Tagen.
         </p>
-      </section>
 
-      <section>
-        <h2>Ausschluss des Widerrufsrechts</h2>
+        <h2>Ausschluss</h2>
         <p>
-          Das Widerrufsrecht besteht nicht bei Verträgen zur Lieferung
-          von Speisen, da diese schnell verderblich sind.
+          Bei Lieferung von Speisen besteht kein Widerrufsrecht, da diese verderblich sind.
         </p>
-      </section>
 
-      <section>
-        <h2>Folgen des Widerrufs</h2>
+        <h2>Folgen</h2>
         <p>
-          Im Falle eines wirksamen Widerrufs werden alle Zahlungen erstattet.
+          Im Falle eines Widerrufs werden Zahlungen erstattet.
         </p>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

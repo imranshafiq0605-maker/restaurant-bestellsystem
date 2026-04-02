@@ -1,9 +1,9 @@
 export default function Impressum() {
   return (
-    <main className="legal-page">
-      <h1>Impressum</h1>
+    <div className="legal-wrapper">
+      <div className="legal-card">
+        <h1>Impressum</h1>
 
-      <section>
         <p>
           La Rosa GmbH<br />
           [Straße Hausnummer]<br />
@@ -15,11 +15,7 @@ export default function Impressum() {
           Telefon: [DEINE NUMMER]<br />
           E-Mail: [DEINE EMAIL]
         </p>
-
-        <p>
-          Umsatzsteuer-ID: [falls vorhanden]
-        </p>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
