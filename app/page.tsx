@@ -904,34 +904,7 @@ const status = specialClosed
       };
     });
   });
-  useEffect(() => {
-  const todayId = formatDateId(new Date());
-  const closureRef = doc(db, "specialClosures", todayId);
-
-  const unsubscribe = onSnapshot(
-    closureRef,
-    (closureSnap) => {
-      if (closureSnap.exists()) {
-        const data = closureSnap.data();
-        setSpecialClosed(!!data.closed);
-        setSpecialClosedReason(data.reason || "");
-      } else {
-        setSpecialClosed(false);
-        setSpecialClosedReason("");
-      }
-
-      setSpecialClosedLoading(false);
-    },
-    (error) => {
-      console.error("Fehler beim Laden der Sonder-Öffnungszeiten:", error);
-      setSpecialClosed(false);
-      setSpecialClosedReason("");
-      setSpecialClosedLoading(false);
-    }
-  );
-
-  return () => unsubscribe();
-}, []);
+  
 
   setSelectedOptionsPriceMap(recalculatedPriceMap);
 }, [selectedVariantName, selectedProduct, selectedOptionsMap]);
