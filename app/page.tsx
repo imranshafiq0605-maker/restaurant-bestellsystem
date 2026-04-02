@@ -4,8 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
   collection,
-  doc,
-  onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
 import {
@@ -36,10 +34,20 @@ type LiefergebietConfig = {
   minOrder: number;
 };
 
+type OfferChoiceGroup = {
+  key: string;
+  title: string;
+  required: boolean;
+  min: number;
+  max: number;
+  productIds: number[];
+};
+
 type OfferSlide = {
   title: string;
   price: number;
   text: string;
+  groups: OfferChoiceGroup[];
 };
 
 const liefergebiete: Record<string, LiefergebietConfig> = {
@@ -59,41 +67,154 @@ const liefergebiete: Record<string, LiefergebietConfig> = {
   "64521": { city: "Groß-Gerau", minOrder: 30 },
 };
 
+const familienPizzaIds = produkte
+  .filter(
+    (p) =>
+      p.category === "Pizza / Calzone" &&
+      p.variants?.some((v) => v.name === "Groß 36cm")
+  )
+  .map((p) => p.id);
+
+const kleinePizzaIds = produkte
+  .filter(
+    (p) =>
+      p.category === "Pizza / Calzone" &&
+      p.variants?.some((v) => v.name === "Klein 24cm")
+  )
+  .map((p) => p.id);
+
+const normalePizzaIds = produkte
+  .filter(
+    (p) =>
+      p.category === "Pizza / Calzone" &&
+      p.variants?.some((v) => v.name === "Normal 31cm")
+  )
+  .map((p) => p.id);
+
+const pastaIds = produkte
+  .filter((p) => p.category === "Pasta")
+  .map((p) => p.id);
+
+const schnitzelIds = produkte
+  .filter((p) => p.category === "Schnitzel")
+  .map((p) => p.id);
+
+const salatIds = produkte
+  .filter((p) => p.category === "Salate")
+  .map((p) => p.id);
+
+const indischeGerichteIds = produkte
+  .filter((p) => p.category === "Indische Hauptspeisen")
+  .map((p) => p.id);
+
+const getraenke1LIds = produkte
+  .filter((p) => {
+    const text = `${p.name} ${p.description || ""}`.toLowerCase();
+    return (
+      p.cuisine === "Getränke" &&
+      (text.includes("1l") ||
+        text.includes("1,0") ||
+        text.includes("1 liter") ||
+        text.includes("1-liter"))
+    );
+  })
+  .map((p) => p.id);
+
 const offerSlides: OfferSlide[] = [
   {
     title: "Angebot 1",
     price: 34.5,
     text: "2 Familien Pizzen 36 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
+    groups: [
+      {
+        key: "pizza1",
+        title: "Familienpizza 1 wählen",
+        required: true,
+        min: 1,
+        max: 1,
+        productIds: familienPizzaIds,
+      },
+      {
+        key: "pizza2",
+        title: "Familienpizza 2 wählen",
+        required: true,
+        min: 1,
+        max: 1,
+        productIds: familienPizzaIds,
+      },
+      {
+        key: "drink",
+        title: "1 Liter Getränk wählen",
+        required: true,
+        min: 1,
+        max: 1,
+        productIds: getraenke1LIds,
+      },
+    ],
   },
   {
     title: "Angebot 2",
     price: 22.5,
     text: "3 kleine Pizzen 24 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
+    groups: [
+      { key: "pizza1", title: "Kleine Pizza 1 wählen", required: true, min: 1, max: 1, productIds: kleinePizzaIds },
+      { key: "pizza2", title: "Kleine Pizza 2 wählen", required: true, min: 1, max: 1, productIds: kleinePizzaIds },
+      { key: "pizza3", title: "Kleine Pizza 3 wählen", required: true, min: 1, max: 1, productIds: kleinePizzaIds },
+      { key: "drink", title: "1 Liter Getränk wählen", required: true, min: 1, max: 1, productIds: getraenke1LIds },
+    ],
   },
   {
     title: "Angebot 3",
     price: 37.5,
     text: "3 normale Pizzen 31 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
+    groups: [
+      { key: "pizza1", title: "Normale Pizza 1 wählen", required: true, min: 1, max: 1, productIds: normalePizzaIds },
+      { key: "pizza2", title: "Normale Pizza 2 wählen", required: true, min: 1, max: 1, productIds: normalePizzaIds },
+      { key: "pizza3", title: "Normale Pizza 3 wählen", required: true, min: 1, max: 1, productIds: normalePizzaIds },
+      { key: "drink", title: "1 Liter Getränk wählen", required: true, min: 1, max: 1, productIds: getraenke1LIds },
+    ],
   },
   {
     title: "Angebot 4",
     price: 23.5,
     text: "2 Nudeln nach Wahl / 1 Liter Cola, Fanta oder Bizzl",
+    groups: [
+      { key: "pasta1", title: "Nudel 1 wählen", required: true, min: 1, max: 1, productIds: pastaIds },
+      { key: "pasta2", title: "Nudel 2 wählen", required: true, min: 1, max: 1, productIds: pastaIds },
+      { key: "drink", title: "1 Liter Getränk wählen", required: true, min: 1, max: 1, productIds: getraenke1LIds },
+    ],
   },
   {
     title: "Angebot 5",
     price: 32.5,
     text: "2x Schnitzel nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
+    groups: [
+      { key: "schnitzel1", title: "Schnitzel 1 wählen", required: true, min: 1, max: 1, productIds: schnitzelIds },
+      { key: "schnitzel2", title: "Schnitzel 2 wählen", required: true, min: 1, max: 1, productIds: schnitzelIds },
+      { key: "drink", title: "1 Liter Getränk wählen", required: true, min: 1, max: 1, productIds: getraenke1LIds },
+    ],
   },
   {
     title: "Angebot 6",
     price: 53.5,
     text: "1 normale Pizza 31 cm nach Ihrer Wahl / 1 Schnitzel nach Ihrer Wahl / 1 Nudel nach Ihrer Wahl / 1 Salat nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzl",
+    groups: [
+      { key: "pizza", title: "Normale Pizza wählen", required: true, min: 1, max: 1, productIds: normalePizzaIds },
+      { key: "schnitzel", title: "Schnitzel wählen", required: true, min: 1, max: 1, productIds: schnitzelIds },
+      { key: "pasta", title: "Nudel wählen", required: true, min: 1, max: 1, productIds: pastaIds },
+      { key: "salat", title: "Salat wählen", required: true, min: 1, max: 1, productIds: salatIds },
+      { key: "drink", title: "1 Liter Getränk wählen", required: true, min: 1, max: 1, productIds: getraenke1LIds },
+    ],
   },
   {
     title: "Angebot 452",
     price: 33.5,
     text: "2 indische Gerichte nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzl",
+    groups: [
+      { key: "indisch1", title: "Indisches Gericht 1 wählen", required: true, min: 1, max: 1, productIds: indischeGerichteIds },
+      { key: "indisch2", title: "Indisches Gericht 2 wählen", required: true, min: 1, max: 1, productIds: indischeGerichteIds },
+      { key: "drink", title: "1 Liter Getränk wählen", required: true, min: 1, max: 1, productIds: getraenke1LIds },
+    ],
   },
 ];
 
@@ -125,12 +246,6 @@ const cuisineCards: {
 
 function formatEuro(value: number) {
   return `${value.toFixed(2).replace(".", ",")} €`;
-}
-function formatDateId(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function formatDateInput(date: Date) {
@@ -211,6 +326,7 @@ function validiereTelefonnummer(telefon: string) {
     message: "Telefonnummer sieht gültig aus.",
   };
 }
+
 function validiereEmail(email: string) {
   const emailBereinigt = email.trim();
 
@@ -221,10 +337,12 @@ function validiereEmail(email: string) {
     };
   }
 
-  if (!emailBereinigt.includes("@")) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(emailBereinigt)) {
     return {
       ok: false,
-      message: "Bitte gib eine E-Mail-Adresse mit @ ein.",
+      message: "Bitte gib eine gültige E-Mail-Adresse ein.",
     };
   }
 
@@ -398,8 +516,9 @@ function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
 
 export default function HomePage() {
   const MANUAL_NOTICE_ACTIVE = false;
-const MANUAL_NOTICE_TEXT = "Heute öffnen wir erst um 14:00 Uhr.";
-const MANUAL_CHECKOUT_BLOCKED = false;
+  const MANUAL_NOTICE_TEXT = "Heute öffnen wir erst um 14:00 Uhr.";
+  const MANUAL_CHECKOUT_BLOCKED = false;
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [bestellart, setBestellart] = useState<Bestellart>("abholung");
   const [name, setName] = useState("");
@@ -418,9 +537,10 @@ const MANUAL_CHECKOUT_BLOCKED = false;
   const [fehlermeldung, setFehlermeldung] = useState("");
   const [erfolgsmeldung, setErfolgsmeldung] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [specialClosed, setSpecialClosed] = useState(false);
-const [specialClosedReason, setSpecialClosedReason] = useState("");
-const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
+  const [specialClosedReason, setSpecialClosedReason] = useState("");
+  const [specialClosedLoading] = useState(false);
 
   const [viewStep, setViewStep] = useState<ViewStep>("kitchens");
   const [activeCuisine, setActiveCuisine] = useState<Cuisine | null>(null);
@@ -436,18 +556,21 @@ const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
     Record<string, string[]>
   >({});
   const [selectedOptionsPriceMap, setSelectedOptionsPriceMap] = useState<
-  Record<string, { name: string; price: number }[]>
->({});
+    Record<string, { name: string; price: number }[]>
+  >({});
   const [modalError, setModalError] = useState("");
+
+  const [selectedOffer, setSelectedOffer] = useState<OfferSlide | null>(null);
+  const [selectedOfferChoices, setSelectedOfferChoices] = useState<
+    Record<string, number[]>
+  >({});
+  const [offerModalError, setOfferModalError] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
   const offersTrackRef = useRef<HTMLDivElement | null>(null);
 
   const baseStatus = getServiceStatus(bestellart);
-
-const status = specialClosed
-  ? { isOpen: false }
-  : baseStatus;
+  const status = specialClosed ? { isOpen: false } : baseStatus;
 
   const availablePreorderDates = useMemo(() => getAvailablePreorderDates(21), []);
   const availableTimeSlots = useMemo(
@@ -537,8 +660,72 @@ const status = specialClosed
     setTimeout(() => setShowAddedEffect(false), 1800);
   }
 
-  function addOfferToCart(offer: OfferSlide) {
-    const uniqueKey = `offer-${offer.title}`;
+  function openOfferModal(offer: OfferSlide) {
+    setSelectedOffer(offer);
+    setOfferModalError("");
+
+    const initialChoices: Record<string, number[]> = {};
+    offer.groups.forEach((group) => {
+      initialChoices[group.key] = [];
+    });
+
+    setSelectedOfferChoices(initialChoices);
+  }
+
+  function closeOfferModal() {
+    setSelectedOffer(null);
+    setSelectedOfferChoices({});
+    setOfferModalError("");
+  }
+
+  function handleOfferChoice(groupKey: string, productId: number, max: number) {
+    setSelectedOfferChoices((prev) => {
+      const current = prev[groupKey] || [];
+
+      if (max === 1) {
+        return {
+          ...prev,
+          [groupKey]: [productId],
+        };
+      }
+
+      if (current.includes(productId)) {
+        return {
+          ...prev,
+          [groupKey]: current.filter((id) => id !== productId),
+        };
+      }
+
+      if (current.length >= max) return prev;
+
+      return {
+        ...prev,
+        [groupKey]: [...current, productId],
+      };
+    });
+  }
+
+  function confirmOfferSelection() {
+    if (!selectedOffer) return;
+
+    for (const group of selectedOffer.groups) {
+      const selected = selectedOfferChoices[group.key] || [];
+
+      if (group.required && selected.length < group.min) {
+        setOfferModalError(`Bitte wähle etwas bei "${group.title}" aus.`);
+        return;
+      }
+    }
+
+    const selectedTexts = selectedOffer.groups.flatMap((group) => {
+      const selectedIds = selectedOfferChoices[group.key] || [];
+      return selectedIds.map((id) => {
+        const produkt = produkte.find((p) => p.id === id);
+        return `${group.title}: ${produkt?.name || "Unbekannt"}`;
+      });
+    });
+
+    const uniqueKey = `offer-${selectedOffer.title}-${selectedTexts.join("|")}`;
 
     setCart((prevCart) => {
       const found = prevCart.find((item) => item.uniqueKey === uniqueKey);
@@ -555,18 +742,19 @@ const status = specialClosed
         ...prevCart,
         {
           id: Date.now(),
-          name: offer.title,
-          price: offer.price,
+          name: selectedOffer.title,
+          price: selectedOffer.price,
           quantity: 1,
           category: "Angebote",
           cuisine: "Angebote",
-          selectedOptions: [offer.text],
+          selectedOptions: selectedTexts,
           uniqueKey,
         },
       ];
     });
 
-    triggerAddFeedback(offer.title);
+    triggerAddFeedback(selectedOffer.title);
+    closeOfferModal();
   }
 
   function openProductModal(produkt: Product) {
@@ -596,27 +784,27 @@ const status = specialClosed
     const initialOptionPrices: Record<string, { name: string; price: number }[]> = {};
 
     produkt.options?.forEach((group) => {
-  if (group.required && group.items.length > 0) {
-    const firstItem = group.items[0];
-    const firstPrice =
-      typeof firstItem.price === "number"
-        ? firstItem.price
-        : firstItem.priceByVariant?.[
-            produkt.variants?.[0]?.name || selectedVariantName
-          ] || 0;
+      if (group.required && group.items.length > 0) {
+        const firstItem = group.items[0];
+        const firstPrice =
+          typeof firstItem.price === "number"
+            ? firstItem.price
+            : firstItem.priceByVariant?.[
+                produkt.variants?.[0]?.name || selectedVariantName
+              ] || 0;
 
-    initialOptions[group.group] = [firstItem.name];
-    initialOptionPrices[group.group] = [
-      {
-        name: firstItem.name,
-        price: firstPrice,
-      },
-    ];
-  } else {
-    initialOptions[group.group] = [];
-    initialOptionPrices[group.group] = [];
-  }
-});
+        initialOptions[group.group] = [firstItem.name];
+        initialOptionPrices[group.group] = [
+          {
+            name: firstItem.name,
+            price: firstPrice,
+          },
+        ];
+      } else {
+        initialOptions[group.group] = [];
+        initialOptionPrices[group.group] = [];
+      }
+    });
 
     setSelectedOptionsMap(initialOptions);
     setSelectedOptionsPriceMap(initialOptionPrices);
@@ -628,80 +816,77 @@ const status = specialClosed
   }
 
   function handleOptionChange(
-  groupName: string,
-  itemName: string,
-  itemPrice: number,
-  multiple?: boolean
-) {
-  setSelectedOptionsMap((prev) => {
-    const current = prev[groupName] || [];
+    groupName: string,
+    itemName: string,
+    itemPrice: number,
+    multiple?: boolean
+  ) {
+    setSelectedOptionsMap((prev) => {
+      const current = prev[groupName] || [];
 
-    if (multiple) {
-      const exists = current.includes(itemName);
+      if (multiple) {
+        const exists = current.includes(itemName);
+        return {
+          ...prev,
+          [groupName]: exists
+            ? current.filter((item) => item !== itemName)
+            : [...current, itemName],
+        };
+      }
+
       return {
         ...prev,
-        [groupName]: exists
-          ? current.filter((item) => item !== itemName)
-          : [...current, itemName],
+        [groupName]: [itemName],
       };
-    }
+    });
 
-    return {
-      ...prev,
-      [groupName]: [itemName],
-    };
-  });
+    setSelectedOptionsPriceMap((prev) => {
+      const currentEntries = prev[groupName] || [];
+      const exists = currentEntries.some((entry) => entry.name === itemName);
 
-  setSelectedOptionsPriceMap((prev) => {
-    const currentEntries = prev[groupName] || [];
-    const exists = currentEntries.some((entry) => entry.name === itemName);
+      if (multiple) {
+        return {
+          ...prev,
+          [groupName]: exists
+            ? currentEntries.filter((entry) => entry.name !== itemName)
+            : [...currentEntries, { name: itemName, price: itemPrice }],
+        };
+      }
 
-    if (multiple) {
       return {
         ...prev,
-        [groupName]: exists
-          ? currentEntries.filter((entry) => entry.name !== itemName)
-          : [...currentEntries, { name: itemName, price: itemPrice }],
+        [groupName]: [{ name: itemName, price: itemPrice }],
       };
-    }
-
-    return {
-      ...prev,
-      [groupName]: [{ name: itemName, price: itemPrice }],
-    };
-  });
-}
-
-  const modalTotalPrice = useMemo(() => {
-  if (!selectedProduct) return 0;
-
-  let total = 0;
-
-  if (selectedProduct.variants?.length) {
-    total += selectedVariantPrice;
-  } else if (typeof selectedProduct.price === "number") {
-    total += selectedProduct.price;
+    });
   }
 
-  selectedProduct.options?.forEach((group) => {
-    const selectedEntries = selectedOptionsPriceMap[group.group] || [];
+  const modalTotalPrice = useMemo(() => {
+    if (!selectedProduct) return 0;
 
-    if (
-      selectedProduct.id === 39 &&
-      group.group === "Extras Partypizza"
-    ) {
-      const extraCount = Math.max(0, selectedEntries.length - 1);
-      total += extraCount * 4;
-      return;
+    let total = 0;
+
+    if (selectedProduct.variants?.length) {
+      total += selectedVariantPrice;
+    } else if (typeof selectedProduct.price === "number") {
+      total += selectedProduct.price;
     }
 
-    selectedEntries.forEach((entry) => {
-      total += entry.price;
-    });
-  });
+    selectedProduct.options?.forEach((group) => {
+      const selectedEntries = selectedOptionsPriceMap[group.group] || [];
 
-  return total;
-}, [selectedProduct, selectedVariantPrice, selectedOptionsPriceMap]);
+      if (selectedProduct.id === 39 && group.group === "Extras Partypizza") {
+        const extraCount = Math.max(0, selectedEntries.length - 1);
+        total += extraCount * 4;
+        return;
+      }
+
+      selectedEntries.forEach((entry) => {
+        total += entry.price;
+      });
+    });
+
+    return total;
+  }, [selectedProduct, selectedVariantPrice, selectedOptionsPriceMap]);
 
   function addConfiguredProductToCart({
     produkt,
@@ -881,33 +1066,32 @@ const status = specialClosed
       setVorbestellungDatum(availablePreorderDates[0]);
     }
   }, [availablePreorderDates, vorbestellungDatum]);
+
   useEffect(() => {
-  if (!selectedProduct?.options?.length) return;
-  
+    if (!selectedProduct?.options?.length) return;
 
-  const recalculatedPriceMap: Record<string, { name: string; price: number }[]> = {};
+    const recalculatedPriceMap: Record<string, { name: string; price: number }[]> = {};
 
-  selectedProduct.options.forEach((group) => {
-    const selectedNames = selectedOptionsMap[group.group] || [];
+    selectedProduct.options.forEach((group) => {
+      const selectedNames = selectedOptionsMap[group.group] || [];
 
-    recalculatedPriceMap[group.group] = selectedNames.map((selectedName) => {
-      const foundItem = group.items.find((item) => item.name === selectedName);
+      recalculatedPriceMap[group.group] = selectedNames.map((selectedName) => {
+        const foundItem = group.items.find((item) => item.name === selectedName);
 
-      const recalculatedPrice =
-        typeof foundItem?.price === "number"
-          ? foundItem.price
-          : foundItem?.priceByVariant?.[selectedVariantName] ?? 0;
+        const recalculatedPrice =
+          typeof foundItem?.price === "number"
+            ? foundItem.price
+            : foundItem?.priceByVariant?.[selectedVariantName] ?? 0;
 
-      return {
-        name: selectedName,
-        price: recalculatedPrice,
-      };
+        return {
+          name: selectedName,
+          price: recalculatedPrice,
+        };
+      });
     });
-  });
-  
 
-  setSelectedOptionsPriceMap(recalculatedPriceMap);
-}, [selectedVariantName, selectedProduct, selectedOptionsMap]);
+    setSelectedOptionsPriceMap(recalculatedPriceMap);
+  }, [selectedVariantName, selectedProduct, selectedOptionsMap]);
 
   useEffect(() => {
     if (vorbestellung !== "spaeter") return;
@@ -936,19 +1120,21 @@ const status = specialClosed
 
   async function handleStripeCheckout() {
     if (specialClosed) {
-  setFehlermeldung(
-    specialClosedReason
-      ? `Heute geschlossen: ${specialClosedReason}`
-      : "Heute nehmen wir keine Bestellungen an."
-  );
-  return;
-}
+      setFehlermeldung(
+        specialClosedReason
+          ? `Heute geschlossen: ${specialClosedReason}`
+          : "Heute nehmen wir keine Bestellungen an."
+      );
+      return;
+    }
+
     setFehlermeldung("");
     setErfolgsmeldung("");
+
     if (MANUAL_CHECKOUT_BLOCKED) {
-  setFehlermeldung(MANUAL_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
-  return;
-}
+      setFehlermeldung(MANUAL_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
+      return;
+    }
 
     if (cart.length === 0) {
       setFehlermeldung("Bitte füge zuerst Produkte zum Warenkorb hinzu.");
@@ -965,30 +1151,12 @@ const status = specialClosed
       setFehlermeldung(telefonValidierung.message);
       return;
     }
-    function validiereEmail(email: string) {
-  const emailBereinigt = email.trim();
 
-  if (!emailBereinigt) {
-    return {
-      ok: false,
-      message: "Bitte gib deine E-Mail-Adresse ein.",
-    };
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (!emailRegex.test(emailBereinigt)) {
-    return {
-      ok: false,
-      message: "Bitte gib eine gültige E-Mail-Adresse ein.",
-    };
-  }
-
-  return {
-    ok: true,
-    message: "E-Mail sieht gültig aus.",
-  };
-}
+    const emailValidierung = validiereEmail(email);
+    if (!emailValidierung.ok) {
+      setFehlermeldung(emailValidierung.message);
+      return;
+    }
 
     if (bestellart === "lieferung") {
       if (!strasse.trim()) {
@@ -1061,11 +1229,11 @@ const status = specialClosed
 
       const pendingBestellung = {
         kunde: {
-  name,
-  telefon,
-  email: email.trim(),
-  adresse:
-    bestellart === "lieferung" ? zusammengesetzteAdresse : "Abholung",
+          name,
+          telefon,
+          email: email.trim(),
+          adresse:
+            bestellart === "lieferung" ? zusammengesetzteAdresse : "Abholung",
           ...(bestellart === "lieferung"
             ? {
                 lieferadresse: {
@@ -1155,27 +1323,22 @@ const status = specialClosed
 
             <div className="nav-right">
               <button
-  className={`cart-button compact cart-button-clean ${cartPulse ? "pulse" : ""}`}
-  onClick={openCheckout}
-  type="button"
-  aria-label="Warenkorb öffnen"
->
-  <span className="cart-icon">🛒</span>
-
-  <span className="cart-button-text">
-    Warenkorb
-  </span>
-
-  <span className="cart-count cart-count-clean">{gesamtAnzahl}</span>
-</button>
+                className={`cart-button compact cart-button-clean ${cartPulse ? "pulse" : ""}`}
+                onClick={openCheckout}
+                type="button"
+                aria-label="Warenkorb öffnen"
+              >
+                <span className="cart-icon">🛒</span>
+                <span className="cart-button-text">Warenkorb</span>
+                <span className="cart-count cart-count-clean">{gesamtAnzahl}</span>
+              </button>
             </div>
           </div>
         </header>
+
         {MANUAL_NOTICE_ACTIVE && (
-  <div className="manual-notice-bar">
-    {MANUAL_NOTICE_TEXT}
-  </div>
-)}
+          <div className="manual-notice-bar">{MANUAL_NOTICE_TEXT}</div>
+        )}
 
         {showAddedEffect && (
           <div className="added-toast">
@@ -1186,39 +1349,39 @@ const status = specialClosed
 
         {viewStep === "kitchens" && (
           <>
-          {specialClosed && (
-  <section className="container section-spacing">
-    <div className="special-closure-banner">
-      <span className="special-closure-label">Heute geschlossen</span>
-      <h3>Heute nehmen wir keine Bestellungen an</h3>
-      {specialClosedReason ? (
-        <p>Grund: {specialClosedReason}</p>
-      ) : (
-        <p>Heute ist eine besondere Schließzeit eingetragen.</p>
-      )}
-    </div>
-  </section>
-)}
-            <section className="hero-image-section">
-  <div className="container">
-    <div
-      className="hero-image-card"
-      style={{
-        backgroundImage: "url('/images/hero-main.jpg')",
-      }}
-    >
-      <div className="hero-image-overlay" />
+            {specialClosed && (
+              <section className="container section-spacing">
+                <div className="special-closure-banner">
+                  <span className="special-closure-label">Heute geschlossen</span>
+                  <h3>Heute nehmen wir keine Bestellungen an</h3>
+                  {specialClosedReason ? (
+                    <p>Grund: {specialClosedReason}</p>
+                  ) : (
+                    <p>Heute ist eine besondere Schließzeit eingetragen.</p>
+                  )}
+                </div>
+              </section>
+            )}
 
-      <div className="hero-image-content">
-        <span className="hero-kicker">Willkommen</span>
-        <h2 className="hero-image-title">Willkommen bei La Rosa GmbH</h2>
-        <p className="hero-image-text">
-          Italienische und indische Spezialitäten direkt online bestellen.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
+            <section className="hero-image-section">
+              <div className="container">
+                <div
+                  className="hero-image-card"
+                  style={{
+                    backgroundImage: "url('/images/hero-main.jpg')",
+                  }}
+                >
+                  <div className="hero-image-overlay" />
+                  <div className="hero-image-content">
+                    <span className="hero-kicker">Willkommen</span>
+                    <h2 className="hero-image-title">Willkommen bei La Rosa GmbH</h2>
+                    <p className="hero-image-text">
+                      Italienische und indische Spezialitäten direkt online bestellen.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <section className="container section-spacing offers-section">
               <div className="section-topline offers-headline">
@@ -1263,7 +1426,7 @@ const status = specialClosed
 
                     <button
                       className="offer-cart-button"
-                      onClick={() => addOfferToCart(slide)}
+                      onClick={() => openOfferModal(slide)}
                       type="button"
                     >
                       In den Warenkorb
@@ -1306,72 +1469,74 @@ const status = specialClosed
                 ))}
               </div>
             </section>
-<section className="container opening-hours-section">
-  <div className="opening-hours-topline">
-    <div>
-      <span className="eyebrow">Öffnungszeiten</span>
-      <h3 className="section-title">Abholung & Lieferung</h3>
-    </div>
-  </div>
 
-  <div className="opening-hours-grid">
-    <div className="opening-hours-clean-card">
-      <div className="opening-hours-card-head">
-        <div>
-          <span className="opening-hours-label">Service</span>
-          <h4>Abholung</h4>
-        </div>
+            <section className="container opening-hours-section">
+              <div className="opening-hours-topline">
+                <div>
+                  <span className="eyebrow">Öffnungszeiten</span>
+                  <h3 className="section-title">Abholung & Lieferung</h3>
+                </div>
+              </div>
 
-        <span
-          className={`opening-status-pill ${
-            getServiceStatus("abholung").isOpen ? "open" : "closed"
-          }`}
-        >
-          {getServiceStatus("abholung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
-        </span>
-      </div>
+              <div className="opening-hours-grid">
+                <div className="opening-hours-clean-card">
+                  <div className="opening-hours-card-head">
+                    <div>
+                      <span className="opening-hours-label">Service</span>
+                      <h4>Abholung</h4>
+                    </div>
 
-      <div className="opening-hours-rows">
-        <div className="opening-hours-row">
-          <span>Montag – Freitag</span>
-          <strong>11:00 – 23:00</strong>
-        </div>
-        <div className="opening-hours-row">
-          <span>Samstag – Sonntag</span>
-          <strong>14:00 – 23:00</strong>
-        </div>
-      </div>
-    </div>
+                    <span
+                      className={`opening-status-pill ${
+                        getServiceStatus("abholung").isOpen ? "open" : "closed"
+                      }`}
+                    >
+                      {getServiceStatus("abholung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
+                    </span>
+                  </div>
 
-    <div className="opening-hours-clean-card">
-      <div className="opening-hours-card-head">
-        <div>
-          <span className="opening-hours-label">Service</span>
-          <h4>Lieferung</h4>
-        </div>
+                  <div className="opening-hours-rows">
+                    <div className="opening-hours-row">
+                      <span>Montag – Freitag</span>
+                      <strong>11:00 – 23:00</strong>
+                    </div>
+                    <div className="opening-hours-row">
+                      <span>Samstag – Sonntag</span>
+                      <strong>14:00 – 23:00</strong>
+                    </div>
+                  </div>
+                </div>
 
-        <span
-          className={`opening-status-pill ${
-            getServiceStatus("lieferung").isOpen ? "open" : "closed"
-          }`}
-        >
-          {getServiceStatus("lieferung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
-        </span>
-      </div>
+                <div className="opening-hours-clean-card">
+                  <div className="opening-hours-card-head">
+                    <div>
+                      <span className="opening-hours-label">Service</span>
+                      <h4>Lieferung</h4>
+                    </div>
 
-      <div className="opening-hours-rows">
-        <div className="opening-hours-row">
-          <span>Montag – Freitag</span>
-          <strong>11:00 – 22:30</strong>
-        </div>
-        <div className="opening-hours-row">
-          <span>Samstag – Sonntag</span>
-          <strong>14:00 – 22:30</strong>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+                    <span
+                      className={`opening-status-pill ${
+                        getServiceStatus("lieferung").isOpen ? "open" : "closed"
+                      }`}
+                    >
+                      {getServiceStatus("lieferung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
+                    </span>
+                  </div>
+
+                  <div className="opening-hours-rows">
+                    <div className="opening-hours-row">
+                      <span>Montag – Freitag</span>
+                      <strong>11:00 – 22:30</strong>
+                    </div>
+                    <div className="opening-hours-row">
+                      <span>Samstag – Sonntag</span>
+                      <strong>14:00 – 22:30</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <footer className="site-footer">
               <div className="container footer-inner">
                 <div>
@@ -1507,425 +1672,423 @@ const status = specialClosed
         )}
 
         {viewStep === "checkout" && (
-  <section className="container checkout-section checkout-clean">
-    <div className="checkout-clean-topbar">
-      <div>
-        <span className="eyebrow">Checkout</span>
-        <h2 className="section-title">Dein Warenkorb</h2>
-      </div>
+          <section className="container checkout-section checkout-clean">
+            <div className="checkout-clean-topbar">
+              <div>
+                <span className="eyebrow">Checkout</span>
+                <h2 className="section-title">Dein Warenkorb</h2>
+              </div>
 
-      <button
-        className="back-button"
-        onClick={backFromCheckout}
-        type="button"
-      >
-        ← Zurück
-      </button>
-    </div>
-
-    <div className="checkout-clean-layout">
-      <div className="checkout-clean-main">
-        <div className="checkout-clean-card checkout-items-card">
-          <div className="checkout-card-head">
-            <div>
-              <span className="checkout-kicker">Bestellung</span>
-              <h3>Artikel im Warenkorb</h3>
+              <button
+                className="back-button"
+                onClick={backFromCheckout}
+                type="button"
+              >
+                ← Zurück
+              </button>
             </div>
-            <div className="checkout-head-badge">
-              {gesamtAnzahl} Artikel
-            </div>
-          </div>
 
-          {cart.length === 0 ? (
-            <div className="checkout-empty">
-              <p>Dein Warenkorb ist leer.</p>
-            </div>
-          ) : (
-            <div className="checkout-item-list">
-              {cart.map((item) => (
-                <div className="checkout-item-row" key={item.uniqueKey}>
-                  <div className="checkout-item-left">
-                    <div className="checkout-item-qty-badge">{item.quantity}x</div>
+            <div className="checkout-clean-layout">
+              <div className="checkout-clean-main">
+                <div className="checkout-clean-card checkout-items-card">
+                  <div className="checkout-card-head">
+                    <div>
+                      <span className="checkout-kicker">Bestellung</span>
+                      <h3>Artikel im Warenkorb</h3>
+                    </div>
+                    <div className="checkout-head-badge">{gesamtAnzahl} Artikel</div>
+                  </div>
 
-                    <div className="checkout-item-content">
-                      <h4>{item.name}</h4>
+                  {cart.length === 0 ? (
+                    <div className="checkout-empty">
+                      <p>Dein Warenkorb ist leer.</p>
+                    </div>
+                  ) : (
+                    <div className="checkout-item-list">
+                      {cart.map((item) => (
+                        <div className="checkout-item-row" key={item.uniqueKey}>
+                          <div className="checkout-item-left">
+                            <div className="checkout-item-qty-badge">{item.quantity}x</div>
 
-                      <div className="checkout-item-meta">
-                        {item.cuisine} · {item.category}
-                        {item.variantName ? ` · ${item.variantName}` : ""}
+                            <div className="checkout-item-content">
+                              <h4>{item.name}</h4>
+
+                              <div className="checkout-item-meta">
+                                {item.cuisine} · {item.category}
+                                {item.variantName ? ` · ${item.variantName}` : ""}
+                              </div>
+
+                              {item.selectedOptions &&
+                                item.selectedOptions.length > 0 && (
+                                  <div className="checkout-option-wrap">
+                                    {item.selectedOptions.map((option) => (
+                                      <span className="checkout-option-pill" key={option}>
+                                        {option}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                            </div>
+                          </div>
+
+                          <div className="checkout-item-right">
+                            <div className="checkout-item-total">
+                              {(item.price * item.quantity).toFixed(2)} €
+                            </div>
+
+                            <div className="checkout-item-unit-price">
+                              Einzelpreis {item.price.toFixed(2)} €
+                            </div>
+
+                            <div className="checkout-item-quantity-box">
+                              <button
+                                onClick={() => decreaseQuantity(item.uniqueKey)}
+                                type="button"
+                              >
+                                −
+                              </button>
+                              <span>{item.quantity}</span>
+                              <button
+                                onClick={() => increaseQuantity(item.uniqueKey)}
+                                type="button"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="checkout-clean-card">
+                  <div className="checkout-card-head">
+                    <div>
+                      <span className="checkout-kicker">Service</span>
+                      <h3>Bestellart</h3>
+                    </div>
+                  </div>
+
+                  <div className="checkout-choice-grid">
+                    <button
+                      className={`checkout-choice-card ${
+                        bestellart === "abholung" ? "active" : ""
+                      }`}
+                      onClick={() => setBestellart("abholung")}
+                      type="button"
+                    >
+                      <span className="checkout-choice-label">Option</span>
+                      <strong>Abholung</strong>
+                      <small>Mo–Fr 11:00–23:00 · Sa–So 14:00–23:00</small>
+                    </button>
+
+                    <button
+                      className={`checkout-choice-card ${
+                        bestellart === "lieferung" ? "active" : ""
+                      }`}
+                      onClick={() => setBestellart("lieferung")}
+                      type="button"
+                    >
+                      <span className="checkout-choice-label">Option</span>
+                      <strong>Lieferung</strong>
+                      <small>Mo–Fr 11:00–22:30 · Sa–So 14:00–22:30</small>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="checkout-clean-card">
+                  <div className="checkout-card-head">
+                    <div>
+                      <span className="checkout-kicker">Kunde</span>
+                      <h3>Deine Daten</h3>
+                    </div>
+                  </div>
+
+                  <div className="checkout-form-grid">
+                    <div className="form-group">
+                      <label htmlFor="name">Name</label>
+                      <input
+                        id="name"
+                        type="text"
+                        placeholder="Dein Name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="telefon">Telefonnummer</label>
+                      <input
+                        id="telefon"
+                        type="text"
+                        placeholder="Deine Telefonnummer"
+                        value={telefon}
+                        onChange={(e) => setTelefon(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="checkout-form-grid">
+                    <div className="form-group">
+                      <label htmlFor="email">E-Mail-Adresse</label>
+                      <input
+                        id="email"
+                        type="email"
+                        placeholder="Deine E-Mail-Adresse"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {bestellart === "lieferung" && (
+                    <>
+                      <div className="checkout-form-grid">
+                        <div className="form-group">
+                          <label htmlFor="strasse">Straße</label>
+                          <input
+                            id="strasse"
+                            type="text"
+                            placeholder="Straße"
+                            value={strasse}
+                            onChange={(e) => setStrasse(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="hausnummer">Hausnummer</label>
+                          <input
+                            id="hausnummer"
+                            type="text"
+                            placeholder="Hausnummer"
+                            value={hausnummer}
+                            onChange={(e) => setHausnummer(e.target.value)}
+                          />
+                        </div>
                       </div>
 
-                      {item.selectedOptions &&
-                        item.selectedOptions.length > 0 && (
-                          <div className="checkout-option-wrap">
-                            {item.selectedOptions.map((option) => (
-                              <span className="checkout-option-pill" key={option}>
-                                {option}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                    </div>
-                  </div>
+                      <div className="checkout-form-grid">
+                        <div className="form-group">
+                          <label htmlFor="plz">Postleitzahl</label>
+                          <input
+                            id="plz"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={5}
+                            placeholder="PLZ"
+                            value={plz}
+                            onChange={(e) =>
+                              setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))
+                            }
+                          />
+                        </div>
 
-                  <div className="checkout-item-right">
-                    <div className="checkout-item-total">
-                      {(item.price * item.quantity).toFixed(2)} €
-                    </div>
-
-                    <div className="checkout-item-unit-price">
-                      Einzelpreis {item.price.toFixed(2)} €
-                    </div>
-
-                    <div className="checkout-item-quantity-box">
-                      <button
-                        onClick={() => decreaseQuantity(item.uniqueKey)}
-                        type="button"
-                      >
-                        −
-                      </button>
-                      <span>{item.quantity}</span>
-                      <button
-                        onClick={() => increaseQuantity(item.uniqueKey)}
-                        type="button"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="checkout-clean-card">
-          <div className="checkout-card-head">
-            <div>
-              <span className="checkout-kicker">Service</span>
-              <h3>Bestellart</h3>
-            </div>
-          </div>
-
-          <div className="checkout-choice-grid">
-            <button
-              className={`checkout-choice-card ${
-                bestellart === "abholung" ? "active" : ""
-              }`}
-              onClick={() => setBestellart("abholung")}
-              type="button"
-            >
-              <span className="checkout-choice-label">Option</span>
-              <strong>Abholung</strong>
-              <small>Mo–Fr 11:00–23:00 · Sa–So 14:00–23:00</small>
-            </button>
-
-            <button
-              className={`checkout-choice-card ${
-                bestellart === "lieferung" ? "active" : ""
-              }`}
-              onClick={() => setBestellart("lieferung")}
-              type="button"
-            >
-              <span className="checkout-choice-label">Option</span>
-              <strong>Lieferung</strong>
-              <small>Mo–Fr 11:00–22:30 · Sa–So 14:00–22:30</small>
-            </button>
-          </div>
-        </div>
-
-        <div className="checkout-clean-card">
-          <div className="checkout-card-head">
-            <div>
-              <span className="checkout-kicker">Kunde</span>
-              <h3>Deine Daten</h3>
-            </div>
-          </div>
-
-          <div className="checkout-form-grid">
-  <div className="form-group">
-    <label htmlFor="name">Name</label>
-    <input
-      id="name"
-      type="text"
-      placeholder="Dein Name"
-      value={name}
-      onChange={(e) => setName(e.target.value)}
-    />
-  </div>
-
-  <div className="form-group">
-    <label htmlFor="telefon">Telefonnummer</label>
-    <input
-      id="telefon"
-      type="text"
-      placeholder="Deine Telefonnummer"
-      value={telefon}
-      onChange={(e) => setTelefon(e.target.value)}
-    />
-  </div>
-</div>
-
-<div className="checkout-form-grid">
-  <div className="form-group">
-    <label htmlFor="email">E-Mail-Adresse</label>
-    <input
-      id="email"
-      type="email"
-      placeholder="Deine E-Mail-Adresse"
-      value={email}
-      onChange={(e) => setEmail(e.target.value)}
-    />
-  </div>
-</div>
-
-          {bestellart === "lieferung" && (
-            <>
-              <div className="checkout-form-grid">
-                <div className="form-group">
-                  <label htmlFor="strasse">Straße</label>
-                  <input
-                    id="strasse"
-                    type="text"
-                    placeholder="Straße"
-                    value={strasse}
-                    onChange={(e) => setStrasse(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="hausnummer">Hausnummer</label>
-                  <input
-                    id="hausnummer"
-                    type="text"
-                    placeholder="Hausnummer"
-                    value={hausnummer}
-                    onChange={(e) => setHausnummer(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="checkout-form-grid">
-                <div className="form-group">
-                  <label htmlFor="plz">Postleitzahl</label>
-                  <input
-                    id="plz"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={5}
-                    placeholder="PLZ"
-                    value={plz}
-                    onChange={(e) =>
-                      setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="stadt">Stadt</label>
-                  <input
-                    id="stadt"
-                    type="text"
-                    placeholder="Wird automatisch ausgefüllt"
-                    value={stadt}
-                    readOnly
-                    disabled
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {bestellart === "lieferung" && lieferPruefung && (
-            <p className={`message ${lieferPruefung.ok ? "success" : "error"}`}>
-              {lieferPruefung.message}
-            </p>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="hinweis">Hinweis zur Bestellung</label>
-            <textarea
-              id="hinweis"
-              placeholder="Zum Beispiel: ohne Zwiebeln"
-              value={hinweis}
-              onChange={(e) => setHinweis(e.target.value)}
-              rows={4}
-            />
-          </div>
-        </div>
-
-        <div className="checkout-clean-card">
-          <div className="checkout-card-head">
-            <div>
-              <span className="checkout-kicker">Zeit</span>
-              <h3>Bestellzeit</h3>
-            </div>
-          </div>
-
-          <div className="checkout-choice-grid">
-            <button
-              className={`checkout-choice-card ${
-                vorbestellung === "sofort" ? "active" : ""
-              }`}
-              onClick={() => setVorbestellung("sofort")}
-              type="button"
-              disabled={!status.isOpen || MANUAL_CHECKOUT_BLOCKED}
-            >
-              <span className="checkout-choice-label">Auswahl</span>
-              <strong>Sofort</strong>
-              <small>
-                {status.isOpen
-                  ? "Direkt so schnell wie möglich"
-                  : "Aktuell nicht verfügbar"}
-              </small>
-            </button>
-
-            <button
-              className={`checkout-choice-card ${
-                vorbestellung === "spaeter" ? "active" : ""
-              }`}
-              onClick={() => setVorbestellung("spaeter")}
-              type="button"
-              disabled={MANUAL_CHECKOUT_BLOCKED}
-            >
-              <span className="checkout-choice-label">Auswahl</span>
-              <strong>Vorbestellung</strong>
-              <small>Datum und Uhrzeit selbst wählen</small>
-            </button>
-          </div>
-
-          {!status.isOpen && (
-            <p className="message error">
-              Aktuell geschlossen. Sofort-Bestellung ist deaktiviert.
-            </p>
-          )}
-
-          {vorbestellung === "spaeter" && (
-            <div className="checkout-form-grid preorder-clean-grid">
-              <div className="form-group">
-                <label htmlFor="vorbestellungDatum">Datum</label>
-                <select
-                  id="vorbestellungDatum"
-                  value={vorbestellungDatum}
-                  onChange={(e) => setVorbestellungDatum(e.target.value)}
-                >
-                  {availablePreorderDates.map((date) => (
-                    <option key={date} value={date}>
-                      {formatDateLabel(date)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="uhrzeit">Uhrzeit</label>
-                <select
-                  id="uhrzeit"
-                  value={uhrzeit}
-                  onChange={(e) => setUhrzeit(e.target.value)}
-                >
-                  {availableTimeSlots.length > 0 ? (
-                    availableTimeSlots.map((slot) => (
-                      <option key={slot} value={slot}>
-                        {slot} Uhr
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">Keine Uhrzeiten verfügbar</option>
+                        <div className="form-group">
+                          <label htmlFor="stadt">Stadt</label>
+                          <input
+                            id="stadt"
+                            type="text"
+                            placeholder="Wird automatisch ausgefüllt"
+                            value={stadt}
+                            readOnly
+                            disabled
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
-                </select>
+
+                  {bestellart === "lieferung" && lieferPruefung && (
+                    <p className={`message ${lieferPruefung.ok ? "success" : "error"}`}>
+                      {lieferPruefung.message}
+                    </p>
+                  )}
+
+                  <div className="form-group">
+                    <label htmlFor="hinweis">Hinweis zur Bestellung</label>
+                    <textarea
+                      id="hinweis"
+                      placeholder="Zum Beispiel: ohne Zwiebeln"
+                      value={hinweis}
+                      onChange={(e) => setHinweis(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                </div>
+
+                <div className="checkout-clean-card">
+                  <div className="checkout-card-head">
+                    <div>
+                      <span className="checkout-kicker">Zeit</span>
+                      <h3>Bestellzeit</h3>
+                    </div>
+                  </div>
+
+                  <div className="checkout-choice-grid">
+                    <button
+                      className={`checkout-choice-card ${
+                        vorbestellung === "sofort" ? "active" : ""
+                      }`}
+                      onClick={() => setVorbestellung("sofort")}
+                      type="button"
+                      disabled={!status.isOpen || MANUAL_CHECKOUT_BLOCKED}
+                    >
+                      <span className="checkout-choice-label">Auswahl</span>
+                      <strong>Sofort</strong>
+                      <small>
+                        {status.isOpen
+                          ? "Direkt so schnell wie möglich"
+                          : "Aktuell nicht verfügbar"}
+                      </small>
+                    </button>
+
+                    <button
+                      className={`checkout-choice-card ${
+                        vorbestellung === "spaeter" ? "active" : ""
+                      }`}
+                      onClick={() => setVorbestellung("spaeter")}
+                      type="button"
+                      disabled={MANUAL_CHECKOUT_BLOCKED}
+                    >
+                      <span className="checkout-choice-label">Auswahl</span>
+                      <strong>Vorbestellung</strong>
+                      <small>Datum und Uhrzeit selbst wählen</small>
+                    </button>
+                  </div>
+
+                  {!status.isOpen && (
+                    <p className="message error">
+                      Aktuell geschlossen. Sofort-Bestellung ist deaktiviert.
+                    </p>
+                  )}
+
+                  {vorbestellung === "spaeter" && (
+                    <div className="checkout-form-grid preorder-clean-grid">
+                      <div className="form-group">
+                        <label htmlFor="vorbestellungDatum">Datum</label>
+                        <select
+                          id="vorbestellungDatum"
+                          value={vorbestellungDatum}
+                          onChange={(e) => setVorbestellungDatum(e.target.value)}
+                        >
+                          {availablePreorderDates.map((date) => (
+                            <option key={date} value={date}>
+                              {formatDateLabel(date)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="uhrzeit">Uhrzeit</label>
+                        <select
+                          id="uhrzeit"
+                          value={uhrzeit}
+                          onChange={(e) => setUhrzeit(e.target.value)}
+                        >
+                          {availableTimeSlots.length > 0 ? (
+                            availableTimeSlots.map((slot) => (
+                              <option key={slot} value={slot}>
+                                {slot} Uhr
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">Keine Uhrzeiten verfügbar</option>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="checkout-note-box">
+                        {(() => {
+                          const { isWeekend } =
+                            getPreorderWindowForDate(vorbestellungDatum);
+                          return isWeekend
+                            ? "Vorbestellungen am Wochenende: 15:00 bis 22:00 Uhr."
+                            : "Vorbestellungen Montag bis Freitag: 12:00 bis 22:00 Uhr.";
+                        })()}
+                      </div>
+
+                      <div className="checkout-note-box muted">
+                        Vorbestellungen werden nur angezeigt, wenn sie mindestens 1 Stunde in der Zukunft liegen.
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="checkout-note-box">
-                {(() => {
-                  const { isWeekend } =
-                    getPreorderWindowForDate(vorbestellungDatum);
-                  return isWeekend
-                    ? "Vorbestellungen am Wochenende: 15:00 bis 22:00 Uhr."
-                    : "Vorbestellungen Montag bis Freitag: 12:00 bis 22:00 Uhr.";
-                })()}
-              </div>
+              <aside className="checkout-clean-sidebar">
+                <div className="checkout-summary-card">
+                  <div className="checkout-card-head">
+                    <div>
+                      <span className="checkout-kicker">Übersicht</span>
+                      <h3>Zusammenfassung</h3>
+                    </div>
+                  </div>
 
-              <div className="checkout-note-box muted">
-                Vorbestellungen werden nur angezeigt, wenn sie mindestens 1 Stunde in der Zukunft liegen.
-              </div>
+                  <div className="checkout-summary-rows">
+                    <div className="checkout-summary-row">
+                      <span>Artikel</span>
+                      <span>{gesamtAnzahl}</span>
+                    </div>
+
+                    <div className="checkout-summary-row">
+                      <span>Zwischensumme</span>
+                      <span>{gesamtpreisProdukte.toFixed(2)} €</span>
+                    </div>
+
+                    <div className="checkout-summary-row discount">
+                      <span>10% Rabatt</span>
+                      <span>-{rabattBetrag.toFixed(2)} €</span>
+                    </div>
+
+                    {bestellart === "lieferung" && lieferPruefung?.minOrder ? (
+                      <div className="checkout-summary-row">
+                        <span>Mindestbestellwert</span>
+                        <span>{lieferPruefung.minOrder.toFixed(2)} €</span>
+                      </div>
+                    ) : null}
+
+                    <div className="checkout-summary-row">
+                      <span>Versand</span>
+                      <span>Kostenlos</span>
+                    </div>
+
+                    <div className="checkout-summary-row total">
+                      <span>Gesamt</span>
+                      <span>{gesamtpreis.toFixed(2)} €</span>
+                    </div>
+                  </div>
+
+                  {vorbestellung === "spaeter" && (
+                    <div className="checkout-summary-extra">
+                      <span>Vorbestellung</span>
+                      <strong>
+                        {formatDateLabel(vorbestellungDatum)} · {uhrzeit || "--:--"} Uhr
+                      </strong>
+                    </div>
+                  )}
+
+                  {fehlermeldung && <p className="message error">{fehlermeldung}</p>}
+                  {erfolgsmeldung && <p className="message success">{erfolgsmeldung}</p>}
+
+                  <button
+                    className="checkout-button"
+                    onClick={handleStripeCheckout}
+                    type="button"
+                    disabled={isSubmitting || MANUAL_CHECKOUT_BLOCKED}
+                  >
+                    {isSubmitting
+                      ? "Wird gesendet..."
+                      : MANUAL_CHECKOUT_BLOCKED
+                      ? "Aktuell nicht bestellbar"
+                      : "Jetzt sicher bezahlen"}
+                  </button>
+                </div>
+              </aside>
             </div>
-          )}
-        </div>
-      </div>
-
-      <aside className="checkout-clean-sidebar">
-        <div className="checkout-summary-card">
-          <div className="checkout-card-head">
-            <div>
-              <span className="checkout-kicker">Übersicht</span>
-              <h3>Zusammenfassung</h3>
-            </div>
-          </div>
-
-          <div className="checkout-summary-rows">
-            <div className="checkout-summary-row">
-              <span>Artikel</span>
-              <span>{gesamtAnzahl}</span>
-            </div>
-
-            <div className="checkout-summary-row">
-              <span>Zwischensumme</span>
-              <span>{gesamtpreisProdukte.toFixed(2)} €</span>
-            </div>
-
-            <div className="checkout-summary-row discount">
-              <span>10% Rabatt</span>
-              <span>-{rabattBetrag.toFixed(2)} €</span>
-            </div>
-
-            {bestellart === "lieferung" && lieferPruefung?.minOrder ? (
-              <div className="checkout-summary-row">
-                <span>Mindestbestellwert</span>
-                <span>{lieferPruefung.minOrder.toFixed(2)} €</span>
-              </div>
-            ) : null}
-
-            <div className="checkout-summary-row">
-              <span>Versand</span>
-              <span>Kostenlos</span>
-            </div>
-
-            <div className="checkout-summary-row total">
-              <span>Gesamt</span>
-              <span>{gesamtpreis.toFixed(2)} €</span>
-            </div>
-          </div>
-
-          {vorbestellung === "spaeter" && (
-            <div className="checkout-summary-extra">
-              <span>Vorbestellung</span>
-              <strong>
-                {formatDateLabel(vorbestellungDatum)} · {uhrzeit || "--:--"} Uhr
-              </strong>
-            </div>
-          )}
-
-          {fehlermeldung && <p className="message error">{fehlermeldung}</p>}
-          {erfolgsmeldung && <p className="message success">{erfolgsmeldung}</p>}
-
-          <button
-  className="checkout-button"
-  onClick={handleStripeCheckout}
-  type="button"
-  disabled={isSubmitting || MANUAL_CHECKOUT_BLOCKED}
->
-            {isSubmitting
-  ? "Wird gesendet..."
-  : MANUAL_CHECKOUT_BLOCKED
-  ? "Aktuell nicht bestellbar"
-  : "Jetzt sicher bezahlen"}
-          </button>
-        </div>
-      </aside>
-    </div>
-  </section>
-)}
+          </section>
+        )}
 
         {selectedProduct && (
           <div className="modal-backdrop" onClick={resetModal}>
@@ -1933,7 +2096,7 @@ const status = specialClosed
               <div className="modal-header">
                 <div>
                   <span className="eyebrow">{selectedProduct?.category}</span>
-<h3>{selectedProduct?.name}</h3>
+                  <h3>{selectedProduct?.name}</h3>
                 </div>
 
                 <button className="modal-close" onClick={resetModal} type="button">
@@ -1967,46 +2130,47 @@ const status = specialClosed
               )}
 
               {selectedProduct.options?.map((optionGroup) => (
-  <div className="modal-section" key={optionGroup.group}>
-    <h4>{optionGroup.group}</h4>
-    <div className="modal-choice-list">
-      {optionGroup.items.map((item) => {
-        const checked =
-          (selectedOptionsMap[optionGroup.group] || []).includes(item.name);
+                <div className="modal-section" key={optionGroup.group}>
+                  <h4>{optionGroup.group}</h4>
+                  <div className="modal-choice-list">
+                    {optionGroup.items.map((item) => {
+                      const checked =
+                        (selectedOptionsMap[optionGroup.group] || []).includes(item.name);
 
-        const calculatedPrice =
-          typeof item.price === "number"
-            ? item.price
-            : item.priceByVariant?.[selectedVariantName] ?? 0;
+                      const calculatedPrice =
+                        typeof item.price === "number"
+                          ? item.price
+                          : item.priceByVariant?.[selectedVariantName] ?? 0;
 
-        return (
-          <button
-            key={item.name}
-            type="button"
-            className={`modal-choice ${checked ? "active" : ""}`}
-            onClick={() =>
-              handleOptionChange(
-                optionGroup.group,
-                item.name,
-                calculatedPrice,
-                optionGroup.multiple
-              )
-            }
-          >
-            <span>{item.name}</span>
-            <strong>
-  {selectedProduct.id === 39 && optionGroup.group === "Extras Partypizza"
-    ? "1 frei / danach +4,00 €"
-    : calculatedPrice > 0
-    ? `+${calculatedPrice.toFixed(2)} €`
-    : "inkl."}
-</strong>
-          </button>
-        );
-      })}
-    </div>
-  </div>
-))}
+                      return (
+                        <button
+                          key={item.name}
+                          type="button"
+                          className={`modal-choice ${checked ? "active" : ""}`}
+                          onClick={() =>
+                            handleOptionChange(
+                              optionGroup.group,
+                              item.name,
+                              calculatedPrice,
+                              optionGroup.multiple
+                            )
+                          }
+                        >
+                          <span>{item.name}</span>
+                          <strong>
+                            {selectedProduct.id === 39 &&
+                            optionGroup.group === "Extras Partypizza"
+                              ? "1 frei / danach +4,00 €"
+                              : calculatedPrice > 0
+                              ? `+${calculatedPrice.toFixed(2)} €`
+                              : "inkl."}
+                          </strong>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
 
               {modalError && <p className="message error">{modalError}</p>}
 
@@ -2019,6 +2183,86 @@ const status = specialClosed
                 <button
                   className="checkout-button"
                   onClick={confirmModalSelection}
+                  type="button"
+                >
+                  In den Warenkorb
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedOffer && (
+          <div className="modal-backdrop" onClick={closeOfferModal}>
+            <div className="product-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <span className="eyebrow">Angebot</span>
+                  <h3>{selectedOffer.title}</h3>
+                </div>
+
+                <button className="modal-close" onClick={closeOfferModal} type="button">
+                  ×
+                </button>
+              </div>
+
+              <p className="modal-description">{selectedOffer.text}</p>
+
+              {selectedOffer.groups.map((group) => {
+                const groupProducts = produkte.filter((p) =>
+                  group.productIds.includes(p.id)
+                );
+                const selectedIds = selectedOfferChoices[group.key] || [];
+
+                return (
+                  <div className="modal-section" key={group.key}>
+                    <h4>{group.title}</h4>
+                    <div className="modal-choice-list">
+                      {groupProducts.length === 0 ? (
+                        <div className="message error">
+                          Für „{group.title}“ wurden keine Produkte gefunden.
+                        </div>
+                      ) : (
+                        groupProducts.map((produkt) => {
+                          const checked = selectedIds.includes(produkt.id);
+
+                          return (
+                            <button
+                              key={produkt.id}
+                              type="button"
+                              className={`modal-choice ${checked ? "active" : ""}`}
+                              onClick={() =>
+                                handleOfferChoice(group.key, produkt.id, group.max)
+                              }
+                            >
+                              <span>{produkt.name}</span>
+                              <strong>
+                                {produkt.variants?.length
+                                  ? produkt.variants.map((v) => v.name).join(" / ")
+                                  : typeof produkt.price === "number"
+                                  ? `${produkt.price.toFixed(2)} €`
+                                  : "Auswählen"}
+                              </strong>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {offerModalError && <p className="message error">{offerModalError}</p>}
+
+              <div className="modal-footer">
+                <div className="modal-price-box">
+                  <span>Angebotspreis</span>
+                  <strong>{selectedOffer.price.toFixed(2)} €</strong>
+                </div>
+
+                <button
+                  className="checkout-button"
+                  onClick={confirmOfferSelection}
                   type="button"
                 >
                   In den Warenkorb
@@ -2605,240 +2849,6 @@ const status = specialClosed
           padding: 42px 0 82px;
         }
 
-        .checkout-topline {
-          align-items: center;
-        }
-
-        .checkout-layout {
-          display: grid;
-          grid-template-columns: minmax(0, 1.35fr) 390px;
-          gap: 22px;
-        }
-
-        .checkout-main {
-          display: grid;
-          gap: 18px;
-        }
-
-        .sticky-card {
-          position: sticky;
-          top: 104px;
-        }
-
-        .cart-list {
-          display: grid;
-          gap: 14px;
-        }
-
-        .cart-item {
-          padding: 16px;
-          border-radius: 18px;
-          background: rgba(255, 255, 255, 0.84);
-        }
-
-        .cart-item-header {
-          display: flex;
-          justify-content: space-between;
-          gap: 14px;
-          align-items: start;
-        }
-
-        .cart-item-header small {
-          display: inline-block;
-          margin-top: 6px;
-          color: #6b7280;
-          line-height: 1.5;
-        }
-
-        .cart-option-list {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-top: 12px;
-        }
-
-        .cart-option-pill {
-          padding: 7px 10px;
-          border-radius: 999px;
-          background: #f3f4f6;
-          color: #374151;
-          font-size: 0.78rem;
-          font-weight: 700;
-        }
-
-        .quantity-box {
-          display: inline-flex;
-          align-items: center;
-          gap: 12px;
-          margin-top: 14px;
-          background: rgba(255, 255, 255, 0.96);
-          border-radius: 999px;
-          padding: 8px 12px;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-        }
-
-        .quantity-box button {
-          width: 34px;
-          height: 34px;
-          border: none;
-          border-radius: 999px;
-          background: #111827;
-          color: white;
-          cursor: pointer;
-          font-size: 1.05rem;
-        }
-
-        .switch-row {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .switch-row button {
-          flex: 1;
-          min-width: 130px;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          background: rgba(255, 255, 255, 0.94);
-          color: #374151;
-          border-radius: 15px;
-          padding: 13px 15px;
-          cursor: pointer;
-          font-weight: 800;
-        }
-
-        .switch-row button.active {
-          background: #111827;
-          color: white;
-          border-color: transparent;
-        }
-
-        .switch-row button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .helper-box,
-        .helper-text {
-          color: #6b7280;
-        }
-
-        .helper-box {
-          margin-top: 14px;
-          padding: 14px 15px;
-          border-radius: 15px;
-          background: rgba(255, 255, 255, 0.74);
-        }
-
-        .helper-text {
-          margin-top: 8px;
-          font-size: 0.9rem;
-        }
-
-        .form-grid,
-        .preorder-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 14px;
-        }
-
-        .form-group {
-          display: grid;
-          gap: 8px;
-          margin-top: 14px;
-        }
-
-        .form-group label {
-          color: #374151;
-          font-weight: 700;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-          width: 100%;
-          border-radius: 15px;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          background: rgba(255, 255, 255, 0.98);
-          color: #111827;
-          padding: 14px 15px;
-          outline: none;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-          border-color: rgba(17, 24, 39, 0.18);
-          box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.05);
-        }
-
-        .form-group input::placeholder,
-        .form-group textarea::placeholder {
-          color: #9ca3af;
-        }
-
-        .form-group input:disabled {
-          opacity: 0.82;
-        }
-
-        .preorder-note {
-          grid-column: 1 / -1;
-          padding: 14px 15px;
-          border-radius: 15px;
-          background: rgba(255, 255, 255, 0.76);
-          color: #374151;
-          line-height: 1.6;
-          border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .preorder-note.secondary {
-          color: #6b7280;
-        }
-
-        .summary-row {
-          display: flex;
-          justify-content: space-between;
-          gap: 14px;
-          padding: 13px 0;
-          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        }
-
-        .summary-row.discount span:last-child {
-          color: #166534;
-          font-weight: 800;
-        }
-
-        .summary-row.free span:last-child {
-          color: #111827;
-          font-weight: 800;
-        }
-
-        .summary-row.total {
-          font-size: 1.08rem;
-          font-weight: 900;
-          border-bottom: none;
-          padding-bottom: 0;
-        }
-
-        .selected-preorder-box {
-          margin-top: 18px;
-          padding: 15px;
-          border-radius: 18px;
-          background: rgba(255, 255, 255, 0.86);
-          border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .selected-preorder-box span {
-          display: block;
-          color: #6b7280;
-          margin-bottom: 6px;
-        }
-
-        .selected-preorder-box strong {
-          color: #111827;
-          line-height: 1.6;
-        }
-
         .message {
           margin-top: 16px;
           padding: 14px 15px;
@@ -2856,10 +2866,6 @@ const status = specialClosed
           background: rgba(22, 163, 74, 0.1);
           color: #166534;
           border: 1px solid rgba(22, 163, 74, 0.12);
-        }
-
-        .empty-state {
-          color: #6b7280;
         }
 
         .modal-backdrop {
@@ -3028,17 +3034,8 @@ const status = specialClosed
           .cuisine-grid,
           .category-grid,
           .products-grid,
-          .checkout-layout,
           .footer-inner {
             grid-template-columns: 1fr;
-          }
-
-          .sticky-card {
-            position: static;
-          }
-
-          .checkout-sidebar {
-            order: -1;
           }
         }
 
@@ -3114,8 +3111,7 @@ const status = specialClosed
 
           .section-topline,
           .modal-header,
-          .modal-footer,
-          .cart-item-header {
+          .modal-footer {
             flex-direction: column;
             align-items: stretch;
           }
@@ -3140,9 +3136,7 @@ const status = specialClosed
             font-size: 1.35rem;
           }
 
-          .cuisine-grid,
-          .form-grid,
-          .preorder-grid {
+          .cuisine-grid {
             grid-template-columns: 1fr;
           }
 
@@ -3155,14 +3149,9 @@ const status = specialClosed
             padding: 22px;
           }
 
-          .glass-card,
           .product-card,
           .category-card-inner {
             padding: 18px;
-          }
-
-          .switch-row button {
-            min-width: 0;
           }
 
           .product-modal {
@@ -3208,11 +3197,6 @@ const status = specialClosed
           .product-price {
             font-size: 0.86rem;
             padding: 8px 10px;
-          }
-
-          .quantity-box button {
-            width: 32px;
-            height: 32px;
           }
 
           .modal-choice {
