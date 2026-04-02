@@ -5,7 +5,7 @@ import {
   addDoc,
   collection,
   doc,
-  getDoc,
+  onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
 import {
@@ -881,12 +881,12 @@ const status = specialClosed
   useEffect(() => {
   if (!selectedProduct?.options?.length) return;
   useEffect(() => {
-  async function loadSpecialClosure() {
-    try {
-      const todayId = formatDateId(new Date());
-      const closureRef = doc(db, "specialClosures", todayId);
-      const closureSnap = await getDoc(closureRef);
+  const todayId = formatDateId(new Date());
+  const closureRef = doc(db, "specialClosures", todayId);
 
+  const unsubscribe = onSnapshot(
+    closureRef,
+    (closureSnap) => {
       if (closureSnap.exists()) {
         const data = closureSnap.data();
         setSpecialClosed(!!data.closed);
@@ -895,16 +895,18 @@ const status = specialClosed
         setSpecialClosed(false);
         setSpecialClosedReason("");
       }
-    } catch (error) {
+
+      setSpecialClosedLoading(false);
+    },
+    (error) => {
       console.error("Fehler beim Laden der Sonder-Öffnungszeiten:", error);
       setSpecialClosed(false);
       setSpecialClosedReason("");
-    } finally {
       setSpecialClosedLoading(false);
     }
-  }
+  );
 
-  loadSpecialClosure();
+  return () => unsubscribe();
 }, []);
 
   const recalculatedPriceMap: Record<string, { name: string; price: number }[]> = {};
@@ -966,6 +968,14 @@ const status = specialClosed
 }
     setFehlermeldung("");
     setErfolgsmeldung("");
+    if (specialClosed) {
+  setFehlermeldung(
+    specialClosedReason
+      ? `Heute geschlossen: ${specialClosedReason}`
+      : "Heute nehmen wir keine Bestellungen an."
+  );
+  return;
+}
 
     if (cart.length === 0) {
       setFehlermeldung("Bitte füge zuerst Produkte zum Warenkorb hinzu.");
