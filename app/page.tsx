@@ -397,9 +397,9 @@ function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
 }
 
 export default function HomePage() {
-  const MANUAL_NOTICE_ACTIVE = false;
+  const MANUAL_NOTICE_ACTIVE = true;
 const MANUAL_NOTICE_TEXT = "Heute öffnen wir erst um 14:00 Uhr.";
-const MANUAL_CHECKOUT_BLOCKED = false;
+const MANUAL_CHECKOUT_BLOCKED = true;
   const [cart, setCart] = useState<CartItem[]>([]);
   const [bestellart, setBestellart] = useState<Bestellart>("abholung");
   const [name, setName] = useState("");
