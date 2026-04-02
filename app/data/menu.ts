@@ -409,6 +409,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 11.0 },
       { name: "Groß 36cm", price: 16.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 14,
@@ -422,6 +423,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 11.0 },
       { name: "Groß 36cm", price: 16.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 15,
@@ -435,6 +437,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 10.5 },
       { name: "Groß 36cm", price: 15.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 16,
@@ -448,6 +451,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 11.0 },
       { name: "Groß 36cm", price: 16.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 17,
@@ -461,6 +465,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 18,
@@ -474,6 +479,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 19,
@@ -487,6 +493,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 20,
@@ -500,6 +507,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 21,
@@ -514,6 +522,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 22,
@@ -528,6 +537,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 23,
@@ -541,6 +551,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 24,
@@ -555,6 +566,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 14.0 },
       { name: "Groß 36cm", price: 19.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 25,
@@ -564,6 +576,7 @@ export const produkte: Product[] = [
     category: "Pizza / Calzone",
     cuisine: "Italienisch",
     variants: [{ name: "Normal 31cm", price: 13.5 }],
+    options: [pizzaExtrasOption],
   },
   {
     id: 26,
@@ -577,6 +590,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 14.0 },
       { name: "Groß 36cm", price: 19.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 27,
@@ -591,6 +605,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 28,
@@ -604,6 +619,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 29,
@@ -618,6 +634,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 30,
@@ -632,6 +649,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 31,
@@ -646,6 +664,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 32,
@@ -659,6 +678,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 33,
@@ -672,6 +692,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 34,
@@ -686,6 +707,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 35,
@@ -700,6 +722,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 14.0 },
       { name: "Groß 36cm", price: 19.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 36,
@@ -713,6 +736,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.0 },
       { name: "Groß 36cm", price: 18.0 },
     ],
+    options: [pizzaExtrasOption],
   },
   {
     id: 37,
@@ -726,6 +750,7 @@ export const produkte: Product[] = [
       { name: "Normal 31cm", price: 13.5 },
       { name: "Groß 36cm", price: 18.5 },
     ],
+    options: [pizzaExtrasOption],
   },
 
   // Italienisch — Partypizza
