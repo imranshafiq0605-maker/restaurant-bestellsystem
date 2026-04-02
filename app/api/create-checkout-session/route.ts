@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     descriptionParts.push(`Endpreis: ${gesamtpreis.toFixed(2)} €`);
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      payment_method_types: ["card","paypal"],
       mode: "payment",
       customer_email: email.trim(),
       line_items: [
