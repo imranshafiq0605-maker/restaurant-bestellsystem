@@ -1899,7 +1899,7 @@ export const produkte: Product[] = [
   },
   {
     id: 117,
-    name: "Bizzil",
+    name: "Bizzl",
     description: "Getränk",
     price: 3.0,
     category: "Getränke",
