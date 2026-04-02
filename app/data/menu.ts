@@ -342,6 +342,79 @@ const partypizzaExtrasOption: ProductOption = {
     { name: "mit Pilzen", price: 0 },
   ],
 };
+const softdrink033Option: ProductOption = {
+  group: "Softdrink Sorte",
+  required: true,
+  items: [
+    { name: "Cola", price: 0 },
+    { name: "Cola Zero", price: 0 },
+    { name: "Fanta", price: 0 },
+    { name: "Fanta Exotic", price: 0 },
+    { name: "Sprite", price: 0 },
+    { name: "Sprite Zero", price: 0 },
+    { name: "Mezzo Mix", price: 0 },
+  ],
+};
+
+const softdrink1LOption: ProductOption = {
+  group: "Flasche Sorte",
+  required: true,
+  items: [
+    { name: "Cola", price: 0 },
+    { name: "Cola Zero", price: 0 },
+    { name: "Fanta", price: 0 },
+    { name: "Sprite", price: 0 },
+    { name: "Mezzo Mix", price: 0 },
+  ],
+};
+
+const alkoholfreiBierOption: ProductOption = {
+  group: "Bier Sorten",
+  required: true,
+  items: [
+    { name: "Bitburger Grapefruit", price: 0 },
+    { name: "Bitburger Pineapple", price: 0 },
+    { name: "Bitburger Pils", price: 0 },
+    { name: "Beck's Blue Lemon", price: 0 },
+  ],
+};
+
+const bionadeOption: ProductOption = {
+  group: "Bionade Geschmack",
+  required: true,
+  items: [
+    { name: "Himbeere", price: 0 },
+    { name: "Holunder", price: 0 },
+    { name: "Naturtrübe Orange", price: 0 },
+    { name: "Naturtrübe Zitrone", price: 0 },
+  ],
+};
+
+const durstloescherOption: ProductOption = {
+  group: "Durstlöscher Geschmack",
+  required: true,
+  items: [
+    { name: "Banane-Sauerkirsch", price: 0 },
+    { name: "Pfirsich", price: 0 },
+    { name: "Zitrone", price: 0 },
+    { name: "Mango", price: 0 },
+    { name: "Blueberry Marshmallow", price: 0 },
+    { name: "Multivitamin", price: 0 },
+    { name: "Waldmeister", price: 0 },
+  ],
+};
+
+const bizzlOption: ProductOption = {
+  group: "Bizzl Geschmack",
+  required: true,
+  items: [
+    { name: "Orange", price: 0 },
+    { name: "Zitrone", price: 0 },
+    { name: "Grapefruit", price: 0 },
+    { name: "Cola", price: 0 },
+    { name: "Pink Grapefruit", price: 0 },
+  ],
+};
 export const kategorienMap: Record<Cuisine, string[]> = {
   Italienisch: [
     "Salate",
@@ -1749,19 +1822,21 @@ export const produkte: Product[] = [
   // Getränke
   {
     id: 108,
-    name: "Cola / Fanta / Sprite / Mezzo Mix 0,33L",
+    name: "Softdrink 0,33L",
     description: "Softgetränk",
     price: 3.0,
     category: "Getränke",
     cuisine: "Getränke",
+    options: [softdrink033Option],
   },
   {
     id: 109,
-    name: "Cola / Fanta / Sprite / Mezzo Mix 1L",
-    description: "Softgetränk",
+    name: "Softdrinks 1L",
+    description: "Wähle deine Flaschen-Sorte",
     price: 4.5,
     category: "Getränke",
     cuisine: "Getränke",
+    options: [softdrink1LOption],
   },
   {
     id: 110,
@@ -1774,14 +1849,15 @@ export const produkte: Product[] = [
   {
     id: 111,
     name: "Durstlöscher",
-    description: "Getränk",
+    description: "Wähle dein Geschmack",
     price: 3.0,
     category: "Getränke",
     cuisine: "Getränke",
+    options: [durstloescherOption],
   },
   {
     id: 112,
-    name: "Red Bull",
+    name: "Red Bull 0,25L",
     description: "Getränk",
     price: 3.5,
     category: "Getränke",
@@ -1789,7 +1865,7 @@ export const produkte: Product[] = [
   },
   {
     id: 113,
-    name: "Wasser",
+    name: "Wasser 0,5L",
     description: "Getränk",
     price: 2.5,
     category: "Getränke",
@@ -1802,6 +1878,7 @@ export const produkte: Product[] = [
     price: 4.5,
     category: "Getränke",
     cuisine: "Getränke",
+    options: [alkoholfreiBierOption],
   },
   {
     id: 115,
@@ -1810,6 +1887,7 @@ export const produkte: Product[] = [
     price: 3.5,
     category: "Getränke",
     cuisine: "Getränke",
+    options: [bionadeOption],
   },
   {
     id: 116,
@@ -1826,5 +1904,6 @@ export const produkte: Product[] = [
     price: 3.0,
     category: "Getränke",
     cuisine: "Getränke",
+    options: [bizzlOption],
   },
 ];
