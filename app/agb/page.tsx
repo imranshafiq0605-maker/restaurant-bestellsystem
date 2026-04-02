@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function AGB() {
   return (
     <div className="legal-wrapper">

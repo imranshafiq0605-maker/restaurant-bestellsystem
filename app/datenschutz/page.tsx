@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function Datenschutz() {
   return (
     <div className="legal-wrapper">
@@ -13,9 +14,9 @@ export default function Datenschutz() {
         <h2>2. Verantwortlicher</h2>
         <p>
           La Rosa GmbH<br />
-          [Straße Hausnummer]<br />
-          [PLZ Ort]<br />
-          E-Mail: [DEINE EMAIL]
+          Bahnhofstraße 2<br />
+          64546 Mörfelden-Walldorf<br />
+          E-Mail: larosa1993@outlook.de
         </p>
 
         <h2>3. Hosting</h2>

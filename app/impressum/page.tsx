@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function Impressum() {
   return (
     <div className="legal-wrapper">
@@ -6,14 +7,14 @@ export default function Impressum() {
 
         <p>
           La Rosa GmbH<br />
-          [Straße Hausnummer]<br />
-          [PLZ Ort]
+          Bahnhofstraße 2<br />
+          64546 Mörfelden-Walldorf
         </p>
 
         <p>
-          Geschäftsführer: [DEIN NAME]<br />
-          Telefon: [DEINE NUMMER]<br />
-          E-Mail: [DEINE EMAIL]
+          Geschäftsführer: Muhammad Shafiq<br />
+          Telefon: 06105 297883<br />
+          E-Mail: larosa1993@outlook.de
         </p>
       </div>
     </div>
