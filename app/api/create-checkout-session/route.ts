@@ -3,16 +3,45 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+function validiereEmail(email: string) {
+  const emailBereinigt = email.trim();
+
+  if (!emailBereinigt) return false;
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(emailBereinigt);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { pendingOrderId, gesamtpreis, gesamtpreisProdukte, rabattBetrag } = body;
+    const {
+      pendingOrderId,
+      email,
+      gesamtpreis,
+      gesamtpreisProdukte,
+      rabattBetrag,
+    } = body;
 
     if (!pendingOrderId) {
-      return NextResponse.json({ error: "pendingOrderId fehlt" }, { status: 400 });
+      return NextResponse.json(
+        { error: "pendingOrderId fehlt" },
+        { status: 400 }
+      );
     }
 
-    if (typeof gesamtpreis !== "number" || Number.isNaN(gesamtpreis) || gesamtpreis <= 0) {
+    if (!email || typeof email !== "string" || !validiereEmail(email)) {
+      return NextResponse.json(
+        { error: "E-Mail fehlt oder ist ungültig" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      typeof gesamtpreis !== "number" ||
+      Number.isNaN(gesamtpreis) ||
+      gesamtpreis <= 0
+    ) {
       return NextResponse.json(
         { error: "Gesamtpreis fehlt oder ist ungültig" },
         { status: 400 }
@@ -20,7 +49,8 @@ export async function POST(req: NextRequest) {
     }
 
     const origin =
-      req.headers.get("origin") || "https://restaurant-bestellsystem.vercel.app";
+      req.headers.get("origin") ||
+      "https://restaurant-bestellsystem.vercel.app";
 
     const descriptionParts: string[] = [];
 
@@ -37,6 +67,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
+      customer_email: email.trim(),
       line_items: [
         {
           price_data: {
@@ -52,9 +83,12 @@ export async function POST(req: NextRequest) {
       ],
       metadata: {
         pendingOrderId,
+        email: email.trim(),
         gesamtpreis: gesamtpreis.toFixed(2),
         rabattBetrag:
-          typeof rabattBetrag === "number" ? rabattBetrag.toFixed(2) : "0.00",
+          typeof rabattBetrag === "number"
+            ? rabattBetrag.toFixed(2)
+            : "0.00",
       },
       success_url: `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}`,
       cancel_url: `${origin}`,

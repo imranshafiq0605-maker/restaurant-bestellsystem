@@ -199,6 +199,30 @@ function validiereTelefonnummer(telefon: string) {
     message: "Telefonnummer sieht gültig aus.",
   };
 }
+function validiereEmail(email: string) {
+  const emailBereinigt = email.trim();
+
+  if (!emailBereinigt) {
+    return {
+      ok: false,
+      message: "Bitte gib deine E-Mail-Adresse ein.",
+    };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(emailBereinigt)) {
+    return {
+      ok: false,
+      message: "Bitte gib eine gültige E-Mail-Adresse ein.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: "E-Mail sieht gültig aus.",
+  };
+}
 
 function pruefeLiefergebiet(plz: string) {
   const plzBereinigt = plz.trim();
@@ -349,6 +373,7 @@ export default function HomePage() {
   const [bestellart, setBestellart] = useState<Bestellart>("abholung");
   const [name, setName] = useState("");
   const [telefon, setTelefon] = useState("");
+  const [email, setEmail] = useState("");
   const [strasse, setStrasse] = useState("");
   const [hausnummer, setHausnummer] = useState("");
   const [plz, setPlz] = useState("");
@@ -842,6 +867,30 @@ export default function HomePage() {
       setFehlermeldung(telefonValidierung.message);
       return;
     }
+    function validiereEmail(email: string) {
+  const emailBereinigt = email.trim();
+
+  if (!emailBereinigt) {
+    return {
+      ok: false,
+      message: "Bitte gib deine E-Mail-Adresse ein.",
+    };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(emailBereinigt)) {
+    return {
+      ok: false,
+      message: "Bitte gib eine gültige E-Mail-Adresse ein.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: "E-Mail sieht gültig aus.",
+  };
+}
 
     if (bestellart === "lieferung") {
       if (!strasse.trim()) {
@@ -914,10 +963,11 @@ export default function HomePage() {
 
       const pendingBestellung = {
         kunde: {
-          name,
-          telefon,
-          adresse:
-            bestellart === "lieferung" ? zusammengesetzteAdresse : "Abholung",
+  name,
+  telefon,
+  email: email.trim(),
+  adresse:
+    bestellart === "lieferung" ? zusammengesetzteAdresse : "Abholung",
           ...(bestellart === "lieferung"
             ? {
                 lieferadresse: {
@@ -1476,28 +1526,41 @@ export default function HomePage() {
           </div>
 
           <div className="checkout-form-grid">
-            <div className="form-group">
-              <label htmlFor="name">Name</label>
-              <input
-                id="name"
-                type="text"
-                placeholder="Dein Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
+  <div className="form-group">
+    <label htmlFor="name">Name</label>
+    <input
+      id="name"
+      type="text"
+      placeholder="Dein Name"
+      value={name}
+      onChange={(e) => setName(e.target.value)}
+    />
+  </div>
 
-            <div className="form-group">
-              <label htmlFor="telefon">Telefonnummer</label>
-              <input
-                id="telefon"
-                type="text"
-                placeholder="Deine Telefonnummer"
-                value={telefon}
-                onChange={(e) => setTelefon(e.target.value)}
-              />
-            </div>
-          </div>
+  <div className="form-group">
+    <label htmlFor="telefon">Telefonnummer</label>
+    <input
+      id="telefon"
+      type="text"
+      placeholder="Deine Telefonnummer"
+      value={telefon}
+      onChange={(e) => setTelefon(e.target.value)}
+    />
+  </div>
+</div>
+
+<div className="checkout-form-grid">
+  <div className="form-group">
+    <label htmlFor="email">E-Mail-Adresse</label>
+    <input
+      id="email"
+      type="email"
+      placeholder="Deine E-Mail-Adresse"
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+    />
+  </div>
+</div>
 
           {bestellart === "lieferung" && (
             <>
