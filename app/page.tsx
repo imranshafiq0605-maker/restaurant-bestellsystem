@@ -1028,16 +1028,25 @@ export default function HomePage() {
         {viewStep === "kitchens" && (
           <>
             <section className="hero-image-section">
-              <div className="container">
-                <div
-                  className="hero-image-card"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.18)), url('/images/hero-main.jpg')",
-                  }}
-                />
-              </div>
-            </section>
+  <div className="container">
+    <div
+      className="hero-image-card"
+      style={{
+        backgroundImage: "url('/images/hero-main.jpg')",
+      }}
+    >
+      <div className="hero-image-overlay" />
+
+      <div className="hero-image-content">
+        <span className="hero-kicker">Willkommen</span>
+        <h2 className="hero-image-title">Willkommen bei La Rosa GmbH</h2>
+        <p className="hero-image-text">
+          Italienische und indische Spezialitäten direkt online bestellen.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 
             <section className="container section-spacing offers-section">
               <div className="section-topline offers-headline">
