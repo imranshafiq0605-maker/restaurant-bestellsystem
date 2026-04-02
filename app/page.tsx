@@ -1959,8 +1959,8 @@ const status = specialClosed
             <div className="product-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div>
-                  <span className="eyebrow">{selectedProduct.category}</span>
-                  <h3>{selectedProduct.name}</h3>
+                  <span className="eyebrow">{selectedProduct?.category}</span>
+<h3>{selectedProduct?.name}</h3>
                 </div>
 
                 <button className="modal-close" onClick={resetModal} type="button">
@@ -1968,13 +1968,13 @@ const status = specialClosed
                 </button>
               </div>
 
-              <p className="modal-description">{selectedProduct.description}</p>
+              <p className="modal-description">{selectedProduct?.description}</p>
 
-              {selectedProduct.variants && selectedProduct.variants.length > 0 && (
+              {selectedProduct?.variants && selectedProduct.variants.length > 0 && (
                 <div className="modal-section">
                   <h4>Variante wählen</h4>
                   <div className="modal-choice-list">
-                    {selectedProduct.variants?.map((variant) => (
+                    {selectedProduct?.variants?.map((variant) => (
                       <button
                         key={variant.name}
                         type="button"
