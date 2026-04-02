@@ -1934,7 +1934,7 @@ const status = specialClosed
   className="checkout-button"
   onClick={handleStripeCheckout}
   type="button"
-  disabled={isSubmitting || specialClosed || specialClosedLoading}
+  disabled={isSubmitting}
 >
             {isSubmitting ? "Wird gesendet..." : "Jetzt sicher bezahlen"}
           </button>
