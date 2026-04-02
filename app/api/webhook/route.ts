@@ -12,6 +12,36 @@ import { db } from "../../lib/firebase";
 import { sendOrderEmail } from "../../lib/send-order-email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function istRestaurantGeradeGeoeffnet(date: Date) {
+  const tag = date.getDay(); // 0 = Sonntag, 6 = Samstag
+  const minuten = date.getHours() * 60 + date.getMinutes();
+  const istWochenende = tag === 0 || tag === 6;
+
+  const offenAb = istWochenende ? 14 * 60 : 11 * 60;
+  const offenBis = 23 * 60;
+
+  return minuten >= offenAb && minuten <= offenBis;
+}
+
+function getNaechsterOeffnungszeitpunkt(fromDate: Date) {
+  const d = new Date(fromDate);
+
+  while (true) {
+    const tag = d.getDay();
+    const istWochenende = tag === 0 || tag === 6;
+    const openHour = istWochenende ? 14 : 11;
+
+    const candidate = new Date(d);
+    candidate.setHours(openHour, 0, 0, 0);
+
+    if (candidate.getTime() > fromDate.getTime()) {
+      return candidate;
+    }
+
+    d.setDate(d.getDate() + 1);
+    d.setHours(0, 0, 0, 0);
+  }
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -74,14 +104,23 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ neue Bestellnummer:", neueBestellnummer);
 
-    const finaleBestellung = {
-      ...pendingOrderData,
-      orderNumber: neueBestellnummer,
-      status: "neu",
-      bezahlt: true,
-      stripeSessionId: session.id,
-      createdAt: serverTimestamp(),
-    };
+    const jetzt = new Date();
+const istGeradeGeoeffnet = istRestaurantGeradeGeoeffnet(jetzt);
+
+const releaseAt = istGeradeGeoeffnet
+  ? jetzt.toISOString()
+  : getNaechsterOeffnungszeitpunkt(jetzt).toISOString();
+
+const finaleBestellung = {
+  ...pendingOrderData,
+  orderNumber: neueBestellnummer,
+  status: "neu",
+  bezahlt: true,
+  stripeSessionId: session.id,
+  releaseAt,
+  acceptedAt: null,
+  createdAt: serverTimestamp(),
+};
 
     await setDoc(doc(db, "bestellungen", pendingOrderId), finaleBestellung);
     console.log("✅ Bestellung in bestellungen gespeichert");
