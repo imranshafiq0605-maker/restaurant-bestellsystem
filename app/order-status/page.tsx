@@ -27,7 +27,7 @@ type OrderData = {
   status?: string;
   bezahlt?: boolean;
   vorbestellung?: string;
-uhrzeit?: string;
+  uhrzeit?: string;
   confirmedMinutes?: number;
   lieferzeitMinuten?: number;
   estimatedMinutes?: number;
@@ -69,6 +69,14 @@ function OrderStatusContent() {
   const [loading, setLoading] = useState(true);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [waitedTooLong, setWaitedTooLong] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     if (!orderId) {
@@ -111,16 +119,16 @@ function OrderStatusContent() {
   }, [paidFromUrl, order]);
 
   const confirmedMinutes = useMemo(() => {
-  if (!order) return null;
+    if (!order) return null;
 
-  const value =
-    (order as any).annahmeZeitMinuten ??
-    (order as any).confirmedMinutes ??
-    (order as any).lieferzeitMinuten ??
-    (order as any).estimatedMinutes;
+    const value =
+      (order as any).annahmeZeitMinuten ??
+      (order as any).confirmedMinutes ??
+      (order as any).lieferzeitMinuten ??
+      (order as any).estimatedMinutes;
 
-  return typeof value === "number" && value > 0 ? value : null;
-}, [order]);
+    return typeof value === "number" && value > 0 ? value : null;
+  }, [order]);
 
   const countdownStart = useMemo(() => {
     if (!order || !confirmedMinutes) return null;
@@ -153,29 +161,24 @@ function OrderStatusContent() {
     return () => clearInterval(interval);
   }, [confirmedMinutes, countdownStart]);
 
-  const minutes = remainingSeconds !== null ? Math.floor(remainingSeconds / 60) : 0;
+  const minutes =
+    remainingSeconds !== null ? Math.floor(remainingSeconds / 60) : 0;
   const seconds = remainingSeconds !== null ? remainingSeconds % 60 : 0;
 
   const progress = useMemo(() => {
     if (!confirmedMinutes || remainingSeconds === null) return 0;
     const total = confirmedMinutes * 60;
-    return Math.min(100, Math.max(0, ((total - remainingSeconds) / total) * 100));
+    return Math.min(
+      100,
+      Math.max(0, ((total - remainingSeconds) / total) * 100)
+    );
   }, [confirmedMinutes, remainingSeconds]);
 
   if (!orderId) {
     return (
-      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
-        <div
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            background: "#fff",
-            borderRadius: 28,
-            padding: 32,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-          }}
-        >
-          Bestellung nicht gefunden.
+      <main style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.simpleCard}>Bestellung nicht gefunden.</div>
         </div>
       </main>
     );
@@ -183,18 +186,11 @@ function OrderStatusContent() {
 
   if (loading) {
     return (
-      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
-        <div
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            background: "#fff",
-            borderRadius: 28,
-            padding: 32,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-          }}
-        >
-          Zahlung wird verarbeitet. Bestellung wird geladen...
+      <main style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.simpleCard}>
+            Zahlung wird verarbeitet. Bestellung wird geladen...
+          </div>
         </div>
       </main>
     );
@@ -202,20 +198,13 @@ function OrderStatusContent() {
 
   if (!order) {
     return (
-      <main style={{ minHeight: "100vh", background: "#f7f7f8", padding: 24 }}>
-        <div
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            background: "#fff",
-            borderRadius: 28,
-            padding: 32,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-          }}
-        >
-          {paidFromUrl && !waitedTooLong
-            ? "Zahlung erfolgreich. Bestellung wird gerade verarbeitet..."
-            : "Bestellung nicht gefunden."}
+      <main style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.simpleCard}>
+            {paidFromUrl && !waitedTooLong
+              ? "Zahlung erfolgreich. Bestellung wird gerade verarbeitet..."
+              : "Bestellung nicht gefunden."}
+          </div>
         </div>
       </main>
     );
@@ -228,31 +217,35 @@ function OrderStatusContent() {
   const displayStatus = (() => {
     const bezahlt = order?.bezahlt || paidFromUrl;
     const istVorbestellung = order?.vorbestellung === "spaeter";
-  const vorbestellUhrzeit = order?.uhrzeit;
+    const vorbestellUhrzeit = order?.uhrzeit;
 
     if (!bezahlt) {
       return {
         badge: "Zahlung offen",
         title: "Zahlung wird geprüft",
-        subtitle: "Sobald die Zahlung bestätigt ist, erscheint hier dein aktueller Status.",
+        subtitle:
+          "Sobald die Zahlung bestätigt ist, erscheint hier dein aktueller Status.",
         tone: "#b91c1c",
         soft: "#fef2f2",
       };
     }
-if (istVorbestellung && vorbestellUhrzeit) {
-  return {
-    badge: "Vorbestellung",
-    title: `${vorbestellUhrzeit} Uhr`,
-    subtitle: "Deine Bestellung wurde als Vorbestellung gespeichert.",
-    tone: "#7c3aed",
-    soft: "#f5f3ff",
-  };
-}
+
+    if (istVorbestellung && vorbestellUhrzeit) {
+      return {
+        badge: "Vorbestellung",
+        title: `${vorbestellUhrzeit} Uhr`,
+        subtitle: "Deine Bestellung wurde als Vorbestellung gespeichert.",
+        tone: "#7c3aed",
+        soft: "#f5f3ff",
+      };
+    }
+
     if (!confirmedMinutes || remainingSeconds === null) {
       return {
         badge: "Bezahlt",
         title: "Lieferzeit wird noch bestätigt",
-        subtitle: "Deine Bestellung ist eingegangen. Die genaue Zeit wird in Kürze bestätigt.",
+        subtitle:
+          "Deine Bestellung ist eingegangen. Die genaue Zeit wird in Kürze bestätigt.",
         tone: "#166534",
         soft: "#f0fdf4",
       };
@@ -291,59 +284,29 @@ if (istVorbestellung && vorbestellUhrzeit) {
   })();
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #f8fafc 0%, #f7f7f8 40%, #f3f4f6 100%)",
-        padding: "28px 18px 40px",
-      }}
-    >
-      <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+    <main style={styles.page}>
+      <div style={styles.container}>
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1.4fr 0.9fr",
-            gap: 20,
+            ...styles.topGrid,
+            gridTemplateColumns: isMobile ? "1fr" : "1.4fr 0.9fr",
           }}
         >
-          <section
-            style={{
-              background: "#ffffff",
-              borderRadius: 30,
-              padding: 32,
-              boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
-              border: "1px solid rgba(15,23,42,0.05)",
-            }}
-          >
+          <section style={styles.mainCard}>
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 20,
-                alignItems: "flex-start",
-                flexWrap: "wrap",
+                ...styles.heroTop,
+                flexDirection: isMobile ? "column" : "row",
+                alignItems: isMobile ? "stretch" : "flex-start",
               }}
             >
               <div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: "#6b7280",
-                    marginBottom: 10,
-                  }}
-                >
-                  La Rosa
-                </div>
+                <div style={styles.brandLabel}>La Rosa</div>
 
                 <h1
                   style={{
-                    margin: 0,
-                    fontSize: 56,
-                    lineHeight: 1,
-                    letterSpacing: "-0.04em",
-                    color: "#0f172a",
+                    ...styles.mainTitle,
+                    fontSize: isMobile ? 34 : 56,
                   }}
                 >
                   Dein Bestellstatus
@@ -351,12 +314,9 @@ if (istVorbestellung && vorbestellUhrzeit) {
 
                 <p
                   style={{
-                    marginTop: 16,
-                    marginBottom: 0,
-                    color: "#64748b",
-                    fontSize: 18,
-                    maxWidth: 720,
-                    lineHeight: 1.5,
+                    ...styles.mainSubtitle,
+                    fontSize: isMobile ? 15 : 18,
+                    marginTop: isMobile ? 12 : 16,
                   }}
                 >
                   Hier siehst du jederzeit den aktuellen Stand deiner Bestellung
@@ -366,76 +326,50 @@ if (istVorbestellung && vorbestellUhrzeit) {
 
               <div
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 10,
+                  ...styles.statusBadge,
                   background: displayStatus.soft,
                   color: displayStatus.tone,
-                  padding: "12px 16px",
-                  borderRadius: 999,
-                  fontWeight: 700,
-                  fontSize: 15,
+                  alignSelf: isMobile ? "flex-start" : "auto",
                 }}
               >
                 <span
                   style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
+                    ...styles.statusDot,
                     background: displayStatus.tone,
-                    display: "inline-block",
                   }}
                 />
                 {displayStatus.badge}
               </div>
             </div>
 
-            <div
-              style={{
-                marginTop: 28,
-                background: "#0f172a",
-                color: "#fff",
-                borderRadius: 26,
-                padding: 26,
-              }}
-            >
+            <div style={styles.darkStatusCard}>
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.2fr 1fr auto",
-                  gap: 16,
-                  alignItems: "end",
+                  ...styles.darkStatusGrid,
+                  gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr auto",
                 }}
               >
                 <div>
+                  <div style={styles.darkLabel}>Status</div>
                   <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      opacity: 0.65,
-                      marginBottom: 8,
-                    }}
-                  >
-                    Status
-                  </div>
-                  <div
-                    style={{
-                      fontSize: remainingSeconds !== null && remainingSeconds > 0 ? 48 : 34,
-                      fontWeight: 800,
-                      letterSpacing: "-0.04em",
-                      lineHeight: 1,
+                      ...styles.darkMainValue,
+                      fontSize:
+                        remainingSeconds !== null && remainingSeconds > 0
+                          ? isMobile
+                            ? 34
+                            : 48
+                          : isMobile
+                          ? 26
+                          : 34,
                     }}
                   >
                     {displayStatus.title}
                   </div>
                   <div
                     style={{
-                      marginTop: 10,
-                      color: "rgba(255,255,255,0.72)",
-                      fontSize: 16,
-                      lineHeight: 1.5,
+                      ...styles.darkText,
+                      fontSize: isMobile ? 14 : 16,
                     }}
                   >
                     {displayStatus.subtitle}
@@ -443,222 +377,107 @@ if (istVorbestellung && vorbestellUhrzeit) {
                 </div>
 
                 <div>
+                  <div style={styles.darkLabel}>Bestellart</div>
                   <div
                     style={{
-                      fontSize: 13,
+                      fontSize: isMobile ? 20 : 24,
                       fontWeight: 700,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      opacity: 0.65,
-                      marginBottom: 8,
                     }}
                   >
-                    Bestellart
-                  </div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>
                     {bestellart === "lieferung" ? "Lieferung" : "Abholung"}
                   </div>
                 </div>
 
                 <div
                   style={{
-                    background: "rgba(255,255,255,0.08)",
-                    padding: "16px 18px",
-                    borderRadius: 18,
-                    minWidth: 140,
+                    ...styles.totalBox,
+                    minWidth: isMobile ? "100%" : 140,
                   }}
                 >
+                  <div style={styles.totalLabel}>Gesamt</div>
                   <div
                     style={{
-                      fontSize: 13,
-                      opacity: 0.65,
-                      textTransform: "uppercase",
-                      fontWeight: 700,
-                      marginBottom: 8,
+                      fontSize: isMobile ? 24 : 28,
+                      fontWeight: 800,
                     }}
                   >
-                    Gesamt
-                  </div>
-                  <div style={{ fontSize: 28, fontWeight: 800 }}>
                     {formatEuro(order.gesamtpreis)}
                   </div>
                 </div>
               </div>
 
-              {confirmedMinutes && remainingSeconds !== null && remainingSeconds > 0 && (
-                <div style={{ marginTop: 24 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: 10,
-                      color: "rgba(255,255,255,0.72)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                    }}
-                  >
-                    <span>Fortschritt</span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
+              {confirmedMinutes &&
+                remainingSeconds !== null &&
+                remainingSeconds > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={styles.progressTop}>
+                      <span>Fortschritt</span>
+                      <span>{Math.round(progress)}%</span>
+                    </div>
 
-                  <div
-                    style={{
-                      width: "100%",
-                      height: 12,
-                      background: "rgba(255,255,255,0.12)",
-                      borderRadius: 999,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${progress}%`,
-                        height: "100%",
-                        borderRadius: 999,
-                        background:
-                          "linear-gradient(90deg, #ffffff 0%, #94a3b8 100%)",
-                        transition: "width 0.8s ease",
-                      }}
-                    />
+                    <div style={styles.progressTrack}>
+                      <div
+                        style={{
+                          ...styles.progressFill,
+                          width: `${progress}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </section>
 
-          <section
-            style={{
-              display: "grid",
-              gap: 20,
-            }}
-          >
-            <div
-              style={{
-                background: "#ffffff",
-                borderRadius: 30,
-                padding: 28,
-                boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
-                border: "1px solid rgba(15,23,42,0.05)",
-              }}
-            >
+          <section style={styles.sideGrid}>
+            <div style={styles.sideCard}>
+              <div style={styles.smallCardLabel}>Bestellnummer</div>
               <div
                 style={{
-                  fontSize: 13,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  fontWeight: 700,
-                  color: "#94a3b8",
-                  marginBottom: 10,
-                }}
-              >
-                Bestellnummer
-              </div>
-              <div
-                style={{
-                  fontSize: 36,
-                  fontWeight: 800,
-                  letterSpacing: "-0.04em",
-                  color: "#0f172a",
+                  ...styles.orderNumber,
+                  fontSize: isMobile ? 28 : 36,
                 }}
               >
                 #{order.orderNumber || "—"}
               </div>
             </div>
 
-            <div
-              style={{
-                background: "#ffffff",
-                borderRadius: 30,
-                padding: 28,
-                boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
-                border: "1px solid rgba(15,23,42,0.05)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 13,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  fontWeight: 700,
-                  color: "#94a3b8",
-                  marginBottom: 12,
-                }}
-              >
-                Kundendaten
-              </div>
+            <div style={styles.sideCard}>
+              <div style={styles.smallCardLabel}>Kundendaten</div>
 
-              <div style={{ display: "grid", gap: 14 }}>
+              <div style={styles.customerGrid}>
                 <div>
-                  <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 4 }}>
-                    Name
-                  </div>
-                  <div style={{ color: "#0f172a", fontWeight: 700, fontSize: 17 }}>
-                    {kunde.name || "—"}
-                  </div>
+                  <div style={styles.metaLabel}>Name</div>
+                  <div style={styles.metaValue}>{kunde.name || "—"}</div>
                 </div>
 
                 <div>
-                  <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 4 }}>
-                    Adresse
-                  </div>
-                  <div style={{ color: "#0f172a", fontWeight: 700, fontSize: 17 }}>
-                    {kunde.adresse || "—"}
-                  </div>
+                  <div style={styles.metaLabel}>Adresse</div>
+                  <div style={styles.metaValue}>{kunde.adresse || "—"}</div>
                 </div>
 
                 <div>
-                  <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 4 }}>
-                    Telefon
-                  </div>
-                  <div style={{ color: "#0f172a", fontWeight: 700, fontSize: 17 }}>
-                    {kunde.telefon || "—"}
-                  </div>
+                  <div style={styles.metaLabel}>Telefon</div>
+                  <div style={styles.metaValue}>{kunde.telefon || "—"}</div>
                 </div>
               </div>
             </div>
           </section>
         </div>
 
-        <section
-          style={{
-            marginTop: 20,
-            background: "#ffffff",
-            borderRadius: 30,
-            padding: 30,
-            boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
-            border: "1px solid rgba(15,23,42,0.05)",
-          }}
-        >
+        <section style={styles.itemsSection}>
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 20,
-              alignItems: "center",
-              marginBottom: 18,
-              flexWrap: "wrap",
+              ...styles.itemsHeader,
+              flexDirection: isMobile ? "column" : "row",
+              alignItems: isMobile ? "stretch" : "center",
             }}
           >
             <div>
-              <div
-                style={{
-                  fontSize: 13,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  fontWeight: 700,
-                  color: "#94a3b8",
-                  marginBottom: 8,
-                }}
-              >
-                Bestellübersicht
-              </div>
+              <div style={styles.smallCardLabel}>Bestellübersicht</div>
               <h2
                 style={{
-                  margin: 0,
-                  color: "#0f172a",
-                  fontSize: 32,
-                  lineHeight: 1,
-                  letterSpacing: "-0.04em",
+                  ...styles.itemsTitle,
+                  fontSize: isMobile ? 26 : 32,
                 }}
               >
                 Deine Artikel
@@ -667,87 +486,48 @@ if (istVorbestellung && vorbestellUhrzeit) {
 
             <div
               style={{
-                background: "#0f172a",
-                color: "#fff",
-                padding: "14px 18px",
-                borderRadius: 18,
-                fontWeight: 800,
-                fontSize: 20,
+                ...styles.itemsTotalPill,
+                fontSize: isMobile ? 18 : 20,
+                alignSelf: isMobile ? "flex-start" : "auto",
               }}
             >
               {formatEuro(order.gesamtpreis)}
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 16 }}>
+          <div style={styles.itemsList}>
             {artikel.map((item, index) => (
               <div
                 key={`${item.name}-${index}`}
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "auto 1fr auto",
-                  gap: 16,
-                  alignItems: "start",
-                  padding: 20,
-                  borderRadius: 22,
-                  background: "#f8fafc",
-                  border: "1px solid #e5e7eb",
+                  ...styles.itemCard,
+                  gridTemplateColumns: isMobile ? "1fr" : "auto 1fr auto",
                 }}
               >
-                <div
-                  style={{
-                    width: 46,
-                    height: 46,
-                    borderRadius: 14,
-                    background: "#111827",
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 800,
-                  }}
-                >
-                  {item.quantity}x
-                </div>
+                <div style={styles.qtyBadge}>{item.quantity}x</div>
 
                 <div>
                   <div
                     style={{
-                      color: "#0f172a",
-                      fontWeight: 800,
-                      fontSize: 20,
-                      marginBottom: 6,
+                      ...styles.itemName,
+                      fontSize: isMobile ? 18 : 20,
                     }}
                   >
                     {item.name}
                   </div>
 
                   {item.variantName && (
-                    <div style={{ color: "#475569", fontSize: 15, marginBottom: 6 }}>
+                    <div style={styles.variantText}>
                       Variante: {item.variantName}
                     </div>
                   )}
 
                   {item.selectedOptions && item.selectedOptions.length > 0 && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 8,
-                        marginTop: 4,
-                      }}
-                    >
+                    <div style={styles.optionWrap}>
                       {item.selectedOptions.map((option, optionIndex) => (
                         <span
                           key={`${option}-${optionIndex}`}
-                          style={{
-                            background: "#e2e8f0",
-                            color: "#334155",
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            fontSize: 13,
-                            fontWeight: 700,
-                          }}
+                          style={styles.optionPill}
                         >
                           {option}
                         </span>
@@ -758,9 +538,8 @@ if (istVorbestellung && vorbestellUhrzeit) {
 
                 <div
                   style={{
-                    color: "#0f172a",
-                    fontWeight: 800,
-                    fontSize: 20,
+                    ...styles.itemPrice,
+                    fontSize: isMobile ? 18 : 20,
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -782,3 +561,260 @@ export default function OrderStatusPage() {
     </Suspense>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: "100vh",
+    background:
+      "linear-gradient(180deg, #f8fafc 0%, #f7f7f8 40%, #f3f4f6 100%)",
+    padding: "20px 14px 36px",
+  },
+  container: {
+    maxWidth: 1180,
+    margin: "0 auto",
+  },
+  simpleCard: {
+    background: "#ffffff",
+    borderRadius: 24,
+    padding: 24,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
+  },
+  topGrid: {
+    display: "grid",
+    gap: 20,
+  },
+  mainCard: {
+    background: "#ffffff",
+    borderRadius: 30,
+    padding: 24,
+    boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
+    border: "1px solid rgba(15,23,42,0.05)",
+  },
+  heroTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 20,
+    flexWrap: "wrap",
+  },
+  brandLabel: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#6b7280",
+    marginBottom: 10,
+  },
+  mainTitle: {
+    margin: 0,
+    lineHeight: 1,
+    letterSpacing: "-0.04em",
+    color: "#0f172a",
+    fontWeight: 800,
+  },
+  mainSubtitle: {
+    marginBottom: 0,
+    color: "#64748b",
+    maxWidth: 720,
+    lineHeight: 1.5,
+  },
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "12px 16px",
+    borderRadius: 999,
+    fontWeight: 700,
+    fontSize: 15,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: "50%",
+    display: "inline-block",
+  },
+  darkStatusCard: {
+    marginTop: 28,
+    background: "#0f172a",
+    color: "#fff",
+    borderRadius: 26,
+    padding: 22,
+  },
+  darkStatusGrid: {
+    display: "grid",
+    gap: 18,
+    alignItems: "end",
+  },
+  darkLabel: {
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    opacity: 0.65,
+    marginBottom: 8,
+  },
+  darkMainValue: {
+    fontWeight: 800,
+    letterSpacing: "-0.04em",
+    lineHeight: 1,
+  },
+  darkText: {
+    marginTop: 10,
+    color: "rgba(255,255,255,0.72)",
+    lineHeight: 1.5,
+  },
+  totalBox: {
+    background: "rgba(255,255,255,0.08)",
+    padding: "16px 18px",
+    borderRadius: 18,
+  },
+  totalLabel: {
+    fontSize: 13,
+    opacity: 0.65,
+    textTransform: "uppercase",
+    fontWeight: 700,
+    marginBottom: 8,
+  },
+  progressTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 14,
+    fontWeight: 600,
+  },
+  progressTrack: {
+    width: "100%",
+    height: 12,
+    background: "rgba(255,255,255,0.12)",
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+    background: "linear-gradient(90deg, #ffffff 0%, #94a3b8 100%)",
+    transition: "width 0.8s ease",
+  },
+  sideGrid: {
+    display: "grid",
+    gap: 20,
+  },
+  sideCard: {
+    background: "#ffffff",
+    borderRadius: 30,
+    padding: 24,
+    boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
+    border: "1px solid rgba(15,23,42,0.05)",
+  },
+  smallCardLabel: {
+    fontSize: 13,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    fontWeight: 700,
+    color: "#94a3b8",
+    marginBottom: 10,
+  },
+  orderNumber: {
+    fontWeight: 800,
+    letterSpacing: "-0.04em",
+    color: "#0f172a",
+  },
+  customerGrid: {
+    display: "grid",
+    gap: 14,
+  },
+  metaLabel: {
+    color: "#94a3b8",
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  metaValue: {
+    color: "#0f172a",
+    fontWeight: 700,
+    fontSize: 17,
+    lineHeight: 1.45,
+    wordBreak: "break-word",
+  },
+  itemsSection: {
+    marginTop: 20,
+    background: "#ffffff",
+    borderRadius: 30,
+    padding: 24,
+    boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
+    border: "1px solid rgba(15,23,42,0.05)",
+  },
+  itemsHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 20,
+    marginBottom: 18,
+    flexWrap: "wrap",
+  },
+  itemsTitle: {
+    margin: 0,
+    color: "#0f172a",
+    lineHeight: 1,
+    letterSpacing: "-0.04em",
+  },
+  itemsTotalPill: {
+    background: "#0f172a",
+    color: "#fff",
+    padding: "14px 18px",
+    borderRadius: 18,
+    fontWeight: 800,
+  },
+  itemsList: {
+    display: "grid",
+    gap: 16,
+  },
+  itemCard: {
+    display: "grid",
+    gap: 16,
+    alignItems: "start",
+    padding: 18,
+    borderRadius: 22,
+    background: "#f8fafc",
+    border: "1px solid #e5e7eb",
+  },
+  qtyBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    background: "#111827",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 800,
+    flexShrink: 0,
+  },
+  itemName: {
+    color: "#0f172a",
+    fontWeight: 800,
+    marginBottom: 6,
+    lineHeight: 1.25,
+  },
+  variantText: {
+    color: "#475569",
+    fontSize: 15,
+    marginBottom: 6,
+    lineHeight: 1.5,
+  },
+  optionWrap: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  optionPill: {
+    background: "#e2e8f0",
+    color: "#334155",
+    padding: "6px 10px",
+    borderRadius: 999,
+    fontSize: 13,
+    fontWeight: 700,
+  },
+  itemPrice: {
+    color: "#0f172a",
+    fontWeight: 800,
+    alignSelf: "center",
+  },
+};
