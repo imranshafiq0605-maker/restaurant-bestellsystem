@@ -9,6 +9,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { sendOrderEmail } from "../../lib/send-order-email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -84,6 +85,33 @@ export async function POST(req: NextRequest) {
 
     await setDoc(doc(db, "bestellungen", pendingOrderId), finaleBestellung);
     console.log("✅ Bestellung in bestellungen gespeichert");
+
+    const kunde = pendingOrderData?.kunde || {};
+    const kundenEmail =
+      typeof kunde.email === "string" ? kunde.email.trim() : "";
+
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      req.headers.get("origin") ||
+      "https://restaurant-bestellsystem.vercel.app";
+
+    const statusUrl = `${siteUrl}/order-status?id=${pendingOrderId}`;
+
+    if (kundenEmail) {
+      try {
+        await sendOrderEmail({
+          to: kundenEmail,
+          name: kunde.name || "",
+          orderNumber: neueBestellnummer,
+          statusUrl,
+        });
+        console.log("✅ Bestellmail gesendet an:", kundenEmail);
+      } catch (mailError: any) {
+        console.error("❌ Fehler beim Mailversand:", mailError);
+      }
+    } else {
+      console.log("⚠️ Keine Kunden-E-Mail vorhanden, Mail wurde nicht gesendet.");
+    }
 
     await deleteDoc(pendingOrderRef);
     console.log("✅ pendingOrder gelöscht");
