@@ -2448,3 +2448,36 @@ border-radius: 50%;
     height: 24px;
   }
 }
+.special-closure-banner {
+  padding: 24px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+  border: 1px solid rgba(239, 68, 68, 0.12);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
+}
+
+.special-closure-label {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #b42318;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.special-closure-banner h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.special-closure-banner p {
+  margin: 12px 0 0;
+  color: #667085;
+  line-height: 1.7;
+}

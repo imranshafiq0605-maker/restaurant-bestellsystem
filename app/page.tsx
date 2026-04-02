@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import {
   kategorienMap,
   produkte,
@@ -119,6 +125,12 @@ const cuisineCards: {
 
 function formatEuro(value: number) {
   return `${value.toFixed(2).replace(".", ",")} €`;
+}
+function formatDateId(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatDateInput(date: Date) {
@@ -403,6 +415,9 @@ export default function HomePage() {
   const [fehlermeldung, setFehlermeldung] = useState("");
   const [erfolgsmeldung, setErfolgsmeldung] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [specialClosed, setSpecialClosed] = useState(false);
+const [specialClosedReason, setSpecialClosedReason] = useState("");
+const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
 
   const [viewStep, setViewStep] = useState<ViewStep>("kitchens");
   const [activeCuisine, setActiveCuisine] = useState<Cuisine | null>(null);
@@ -425,7 +440,11 @@ export default function HomePage() {
   const [adminClicks, setAdminClicks] = useState(0);
   const offersTrackRef = useRef<HTMLDivElement | null>(null);
 
-  const status = getServiceStatus(bestellart);
+  const baseStatus = getServiceStatus(bestellart);
+
+const status = specialClosed
+  ? { isOpen: false }
+  : baseStatus;
 
   const availablePreorderDates = useMemo(() => getAvailablePreorderDates(21), []);
   const availableTimeSlots = useMemo(
@@ -861,6 +880,32 @@ export default function HomePage() {
   }, [availablePreorderDates, vorbestellungDatum]);
   useEffect(() => {
   if (!selectedProduct?.options?.length) return;
+  useEffect(() => {
+  async function loadSpecialClosure() {
+    try {
+      const todayId = formatDateId(new Date());
+      const closureRef = doc(db, "specialClosures", todayId);
+      const closureSnap = await getDoc(closureRef);
+
+      if (closureSnap.exists()) {
+        const data = closureSnap.data();
+        setSpecialClosed(!!data.closed);
+        setSpecialClosedReason(data.reason || "");
+      } else {
+        setSpecialClosed(false);
+        setSpecialClosedReason("");
+      }
+    } catch (error) {
+      console.error("Fehler beim Laden der Sonder-Öffnungszeiten:", error);
+      setSpecialClosed(false);
+      setSpecialClosedReason("");
+    } finally {
+      setSpecialClosedLoading(false);
+    }
+  }
+
+  loadSpecialClosure();
+}, []);
 
   const recalculatedPriceMap: Record<string, { name: string; price: number }[]> = {};
 
@@ -911,6 +956,14 @@ export default function HomePage() {
   ]);
 
   async function handleStripeCheckout() {
+    if (specialClosed) {
+  setFehlermeldung(
+    specialClosedReason
+      ? `Heute geschlossen: ${specialClosedReason}`
+      : "Heute nehmen wir keine Bestellungen an."
+  );
+  return;
+}
     setFehlermeldung("");
     setErfolgsmeldung("");
 
@@ -1145,6 +1198,19 @@ export default function HomePage() {
 
         {viewStep === "kitchens" && (
           <>
+          {specialClosed && (
+  <section className="container section-spacing">
+    <div className="special-closure-banner">
+      <span className="special-closure-label">Heute geschlossen</span>
+      <h3>Heute nehmen wir keine Bestellungen an</h3>
+      {specialClosedReason ? (
+        <p>Grund: {specialClosedReason}</p>
+      ) : (
+        <p>Heute ist eine besondere Schließzeit eingetragen.</p>
+      )}
+    </div>
+  </section>
+)}
             <section className="hero-image-section">
   <div className="container">
     <div
@@ -1715,7 +1781,7 @@ export default function HomePage() {
               }`}
               onClick={() => setVorbestellung("sofort")}
               type="button"
-              disabled={!status.isOpen}
+              disabled={!status.isOpen || specialClosed}
             >
               <span className="checkout-choice-label">Auswahl</span>
               <strong>Sofort</strong>
@@ -1855,11 +1921,11 @@ export default function HomePage() {
           {erfolgsmeldung && <p className="message success">{erfolgsmeldung}</p>}
 
           <button
-            className="checkout-button checkout-submit-clean"
-            onClick={handleStripeCheckout}
-            type="button"
-            disabled={isSubmitting}
-          >
+  className="checkout-button"
+  onClick={handleStripeCheckout}
+  type="button"
+  disabled={isSubmitting || specialClosed || specialClosedLoading}
+>
             {isSubmitting ? "Wird gesendet..." : "Jetzt sicher bezahlen"}
           </button>
         </div>
