@@ -397,6 +397,9 @@ function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
 }
 
 export default function HomePage() {
+  const MANUAL_NOTICE_ACTIVE = false;
+const MANUAL_NOTICE_TEXT = "Heute öffnen wir erst um 14:00 Uhr.";
+const MANUAL_CHECKOUT_BLOCKED = false;
   const [cart, setCart] = useState<CartItem[]>([]);
   const [bestellart, setBestellart] = useState<Bestellart>("abholung");
   const [name, setName] = useState("");
@@ -969,12 +972,8 @@ const status = specialClosed
 }
     setFehlermeldung("");
     setErfolgsmeldung("");
-    if (specialClosed) {
-  setFehlermeldung(
-    specialClosedReason
-      ? `Heute geschlossen: ${specialClosedReason}`
-      : "Heute nehmen wir keine Bestellungen an."
-  );
+    if (MANUAL_CHECKOUT_BLOCKED) {
+  setFehlermeldung(MANUAL_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
   return;
 }
 
@@ -1199,6 +1198,11 @@ const status = specialClosed
             </div>
           </div>
         </header>
+        {MANUAL_NOTICE_ACTIVE && (
+  <div className="manual-notice-bar">
+    {MANUAL_NOTICE_TEXT}
+  </div>
+)}
 
         {showAddedEffect && (
           <div className="added-toast">
@@ -1792,7 +1796,7 @@ const status = specialClosed
               }`}
               onClick={() => setVorbestellung("sofort")}
               type="button"
-              disabled={!status.isOpen || specialClosed}
+              disabled={!status.isOpen || MANUAL_CHECKOUT_BLOCKED}
             >
               <span className="checkout-choice-label">Auswahl</span>
               <strong>Sofort</strong>
@@ -1809,6 +1813,7 @@ const status = specialClosed
               }`}
               onClick={() => setVorbestellung("spaeter")}
               type="button"
+              disabled={MANUAL_CHECKOUT_BLOCKED}
             >
               <span className="checkout-choice-label">Auswahl</span>
               <strong>Vorbestellung</strong>
@@ -1935,9 +1940,13 @@ const status = specialClosed
   className="checkout-button"
   onClick={handleStripeCheckout}
   type="button"
-  disabled={isSubmitting || specialClosed}
+  disabled={isSubmitting || MANUAL_CHECKOUT_BLOCKED}
 >
-            {isSubmitting ? "Wird gesendet..." : "Jetzt sicher bezahlen"}
+            {isSubmitting
+  ? "Wird gesendet..."
+  : MANUAL_CHECKOUT_BLOCKED
+  ? "Aktuell nicht bestellbar"
+  : "Jetzt sicher bezahlen"}
           </button>
         </div>
       </aside>
