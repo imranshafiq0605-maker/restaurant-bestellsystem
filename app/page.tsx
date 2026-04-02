@@ -264,13 +264,31 @@ function pruefeLiefergebiet(plz: string) {
   };
 }
 
-function getProductBasePrice(produkt: Product) {
+function getProductBasePrice(produkt: Product): number {
   if (typeof produkt.price === "number") return produkt.price;
-  if (produkt.variants?.length) return produkt.variants[0].price;
+
+  if (produkt.variants?.length) {
+    return produkt.variants[0]?.price ?? 0;
+  }
+
   if (produkt.options?.length) {
     const firstGroup = produkt.options[0];
-    if (firstGroup.items.length) return firstGroup.items[0].price;
+    const firstItem = firstGroup?.items?.[0];
+
+    if (!firstItem) return 0;
+
+    if (typeof firstItem.price === "number") {
+      return firstItem.price;
+    }
+
+    if (firstItem.priceByVariant) {
+      const firstVariantName = produkt.variants?.[0]?.name;
+      if (firstVariantName) {
+        return firstItem.priceByVariant[firstVariantName] ?? 0;
+      }
+    }
   }
+
   return 0;
 }
 
@@ -400,8 +418,8 @@ export default function HomePage() {
     Record<string, string[]>
   >({});
   const [selectedOptionsPriceMap, setSelectedOptionsPriceMap] = useState<
-    Record<string, number[]>
-  >({});
+  Record<string, { name: string; price: number }[]>
+>({});
   const [modalError, setModalError] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
@@ -553,17 +571,30 @@ export default function HomePage() {
     }
 
     const initialOptions: Record<string, string[]> = {};
-    const initialOptionPrices: Record<string, number[]> = {};
+    const initialOptionPrices: Record<string, { name: string; price: number }[]> = {};
 
     produkt.options?.forEach((group) => {
-      if (group.required && group.items.length > 0) {
-        initialOptions[group.group] = [group.items[0].name];
-        initialOptionPrices[group.group] = [group.items[0].price];
-      } else {
-        initialOptions[group.group] = [];
-        initialOptionPrices[group.group] = [];
-      }
-    });
+  if (group.required && group.items.length > 0) {
+    const firstItem = group.items[0];
+    const firstPrice =
+      typeof firstItem.price === "number"
+        ? firstItem.price
+        : firstItem.priceByVariant?.[
+            produkt.variants?.[0]?.name || selectedVariantName
+          ] || 0;
+
+    initialOptions[group.group] = [firstItem.name];
+    initialOptionPrices[group.group] = [
+      {
+        name: firstItem.name,
+        price: firstPrice,
+      },
+    ];
+  } else {
+    initialOptions[group.group] = [];
+    initialOptionPrices[group.group] = [];
+  }
+});
 
     setSelectedOptionsMap(initialOptions);
     setSelectedOptionsPriceMap(initialOptionPrices);
@@ -575,52 +606,49 @@ export default function HomePage() {
   }
 
   function handleOptionChange(
-    groupName: string,
-    itemName: string,
-    itemPrice: number,
-    multiple?: boolean
-  ) {
-    setSelectedOptionsMap((prev) => {
-      const current = prev[groupName] || [];
+  groupName: string,
+  itemName: string,
+  itemPrice: number,
+  multiple?: boolean
+) {
+  setSelectedOptionsMap((prev) => {
+    const current = prev[groupName] || [];
 
-      if (multiple) {
-        const exists = current.includes(itemName);
-        return {
-          ...prev,
-          [groupName]: exists
-            ? current.filter((item) => item !== itemName)
-            : [...current, itemName],
-        };
-      }
-
+    if (multiple) {
+      const exists = current.includes(itemName);
       return {
         ...prev,
-        [groupName]: [itemName],
+        [groupName]: exists
+          ? current.filter((item) => item !== itemName)
+          : [...current, itemName],
       };
-    });
+    }
 
-    setSelectedOptionsPriceMap((prev) => {
-      const currentNames = selectedOptionsMap[groupName] || [];
-      const currentPrices = prev[groupName] || [];
+    return {
+      ...prev,
+      [groupName]: [itemName],
+    };
+  });
 
-      if (multiple) {
-        const index = currentNames.indexOf(itemName);
-        const exists = index !== -1;
+  setSelectedOptionsPriceMap((prev) => {
+    const currentEntries = prev[groupName] || [];
+    const exists = currentEntries.some((entry) => entry.name === itemName);
 
-        return {
-          ...prev,
-          [groupName]: exists
-            ? currentPrices.filter((_, i) => i !== index)
-            : [...currentPrices, itemPrice],
-        };
-      }
-
+    if (multiple) {
       return {
         ...prev,
-        [groupName]: [itemPrice],
+        [groupName]: exists
+          ? currentEntries.filter((entry) => entry.name !== itemName)
+          : [...currentEntries, { name: itemName, price: itemPrice }],
       };
-    });
-  }
+    }
+
+    return {
+      ...prev,
+      [groupName]: [{ name: itemName, price: itemPrice }],
+    };
+  });
+}
 
   const modalTotalPrice = useMemo(() => {
     if (!selectedProduct) return 0;
@@ -633,11 +661,11 @@ export default function HomePage() {
       total += selectedProduct.price;
     }
 
-    Object.values(selectedOptionsPriceMap).forEach((prices) => {
-      prices.forEach((price) => {
-        total += price;
-      });
-    });
+    Object.values(selectedOptionsPriceMap).forEach((entries) => {
+  entries.forEach((entry) => {
+    total += entry.price;
+  });
+});
 
     return total;
   }, [selectedProduct, selectedVariantPrice, selectedOptionsPriceMap]);
@@ -820,6 +848,31 @@ export default function HomePage() {
       setVorbestellungDatum(availablePreorderDates[0]);
     }
   }, [availablePreorderDates, vorbestellungDatum]);
+  useEffect(() => {
+  if (!selectedProduct?.options?.length) return;
+
+  const recalculatedPriceMap: Record<string, { name: string; price: number }[]> = {};
+
+  selectedProduct.options.forEach((group) => {
+    const selectedNames = selectedOptionsMap[group.group] || [];
+
+    recalculatedPriceMap[group.group] = selectedNames.map((selectedName) => {
+      const foundItem = group.items.find((item) => item.name === selectedName);
+
+      const recalculatedPrice =
+        typeof foundItem?.price === "number"
+          ? foundItem.price
+          : foundItem?.priceByVariant?.[selectedVariantName] ?? 0;
+
+      return {
+        name: selectedName,
+        price: recalculatedPrice,
+      };
+    });
+  });
+
+  setSelectedOptionsPriceMap(recalculatedPriceMap);
+}, [selectedVariantName, selectedProduct, selectedOptionsMap]);
 
   useEffect(() => {
     if (vorbestellung !== "spaeter") return;
@@ -1844,39 +1897,44 @@ export default function HomePage() {
               )}
 
               {selectedProduct.options?.map((optionGroup) => (
-                <div className="modal-section" key={optionGroup.group}>
-                  <h4>{optionGroup.group}</h4>
-                  <div className="modal-choice-list">
-                    {optionGroup.items.map((item) => {
-                      const checked =
-                        (selectedOptionsMap[optionGroup.group] || []).includes(
-                          item.name
-                        );
+  <div className="modal-section" key={optionGroup.group}>
+    <h4>{optionGroup.group}</h4>
+    <div className="modal-choice-list">
+      {optionGroup.items.map((item) => {
+        const checked =
+          (selectedOptionsMap[optionGroup.group] || []).includes(item.name);
 
-                      return (
-                        <button
-                          key={item.name}
-                          type="button"
-                          className={`modal-choice ${checked ? "active" : ""}`}
-                          onClick={() =>
-                            handleOptionChange(
-                              optionGroup.group,
-                              item.name,
-                              item.price,
-                              optionGroup.multiple
-                            )
-                          }
-                        >
-                          <span>{item.name}</span>
-                          <strong>
-                            {item.price > 0 ? `+${item.price.toFixed(2)} €` : "inkl."}
-                          </strong>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+        const calculatedPrice =
+          typeof item.price === "number"
+            ? item.price
+            : item.priceByVariant?.[selectedVariantName] ?? 0;
+
+        return (
+          <button
+            key={item.name}
+            type="button"
+            className={`modal-choice ${checked ? "active" : ""}`}
+            onClick={() =>
+              handleOptionChange(
+                optionGroup.group,
+                item.name,
+                calculatedPrice,
+                optionGroup.multiple
+              )
+            }
+          >
+            <span>{item.name}</span>
+            <strong>
+              {calculatedPrice > 0
+                ? `+${calculatedPrice.toFixed(2)} €`
+                : "inkl."}
+            </strong>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+))}
 
               {modalError && <p className="message error">{modalError}</p>}
 

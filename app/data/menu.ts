@@ -5,14 +5,17 @@ export type ProductVariant = {
   price: number;
 };
 
+export type ProductOptionItem = {
+  name: string;
+  price?: number;
+  priceByVariant?: Record<string, number>;
+};
+
 export type ProductOption = {
   group: string;
   required?: boolean;
   multiple?: boolean;
-  items: {
-    name: string;
-    price: number;
-  }[];
+  items: ProductOptionItem[];
 };
 
 export type Product = {
@@ -26,7 +29,230 @@ export type Product = {
   variants?: ProductVariant[];
   options?: ProductOption[];
 };
-
+const indischFleischartOption: ProductOption = {
+  group: "Fleischart",
+  required: true,
+  items: [
+    { name: "Chicken (Hähnchen)", price: 0 },
+    { name: "Lamm", price: 1.0 },
+    { name: "Rind", price: 1.0 },
+    { name: "Garnelen", price: 1.0 },
+  ],
+};
+const pizzaExtrasOption: ProductOption = {
+  group: "Extras",
+  multiple: true,
+  items: [
+    {
+      name: "mit Rindersalami",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Tomaten-Paprika",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Kapern",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Sardellen",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Artischocken",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Schafskäse",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Rinderpeperoniwurst",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Zwiebeln",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Käse, extra",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Ananas",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit grüne Peperoni",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Shrimps",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Gorgonzola",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Ei",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Truthahnschinken",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Thunfisch",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Tomaten, frisch",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Spinat",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Knoblauch, frisch",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Bolognesesauce",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Oliven",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Broccoli",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+    {
+      name: "mit Mozzarella",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Rindfleisch",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Hähnchenfleisch",
+      priceByVariant: {
+        "Klein 24cm": 1.5,
+        "Normal 31cm": 2.0,
+        "Groß 36cm": 2.5,
+      },
+    },
+    {
+      name: "mit Pilzen",
+      priceByVariant: {
+        "Klein 24cm": 1.0,
+        "Normal 31cm": 1.5,
+        "Groß 36cm": 2.0,
+      },
+    },
+  ],
+};
 export const kategorienMap: Record<Cuisine, string[]> = {
   Italienisch: [
     "Salate",
@@ -158,18 +384,19 @@ export const produkte: Product[] = [
 
   // Italienisch — Pizza / Calzone
   {
-    id: 12,
-    number: 12,
-    name: "Pizza Margharita",
-    description: "Tomatensoße, Käse",
-    category: "Pizza / Calzone",
-    cuisine: "Italienisch",
-    variants: [
-      { name: "Klein 24cm", price: 6.5 },
-      { name: "Normal 31cm", price: 9.0 },
-      { name: "Groß 36cm", price: 14.0 },
-    ],
-  },
+  id: 12,
+  number: 12,
+  name: "Pizza Margharita",
+  description: "Tomatensoße, Käse",
+  category: "Pizza / Calzone",
+  cuisine: "Italienisch",
+  variants: [
+    { name: "Klein 24cm", price: 6.5 },
+    { name: "Normal 31cm", price: 9.0 },
+    { name: "Groß 36cm", price: 14.0 },
+  ],
+  options: [pizzaExtrasOption],
+},
   {
     id: 13,
     number: 13,
@@ -1041,49 +1268,186 @@ export const produkte: Product[] = [
   },
 
   // Indisch — Hauptspeisen
-  {
-    id: 92,
-    name: "Indische Hauptspeise nach Sauce und Fleischart",
-    description: "Wähle Sauce und Fleischart/Meeresfrüchte",
-    category: "Indische Hauptspeisen",
-    cuisine: "Indisch",
-    options: [
-      {
-        group: "Sauce",
-        required: true,
-        items: [
-          { name: "Korma", price: 15.5 },
-          { name: "Curry", price: 15.5 },
-          { name: "Tikka Masala", price: 15.5 },
-          { name: "Vindaloo", price: 15.5 },
-          { name: "Saag", price: 15.5 },
-          { name: "Jalfrezi", price: 15.5 },
-          { name: "Butter", price: 15.5 },
-          { name: "Sabji", price: 15.5 },
-          { name: "Mango", price: 15.5 },
-          { name: "Chilli", price: 15.5 },
-          { name: "Kadhai", price: 15.5 },
-          { name: "Bhunna", price: 15.5 },
-          { name: "Rogan Jash", price: 15.5 },
-          { name: "Dopiaza", price: 15.5 },
-          { name: "Balti", price: 15.5 },
-          { name: "Shashlik", price: 15.5 },
-          { name: "Madraz", price: 15.5 },
-          { name: "Coconut", price: 15.5 },
-        ],
-      },
-      {
-        group: "Fleischart / Meeresfrüchte",
-        required: true,
-        items: [
-          { name: "Chicken (Hähnchen)", price: 0 },
-          { name: "Beef (Rind)", price: 0 },
-          { name: "Lamb (Lamm)", price: 1.0 },
-          { name: "Prawn (Garnelen)", price: 1.0 },
-        ],
-      },
-    ],
-  },
+ {
+  id: 92,
+  number: 84,
+  name: "Korma",
+  description: "Indische Hauptspeise mit Korma-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 93,
+  number: 85,
+  name: "Curry",
+  description: "Indische Hauptspeise mit Curry-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 94,
+  number: 86,
+  name: "Tikka Masala",
+  description: "Indische Hauptspeise mit Tikka-Masala-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 95,
+  number: 87,
+  name: "Vindaloo",
+  description: "Indische Hauptspeise mit Vindaloo-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 96,
+  number: 88,
+  name: "Saag",
+  description: "Indische Hauptspeise mit Saag-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 97,
+  number: 89,
+  name: "Jalfrezi",
+  description: "Indische Hauptspeise mit Jalfrezi-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 98,
+  number: 90,
+  name: "Butter",
+  description: "Indische Hauptspeise mit Butter-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 99,
+  number: 91,
+  name: "Sabji",
+  description: "Indische Hauptspeise mit Sabji-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 100,
+  number: 92,
+  name: "Mango",
+  description: "Indische Hauptspeise mit Mango-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 101,
+  number: 93,
+  name: "Chilli",
+  description: "Indische Hauptspeise mit Chilli-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 102,
+  number: 94,
+  name: "Kadhai",
+  description: "Indische Hauptspeise mit Kadhai-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 103,
+  number: 95,
+  name: "Bhunna",
+  description: "Indische Hauptspeise mit Bhunna-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 104,
+  number: 96,
+  name: "Rogan Jash",
+  description: "Indische Hauptspeise mit Rogan-Jash-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 105,
+  number: 97,
+  name: "Dopiaza",
+  description: "Indische Hauptspeise mit Dopiaza-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 106,
+  number: 98,
+  name: "Balti",
+  description: "Indische Hauptspeise mit Balti-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 107,
+  number: 99,
+  name: "Shashlik",
+  description: "Indische Hauptspeise mit Shashlik-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 108,
+  number: 100,
+  name: "Madraz",
+  description: "Indische Hauptspeise mit Madraz-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
+{
+  id: 109,
+  number: 101,
+  name: "Coconut",
+  description: "Indische Hauptspeise mit Coconut-Soße",
+  price: 15.5,
+  category: "Indische Hauptspeisen",
+  cuisine: "Indisch",
+  options: [indischFleischartOption],
+},
 
   // Indisch — Reisgerichte
   {
