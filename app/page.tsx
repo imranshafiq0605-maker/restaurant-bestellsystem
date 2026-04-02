@@ -880,6 +880,27 @@ const status = specialClosed
   }, [availablePreorderDates, vorbestellungDatum]);
   useEffect(() => {
   if (!selectedProduct?.options?.length) return;
+  
+
+  const recalculatedPriceMap: Record<string, { name: string; price: number }[]> = {};
+
+  selectedProduct.options.forEach((group) => {
+    const selectedNames = selectedOptionsMap[group.group] || [];
+
+    recalculatedPriceMap[group.group] = selectedNames.map((selectedName) => {
+      const foundItem = group.items.find((item) => item.name === selectedName);
+
+      const recalculatedPrice =
+        typeof foundItem?.price === "number"
+          ? foundItem.price
+          : foundItem?.priceByVariant?.[selectedVariantName] ?? 0;
+
+      return {
+        name: selectedName,
+        price: recalculatedPrice,
+      };
+    });
+  });
   useEffect(() => {
   const todayId = formatDateId(new Date());
   const closureRef = doc(db, "specialClosures", todayId);
@@ -908,26 +929,6 @@ const status = specialClosed
 
   return () => unsubscribe();
 }, []);
-
-  const recalculatedPriceMap: Record<string, { name: string; price: number }[]> = {};
-
-  selectedProduct.options.forEach((group) => {
-    const selectedNames = selectedOptionsMap[group.group] || [];
-
-    recalculatedPriceMap[group.group] = selectedNames.map((selectedName) => {
-      const foundItem = group.items.find((item) => item.name === selectedName);
-
-      const recalculatedPrice =
-        typeof foundItem?.price === "number"
-          ? foundItem.price
-          : foundItem?.priceByVariant?.[selectedVariantName] ?? 0;
-
-      return {
-        name: selectedName,
-        price: recalculatedPrice,
-      };
-    });
-  });
 
   setSelectedOptionsPriceMap(recalculatedPriceMap);
 }, [selectedVariantName, selectedProduct, selectedOptionsMap]);
@@ -1934,7 +1935,7 @@ const status = specialClosed
   className="checkout-button"
   onClick={handleStripeCheckout}
   type="button"
-  disabled={isSubmitting}
+  disabled={isSubmitting || specialClosed}
 >
             {isSubmitting ? "Wird gesendet..." : "Jetzt sicher bezahlen"}
           </button>
