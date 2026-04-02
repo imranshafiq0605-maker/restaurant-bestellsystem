@@ -1340,356 +1340,407 @@ export default function HomePage() {
         )}
 
         {viewStep === "checkout" && (
-          <section className="container checkout-section">
-            <div className="section-topline checkout-topline">
-              <div>
-                <span className="eyebrow">Bestellung abschließen</span>
-                <h2 className="section-title">Warenkorb & Checkout</h2>
-              </div>
+  <section className="container checkout-section checkout-clean">
+    <div className="checkout-clean-topbar">
+      <div>
+        <span className="eyebrow">Checkout</span>
+        <h2 className="section-title">Dein Warenkorb</h2>
+      </div>
 
-              <button
-                className="back-button"
-                onClick={backFromCheckout}
-                type="button"
-              >
-                ← Zurück
-              </button>
+      <button
+        className="back-button"
+        onClick={backFromCheckout}
+        type="button"
+      >
+        ← Zurück
+      </button>
+    </div>
+
+    <div className="checkout-clean-layout">
+      <div className="checkout-clean-main">
+        <div className="checkout-clean-card checkout-items-card">
+          <div className="checkout-card-head">
+            <div>
+              <span className="checkout-kicker">Bestellung</span>
+              <h3>Artikel im Warenkorb</h3>
+            </div>
+            <div className="checkout-head-badge">
+              {gesamtAnzahl} Artikel
+            </div>
+          </div>
+
+          {cart.length === 0 ? (
+            <div className="checkout-empty">
+              <p>Dein Warenkorb ist leer.</p>
+            </div>
+          ) : (
+            <div className="checkout-item-list">
+              {cart.map((item) => (
+                <div className="checkout-item-row" key={item.uniqueKey}>
+                  <div className="checkout-item-left">
+                    <div className="checkout-item-qty-badge">{item.quantity}x</div>
+
+                    <div className="checkout-item-content">
+                      <h4>{item.name}</h4>
+
+                      <div className="checkout-item-meta">
+                        {item.cuisine} · {item.category}
+                        {item.variantName ? ` · ${item.variantName}` : ""}
+                      </div>
+
+                      {item.selectedOptions &&
+                        item.selectedOptions.length > 0 && (
+                          <div className="checkout-option-wrap">
+                            {item.selectedOptions.map((option) => (
+                              <span className="checkout-option-pill" key={option}>
+                                {option}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="checkout-item-right">
+                    <div className="checkout-item-total">
+                      {(item.price * item.quantity).toFixed(2)} €
+                    </div>
+
+                    <div className="checkout-item-unit-price">
+                      Einzelpreis {item.price.toFixed(2)} €
+                    </div>
+
+                    <div className="checkout-item-quantity-box">
+                      <button
+                        onClick={() => decreaseQuantity(item.uniqueKey)}
+                        type="button"
+                      >
+                        −
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        onClick={() => increaseQuantity(item.uniqueKey)}
+                        type="button"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="checkout-clean-card">
+          <div className="checkout-card-head">
+            <div>
+              <span className="checkout-kicker">Service</span>
+              <h3>Bestellart</h3>
+            </div>
+          </div>
+
+          <div className="checkout-choice-grid">
+            <button
+              className={`checkout-choice-card ${
+                bestellart === "abholung" ? "active" : ""
+              }`}
+              onClick={() => setBestellart("abholung")}
+              type="button"
+            >
+              <span className="checkout-choice-label">Option</span>
+              <strong>Abholung</strong>
+              <small>Mo–Fr 11:00–23:00 · Sa–So 14:00–23:00</small>
+            </button>
+
+            <button
+              className={`checkout-choice-card ${
+                bestellart === "lieferung" ? "active" : ""
+              }`}
+              onClick={() => setBestellart("lieferung")}
+              type="button"
+            >
+              <span className="checkout-choice-label">Option</span>
+              <strong>Lieferung</strong>
+              <small>Mo–Fr 11:00–22:30 · Sa–So 14:00–22:30</small>
+            </button>
+          </div>
+        </div>
+
+        <div className="checkout-clean-card">
+          <div className="checkout-card-head">
+            <div>
+              <span className="checkout-kicker">Kunde</span>
+              <h3>Deine Daten</h3>
+            </div>
+          </div>
+
+          <div className="checkout-form-grid">
+            <div className="form-group">
+              <label htmlFor="name">Name</label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Dein Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
 
-            <div className="checkout-layout">
-              <div className="checkout-main">
-                <div className="glass-card">
-                  <h3>Deine Artikel</h3>
+            <div className="form-group">
+              <label htmlFor="telefon">Telefonnummer</label>
+              <input
+                id="telefon"
+                type="text"
+                placeholder="Deine Telefonnummer"
+                value={telefon}
+                onChange={(e) => setTelefon(e.target.value)}
+              />
+            </div>
+          </div>
 
-                  {cart.length === 0 ? (
-                    <p className="empty-state">Dein Warenkorb ist leer.</p>
+          {bestellart === "lieferung" && (
+            <>
+              <div className="checkout-form-grid">
+                <div className="form-group">
+                  <label htmlFor="strasse">Straße</label>
+                  <input
+                    id="strasse"
+                    type="text"
+                    placeholder="Straße"
+                    value={strasse}
+                    onChange={(e) => setStrasse(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="hausnummer">Hausnummer</label>
+                  <input
+                    id="hausnummer"
+                    type="text"
+                    placeholder="Hausnummer"
+                    value={hausnummer}
+                    onChange={(e) => setHausnummer(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="checkout-form-grid">
+                <div className="form-group">
+                  <label htmlFor="plz">Postleitzahl</label>
+                  <input
+                    id="plz"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    placeholder="PLZ"
+                    value={plz}
+                    onChange={(e) =>
+                      setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="stadt">Stadt</label>
+                  <input
+                    id="stadt"
+                    type="text"
+                    placeholder="Wird automatisch ausgefüllt"
+                    value={stadt}
+                    readOnly
+                    disabled
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {bestellart === "lieferung" && lieferPruefung && (
+            <p className={`message ${lieferPruefung.ok ? "success" : "error"}`}>
+              {lieferPruefung.message}
+            </p>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="hinweis">Hinweis zur Bestellung</label>
+            <textarea
+              id="hinweis"
+              placeholder="Zum Beispiel: ohne Zwiebeln"
+              value={hinweis}
+              onChange={(e) => setHinweis(e.target.value)}
+              rows={4}
+            />
+          </div>
+        </div>
+
+        <div className="checkout-clean-card">
+          <div className="checkout-card-head">
+            <div>
+              <span className="checkout-kicker">Zeit</span>
+              <h3>Bestellzeit</h3>
+            </div>
+          </div>
+
+          <div className="checkout-choice-grid">
+            <button
+              className={`checkout-choice-card ${
+                vorbestellung === "sofort" ? "active" : ""
+              }`}
+              onClick={() => setVorbestellung("sofort")}
+              type="button"
+              disabled={!status.isOpen}
+            >
+              <span className="checkout-choice-label">Auswahl</span>
+              <strong>Sofort</strong>
+              <small>
+                {status.isOpen
+                  ? "Direkt so schnell wie möglich"
+                  : "Aktuell nicht verfügbar"}
+              </small>
+            </button>
+
+            <button
+              className={`checkout-choice-card ${
+                vorbestellung === "spaeter" ? "active" : ""
+              }`}
+              onClick={() => setVorbestellung("spaeter")}
+              type="button"
+            >
+              <span className="checkout-choice-label">Auswahl</span>
+              <strong>Vorbestellung</strong>
+              <small>Datum und Uhrzeit selbst wählen</small>
+            </button>
+          </div>
+
+          {!status.isOpen && (
+            <p className="message error">
+              Aktuell geschlossen. Sofort-Bestellung ist deaktiviert.
+            </p>
+          )}
+
+          {vorbestellung === "spaeter" && (
+            <div className="checkout-form-grid preorder-clean-grid">
+              <div className="form-group">
+                <label htmlFor="vorbestellungDatum">Datum</label>
+                <select
+                  id="vorbestellungDatum"
+                  value={vorbestellungDatum}
+                  onChange={(e) => setVorbestellungDatum(e.target.value)}
+                >
+                  {availablePreorderDates.map((date) => (
+                    <option key={date} value={date}>
+                      {formatDateLabel(date)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="uhrzeit">Uhrzeit</label>
+                <select
+                  id="uhrzeit"
+                  value={uhrzeit}
+                  onChange={(e) => setUhrzeit(e.target.value)}
+                >
+                  {availableTimeSlots.length > 0 ? (
+                    availableTimeSlots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot} Uhr
+                      </option>
+                    ))
                   ) : (
-                    <div className="cart-list">
-                      {cart.map((item) => (
-                        <div className="cart-item" key={item.uniqueKey}>
-                          <div className="cart-item-header">
-                            <div>
-                              <h4>{item.name}</h4>
-                              <small>
-                                {item.cuisine} · {item.category}
-                                {item.variantName ? ` · ${item.variantName}` : ""}
-                              </small>
-
-                              {item.selectedOptions &&
-                                item.selectedOptions.length > 0 && (
-                                  <div className="cart-option-list">
-                                    {item.selectedOptions.map((option) => (
-                                      <span className="cart-option-pill" key={option}>
-                                        {option}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                            </div>
-
-                            <strong>
-                              {(item.price * item.quantity).toFixed(2)} €
-                            </strong>
-                          </div>
-
-                          <div className="quantity-box">
-                            <button
-                              onClick={() => decreaseQuantity(item.uniqueKey)}
-                              type="button"
-                            >
-                              −
-                            </button>
-                            <span>{item.quantity}</span>
-                            <button
-                              onClick={() => increaseQuantity(item.uniqueKey)}
-                              type="button"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <option value="">Keine Uhrzeiten verfügbar</option>
                   )}
-                </div>
-
-                <div className="glass-card">
-                  <h3>Bestellart</h3>
-
-                  <div className="switch-row">
-                    <button
-                      className={bestellart === "abholung" ? "active" : ""}
-                      onClick={() => setBestellart("abholung")}
-                      type="button"
-                    >
-                      Abholung
-                    </button>
-                    <button
-                      className={bestellart === "lieferung" ? "active" : ""}
-                      onClick={() => setBestellart("lieferung")}
-                      type="button"
-                    >
-                      Lieferung
-                    </button>
-                  </div>
-
-                  <div className="helper-box">
-                    {bestellart === "abholung"
-                      ? "Abholung: Mo–Fr 11:00–23:00 · Sa–So 14:00–23:00"
-                      : "Lieferung: Mo–Fr 11:00–22:30 · Sa–So 14:00–22:30"}
-                  </div>
-                </div>
-
-                <div className="glass-card">
-                  <h3>Kundendaten</h3>
-
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label htmlFor="name">Name</label>
-                      <input
-                        id="name"
-                        type="text"
-                        placeholder="Dein Name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="telefon">Telefonnummer</label>
-                      <input
-                        id="telefon"
-                        type="text"
-                        placeholder="Deine Telefonnummer"
-                        value={telefon}
-                        onChange={(e) => setTelefon(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {bestellart === "lieferung" && (
-                    <>
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label htmlFor="strasse">Straße</label>
-                          <input
-                            id="strasse"
-                            type="text"
-                            placeholder="Straße"
-                            value={strasse}
-                            onChange={(e) => setStrasse(e.target.value)}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label htmlFor="hausnummer">Hausnummer</label>
-                          <input
-                            id="hausnummer"
-                            type="text"
-                            placeholder="Hausnummer"
-                            value={hausnummer}
-                            onChange={(e) => setHausnummer(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="form-grid">
-                        <div className="form-group">
-                          <label htmlFor="plz">Postleitzahl</label>
-                          <input
-                            id="plz"
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={5}
-                            placeholder="PLZ"
-                            value={plz}
-                            onChange={(e) =>
-                              setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))
-                            }
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label htmlFor="stadt">Stadt</label>
-                          <input
-                            id="stadt"
-                            type="text"
-                            placeholder="Wird automatisch ausgefüllt"
-                            value={stadt}
-                            readOnly
-                            disabled
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {bestellart === "lieferung" && lieferPruefung && (
-                    <p
-                      className={`message ${
-                        lieferPruefung.ok ? "success" : "error"
-                      }`}
-                    >
-                      {lieferPruefung.message}
-                    </p>
-                  )}
-
-                  <div className="form-group">
-                    <label htmlFor="hinweis">Hinweis zur Bestellung</label>
-                    <textarea
-                      id="hinweis"
-                      placeholder="Zum Beispiel: ohne Zwiebeln"
-                      value={hinweis}
-                      onChange={(e) => setHinweis(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                </div>
-
-                <div className="glass-card">
-                  <h3>Bestellzeit</h3>
-
-                  <div className="switch-row">
-                    <button
-                      className={vorbestellung === "sofort" ? "active" : ""}
-                      onClick={() => setVorbestellung("sofort")}
-                      type="button"
-                      disabled={!status.isOpen}
-                    >
-                      Sofort
-                    </button>
-                    <button
-                      className={vorbestellung === "spaeter" ? "active" : ""}
-                      onClick={() => setVorbestellung("spaeter")}
-                      type="button"
-                    >
-                      Vorbestellung
-                    </button>
-                  </div>
-
-                  {!status.isOpen && (
-                    <p className="message error">
-                      Aktuell geschlossen. Sofort-Bestellung ist deaktiviert.
-                    </p>
-                  )}
-
-                  {vorbestellung === "spaeter" && (
-                    <div className="preorder-grid">
-                      <div className="form-group">
-                        <label htmlFor="vorbestellungDatum">Datum</label>
-                        <select
-                          id="vorbestellungDatum"
-                          value={vorbestellungDatum}
-                          onChange={(e) => setVorbestellungDatum(e.target.value)}
-                        >
-                          {availablePreorderDates.map((date) => (
-                            <option key={date} value={date}>
-                              {formatDateLabel(date)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="uhrzeit">Uhrzeit</label>
-                        <select
-                          id="uhrzeit"
-                          value={uhrzeit}
-                          onChange={(e) => setUhrzeit(e.target.value)}
-                        >
-                          {availableTimeSlots.length > 0 ? (
-                            availableTimeSlots.map((slot) => (
-                              <option key={slot} value={slot}>
-                                {slot} Uhr
-                              </option>
-                            ))
-                          ) : (
-                            <option value="">Keine Uhrzeiten verfügbar</option>
-                          )}
-                        </select>
-                      </div>
-
-                      <div className="preorder-note">
-                        {(() => {
-                          const { isWeekend } =
-                            getPreorderWindowForDate(vorbestellungDatum);
-                          return isWeekend
-                            ? "Vorbestellungen am Wochenende: 15:00 bis 22:00 Uhr."
-                            : "Vorbestellungen Montag bis Freitag: 12:00 bis 22:00 Uhr.";
-                        })()}
-                      </div>
-
-                      <div className="preorder-note secondary">
-                        Vorbestellungen werden nur angezeigt, wenn sie mindestens 1 Stunde in der Zukunft liegen.
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </select>
               </div>
 
-              <aside className="checkout-sidebar">
-                <div className="glass-card sticky-card">
-                  <h3>Zusammenfassung</h3>
+              <div className="checkout-note-box">
+                {(() => {
+                  const { isWeekend } =
+                    getPreorderWindowForDate(vorbestellungDatum);
+                  return isWeekend
+                    ? "Vorbestellungen am Wochenende: 15:00 bis 22:00 Uhr."
+                    : "Vorbestellungen Montag bis Freitag: 12:00 bis 22:00 Uhr.";
+                })()}
+              </div>
 
-                  <div className="summary-row">
-                    <span>Artikel</span>
-                    <span>{gesamtAnzahl}</span>
-                  </div>
-
-                  <div className="summary-row">
-                    <span>Zwischensumme</span>
-                    <span>{gesamtpreisProdukte.toFixed(2)} €</span>
-                  </div>
-
-                  <div className="summary-row discount">
-                    <span>10% Rabatt</span>
-                    <span>-{rabattBetrag.toFixed(2)} €</span>
-                  </div>
-
-                  {bestellart === "lieferung" && lieferPruefung?.minOrder ? (
-                    <div className="summary-row">
-                      <span>Mindestbestellwert</span>
-                      <span>{lieferPruefung.minOrder.toFixed(2)} €</span>
-                    </div>
-                  ) : null}
-
-                  <div className="summary-row free">
-                    <span>Versand</span>
-                    <span>Kostenlos</span>
-                  </div>
-
-                  <div className="summary-row total">
-                    <span>Gesamt</span>
-                    <span>{gesamtpreis.toFixed(2)} €</span>
-                  </div>
-
-                  {vorbestellung === "spaeter" && (
-                    <div className="selected-preorder-box">
-                      <span>Vorbestellung</span>
-                      <strong>
-                        {formatDateLabel(vorbestellungDatum)} · {uhrzeit || "--:--"} Uhr
-                      </strong>
-                    </div>
-                  )}
-
-                  {fehlermeldung && <p className="message error">{fehlermeldung}</p>}
-                  {erfolgsmeldung && (
-                    <p className="message success">{erfolgsmeldung}</p>
-                  )}
-
-                  <button
-                    className="checkout-button"
-                    onClick={handleStripeCheckout}
-                    type="button"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Wird gesendet..." : "Bestellung absenden"}
-                  </button>
-                </div>
-              </aside>
+              <div className="checkout-note-box muted">
+                Vorbestellungen werden nur angezeigt, wenn sie mindestens 1 Stunde in der Zukunft liegen.
+              </div>
             </div>
-          </section>
-        )}
+          )}
+        </div>
+      </div>
+
+      <aside className="checkout-clean-sidebar">
+        <div className="checkout-summary-card">
+          <div className="checkout-card-head">
+            <div>
+              <span className="checkout-kicker">Übersicht</span>
+              <h3>Zusammenfassung</h3>
+            </div>
+          </div>
+
+          <div className="checkout-summary-rows">
+            <div className="checkout-summary-row">
+              <span>Artikel</span>
+              <span>{gesamtAnzahl}</span>
+            </div>
+
+            <div className="checkout-summary-row">
+              <span>Zwischensumme</span>
+              <span>{gesamtpreisProdukte.toFixed(2)} €</span>
+            </div>
+
+            <div className="checkout-summary-row discount">
+              <span>10% Rabatt</span>
+              <span>-{rabattBetrag.toFixed(2)} €</span>
+            </div>
+
+            {bestellart === "lieferung" && lieferPruefung?.minOrder ? (
+              <div className="checkout-summary-row">
+                <span>Mindestbestellwert</span>
+                <span>{lieferPruefung.minOrder.toFixed(2)} €</span>
+              </div>
+            ) : null}
+
+            <div className="checkout-summary-row">
+              <span>Versand</span>
+              <span>Kostenlos</span>
+            </div>
+
+            <div className="checkout-summary-row total">
+              <span>Gesamt</span>
+              <span>{gesamtpreis.toFixed(2)} €</span>
+            </div>
+          </div>
+
+          {vorbestellung === "spaeter" && (
+            <div className="checkout-summary-extra">
+              <span>Vorbestellung</span>
+              <strong>
+                {formatDateLabel(vorbestellungDatum)} · {uhrzeit || "--:--"} Uhr
+              </strong>
+            </div>
+          )}
+
+          {fehlermeldung && <p className="message error">{fehlermeldung}</p>}
+          {erfolgsmeldung && <p className="message success">{erfolgsmeldung}</p>}
+
+          <button
+            className="checkout-button checkout-submit-clean"
+            onClick={handleStripeCheckout}
+            type="button"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Wird gesendet..." : "Jetzt sicher bezahlen"}
+          </button>
+        </div>
+      </aside>
+    </div>
+  </section>
+)}
 
         {selectedProduct && (
           <div className="modal-backdrop" onClick={resetModal}>
