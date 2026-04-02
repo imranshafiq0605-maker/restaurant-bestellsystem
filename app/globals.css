@@ -2429,3 +2429,12 @@ border-radius: 50%;
     width: fit-content;
   }
 }
+@media (max-width: 760px) {
+  .cart-count-clean {
+    background: linear-gradient(180deg, #ffffff, #f1f5f9);
+    color: #0f172a;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    font-weight: 800;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+  }
+}
