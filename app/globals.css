@@ -2438,3 +2438,13 @@ border-radius: 50%;
     box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
   }
 }
+@media (max-width: 760px) {
+  .cart-button-clean .cart-count,
+  .cart-button-clean .cart-count-clean {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 0.75rem;
+    min-width: 24px;
+    height: 24px;
+  }
+}
