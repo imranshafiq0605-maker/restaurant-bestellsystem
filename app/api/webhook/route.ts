@@ -7,6 +7,7 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { sendOrderEmail } from "../../lib/send-order-email";
@@ -107,9 +108,9 @@ export async function POST(req: NextRequest) {
     const jetzt = new Date();
 const istGeradeGeoeffnet = istRestaurantGeradeGeoeffnet(jetzt);
 
-const releaseAt = istGeradeGeoeffnet
-  ? jetzt.toISOString()
-  : getNaechsterOeffnungszeitpunkt(jetzt).toISOString();
+const releaseDate = istGeradeGeoeffnet
+  ? jetzt
+  : getNaechsterOeffnungszeitpunkt(jetzt);
 
 const finaleBestellung = {
   ...pendingOrderData,
@@ -117,7 +118,7 @@ const finaleBestellung = {
   status: "neu",
   bezahlt: true,
   stripeSessionId: session.id,
-  releaseAt,
+  releaseAt: Timestamp.fromDate(releaseDate),
   acceptedAt: null,
   createdAt: serverTimestamp(),
 };
