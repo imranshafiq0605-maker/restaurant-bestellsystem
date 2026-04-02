@@ -209,12 +209,10 @@ function validiereEmail(email: string) {
     };
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (!emailRegex.test(emailBereinigt)) {
+  if (!emailBereinigt.includes("@")) {
     return {
       ok: false,
-      message: "Bitte gib eine gültige E-Mail-Adresse ein.",
+      message: "Bitte gib eine E-Mail-Adresse mit @ ein.",
     };
   }
 
