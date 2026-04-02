@@ -651,24 +651,35 @@ export default function HomePage() {
 }
 
   const modalTotalPrice = useMemo(() => {
-    if (!selectedProduct) return 0;
+  if (!selectedProduct) return 0;
 
-    let total = 0;
+  let total = 0;
 
-    if (selectedProduct.variants?.length) {
-      total += selectedVariantPrice;
-    } else if (typeof selectedProduct.price === "number") {
-      total += selectedProduct.price;
+  if (selectedProduct.variants?.length) {
+    total += selectedVariantPrice;
+  } else if (typeof selectedProduct.price === "number") {
+    total += selectedProduct.price;
+  }
+
+  selectedProduct.options?.forEach((group) => {
+    const selectedEntries = selectedOptionsPriceMap[group.group] || [];
+
+    if (
+      selectedProduct.id === 39 &&
+      group.group === "Extras Partypizza"
+    ) {
+      const extraCount = Math.max(0, selectedEntries.length - 1);
+      total += extraCount * 4;
+      return;
     }
 
-    Object.values(selectedOptionsPriceMap).forEach((entries) => {
-  entries.forEach((entry) => {
-    total += entry.price;
+    selectedEntries.forEach((entry) => {
+      total += entry.price;
+    });
   });
-});
 
-    return total;
-  }, [selectedProduct, selectedVariantPrice, selectedOptionsPriceMap]);
+  return total;
+}, [selectedProduct, selectedVariantPrice, selectedOptionsPriceMap]);
 
   function addConfiguredProductToCart({
     produkt,
@@ -1925,10 +1936,12 @@ export default function HomePage() {
           >
             <span>{item.name}</span>
             <strong>
-              {calculatedPrice > 0
-                ? `+${calculatedPrice.toFixed(2)} €`
-                : "inkl."}
-            </strong>
+  {selectedProduct.id === 39 && optionGroup.group === "Extras Partypizza"
+    ? "1 frei / danach +4,00 €"
+    : calculatedPrice > 0
+    ? `+${calculatedPrice.toFixed(2)} €`
+    : "inkl."}
+</strong>
           </button>
         );
       })}

@@ -299,6 +299,49 @@ const pastaSorteOption: ProductOption = {
     { name: "Tortelloni", price: 1.0 },
   ],
 };
+const schnitzelBeilageOption: ProductOption = {
+  group: "Beilage",
+  required: true,
+  items: [
+    { name: "mit Pommes frites", price: 0 },
+    { name: "mit Kroketten", price: 0 },
+    { name: "mit Reis", price: 0 },
+    { name: "ohne Beilage", price: 0 },
+    { name: "Süßkartoffel Pommes", price: 2.5 },
+  ],
+};
+const partypizzaExtrasOption: ProductOption = {
+  group: "Extras Partypizza",
+  multiple: true,
+  items: [
+    { name: "mit Rindersalami", price: 0 },
+    { name: "mit Tomaten-Paprika", price: 0 },
+    { name: "mit Kapern", price: 0 },
+    { name: "mit Sardellen", price: 0 },
+    { name: "mit Artischocken", price: 0 },
+    { name: "mit Schafskäse", price: 0 },
+    { name: "mit Rinderpeperoniwurst", price: 0 },
+    { name: "mit Zwiebeln", price: 0 },
+    { name: "mit Käse, extra", price: 0 },
+    { name: "mit Ananas", price: 0 },
+    { name: "mit grüne Peperoni", price: 0 },
+    { name: "mit Shrimps", price: 0 },
+    { name: "mit Gorgonzola", price: 0 },
+    { name: "mit Ei", price: 0 },
+    { name: "mit Truthahnschinken", price: 0 },
+    { name: "mit Thunfisch", price: 0 },
+    { name: "mit Tomaten, frisch", price: 0 },
+    { name: "mit Spinat", price: 0 },
+    { name: "mit Knoblauch, frisch", price: 0 },
+    { name: "mit Bolognesesauce", price: 0 },
+    { name: "mit Oliven", price: 0 },
+    { name: "mit Broccoli", price: 0 },
+    { name: "mit Mozzarella", price: 0 },
+    { name: "mit Rindfleisch", price: 0 },
+    { name: "mit Hähnchenfleisch", price: 0 },
+    { name: "mit Pilzen", price: 0 },
+  ],
+};
 export const kategorienMap: Record<Cuisine, string[]> = {
   Italienisch: [
     "Salate",
@@ -814,6 +857,7 @@ export const produkte: Product[] = [
     description: "Jeder weitere Belag +4,00 €",
     category: "Partypizza",
     cuisine: "Italienisch",
+    options: [partypizzaExtrasOption],
     price: 30.0,
   },
 
@@ -1027,6 +1071,7 @@ export const produkte: Product[] = [
     price: 14.5,
     category: "Schnitzel",
     cuisine: "Italienisch",
+    options: [schnitzelBeilageOption],
   },
   {
     id: 60,
@@ -1037,6 +1082,7 @@ export const produkte: Product[] = [
     price: 16.5,
     category: "Schnitzel",
     cuisine: "Italienisch",
+    options: [schnitzelBeilageOption],
   },
   {
     id: 61,
@@ -1046,6 +1092,7 @@ export const produkte: Product[] = [
     price: 16.5,
     category: "Schnitzel",
     cuisine: "Italienisch",
+    options: [schnitzelBeilageOption],
   },
   {
     id: 62,
@@ -1055,6 +1102,7 @@ export const produkte: Product[] = [
     price: 16.5,
     category: "Schnitzel",
     cuisine: "Italienisch",
+    options: [schnitzelBeilageOption],
   },
   {
     id: 63,
@@ -1064,6 +1112,7 @@ export const produkte: Product[] = [
     price: 16.5,
     category: "Schnitzel",
     cuisine: "Italienisch",
+    options: [schnitzelBeilageOption],
   },
   {
     id: 64,
@@ -1074,6 +1123,7 @@ export const produkte: Product[] = [
     price: 16.5,
     category: "Schnitzel",
     cuisine: "Italienisch",
+    options: [schnitzelBeilageOption],
   },
 
   // Italienisch — Fisch Spezialitäten
@@ -1086,6 +1136,7 @@ export const produkte: Product[] = [
     price: 16.5,
     category: "Fisch Spezialitäten",
     cuisine: "Italienisch",
+    options: [schnitzelBeilageOption],
   },
 
   // Italienisch — Fast Food Menus
