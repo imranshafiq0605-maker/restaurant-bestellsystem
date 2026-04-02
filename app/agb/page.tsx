@@ -1,37 +1,52 @@
 export default function AGB() {
   return (
-    <main className="container">
+    <main className="legal-page">
       <h1>Allgemeine Geschäftsbedingungen</h1>
 
-      <h2>1. Geltungsbereich</h2>
-      <p>
-        Diese Allgemeinen Geschäftsbedingungen gelten für alle Bestellungen...
-      </p>
+      <section>
+        <h2>1. Geltungsbereich</h2>
+        <p>
+          Diese AGB gelten für alle Bestellungen über unseren Online-Shop.
+        </p>
+      </section>
 
-      <h2>2. Vertragspartner</h2>
-      <p>
-        Der Kaufvertrag kommt zustande mit La Rosa GmbH...
-      </p>
+      <section>
+        <h2>2. Vertragspartner</h2>
+        <p>
+          Der Kaufvertrag kommt zustande mit:<br />
+          La Rosa GmbH<br />
+          [Adresse]
+        </p>
+      </section>
 
-      <h2>3. Angebot und Vertragsschluss</h2>
-      <p>
-        Die Darstellung der Produkte stellt kein rechtlich bindendes Angebot dar...
-      </p>
+      <section>
+        <h2>3. Angebot und Vertragsschluss</h2>
+        <p>
+          Die Darstellung der Produkte stellt kein rechtlich bindendes Angebot dar.
+          Erst mit Ihrer Bestellung geben Sie ein verbindliches Angebot ab.
+        </p>
+      </section>
 
-      <h2>4. Preise</h2>
-      <p>
-        Alle Preise verstehen sich in Euro inklusive gesetzlicher Mehrwertsteuer.
-      </p>
+      <section>
+        <h2>4. Preise</h2>
+        <p>
+          Alle Preise sind in Euro angegeben und enthalten die gesetzliche Mehrwertsteuer.
+        </p>
+      </section>
 
-      <h2>5. Lieferung</h2>
-      <p>
-        Die Lieferung erfolgt in die angegebenen Liefergebiete...
-      </p>
+      <section>
+        <h2>5. Lieferung</h2>
+        <p>
+          Die Lieferung erfolgt ausschließlich in die angegebenen Liefergebiete.
+        </p>
+      </section>
 
-      <h2>6. Zahlung</h2>
-      <p>
-        Die Zahlung erfolgt über Stripe.
-      </p>
+      <section>
+        <h2>6. Zahlung</h2>
+        <p>
+          Die Zahlung erfolgt über Stripe.
+        </p>
+      </section>
     </main>
   );
 }
