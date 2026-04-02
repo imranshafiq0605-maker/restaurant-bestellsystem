@@ -1006,14 +1006,19 @@ export default function HomePage() {
 
             <div className="nav-right">
               <button
-                className={`cart-button compact ${cartPulse ? "pulse" : ""}`}
-                onClick={openCheckout}
-                type="button"
-                aria-label="Warenkorb öffnen"
-              >
-                <span className="cart-icon">🛒</span>
-                <span className="cart-count">{gesamtAnzahl}</span>
-              </button>
+  className={`cart-button compact cart-button-clean ${cartPulse ? "pulse" : ""}`}
+  onClick={openCheckout}
+  type="button"
+  aria-label="Warenkorb öffnen"
+>
+  <span className="cart-icon">🛒</span>
+
+  <span className="cart-button-text">
+    Warenkorb
+  </span>
+
+  <span className="cart-count cart-count-clean">{gesamtAnzahl}</span>
+</button>
             </div>
           </div>
         </header>
