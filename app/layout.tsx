@@ -2,9 +2,9 @@ import "./globals.css";
 
 export const metadata = {
   title: "La Rosa GmbH",
-  description: "Italienische und indische Spezialitäten",
   icons: {
     icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 
