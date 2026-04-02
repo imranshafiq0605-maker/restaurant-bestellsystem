@@ -1008,6 +1008,7 @@ export default function HomePage() {
         },
         body: JSON.stringify({
           pendingOrderId: pendingOrderRef.id,
+          email: email.trim(),
           artikel: artikelOhneUndefined,
           gesamtpreisProdukte,
           rabattBetrag,
