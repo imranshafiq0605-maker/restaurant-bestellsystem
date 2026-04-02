@@ -253,6 +253,52 @@ const pizzaExtrasOption: ProductOption = {
     },
   ],
 };
+const pastaExtrasOption: ProductOption = {
+  group: "Extras Pasta",
+  multiple: true,
+  items: [
+    { name: "mit Truthahnschinken", price: 2.0 },
+    { name: "mit Broccoli", price: 1.5 },
+    { name: "mit Ei", price: 1.5 },
+    { name: "mit Artischocken", price: 2.0 },
+    { name: "mit Shrimps", price: 2.0 },
+    { name: "mit Schafskäse", price: 2.0 },
+    { name: "mit Pilzen", price: 1.5 },
+    { name: "mit Bolognesesauce", price: 2.0 },
+    { name: "mit Peperoni, grün", price: 1.5 },
+    { name: "mit Rindersalami", price: 2.0 },
+    { name: "mit Mozzarella", price: 2.0 },
+    { name: "mit Zwiebeln", price: 1.5 },
+    { name: "mit Sardellen", price: 1.5 },
+    { name: "mit Tomaten, frisch", price: 1.5 },
+    { name: "mit Rinderpeperoniwurst", price: 2.0 },
+    { name: "mit Oliven", price: 1.5 },
+    { name: "mit Tomaten-Paprika", price: 1.5 },
+    { name: "mit Hähnchenfleisch", price: 2.0 },
+    { name: "mit Rindfleisch", price: 2.0 },
+    { name: "mit Ananas", price: 1.5 },
+    { name: "mit Kapern", price: 1.5 },
+    { name: "mit Thunfisch", price: 2.0 },
+    { name: "mit Spinat", price: 1.5 },
+    { name: "mit Gorgonzola", price: 2.0 },
+    { name: "mit Knoblauch, frisch", price: 1.5 },
+    { name: "mit Käse", price: 2.0 },
+    { name: "mit Käse überbacken", price: 2.0 },
+  ],
+};
+
+const pastaSorteOption: ProductOption = {
+  group: "Pastasorte",
+  required: true,
+  items: [
+    { name: "Spaghetti", price: 0 },
+    { name: "Tagliatelle", price: 1.0 },
+    { name: "Rigatoni", price: 0 },
+    { name: "Tortellini", price: 1.0 },
+    { name: "Gnocchi", price: 0 },
+    { name: "Tortelloni", price: 1.0 },
+  ],
+};
 export const kategorienMap: Record<Cuisine, string[]> = {
   Italienisch: [
     "Salate",
@@ -808,6 +854,7 @@ export const produkte: Product[] = [
     price: 9.0,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 43,
@@ -817,6 +864,7 @@ export const produkte: Product[] = [
     price: 10.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 44,
@@ -826,6 +874,7 @@ export const produkte: Product[] = [
     price: 10.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 45,
@@ -835,6 +884,7 @@ export const produkte: Product[] = [
     price: 10.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 46,
@@ -844,6 +894,7 @@ export const produkte: Product[] = [
     price: 10.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 47,
@@ -853,6 +904,7 @@ export const produkte: Product[] = [
     price: 10.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 48,
@@ -862,6 +914,7 @@ export const produkte: Product[] = [
     price: 11.0,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 49,
@@ -871,6 +924,7 @@ export const produkte: Product[] = [
     price: 11.0,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 50,
@@ -880,6 +934,7 @@ export const produkte: Product[] = [
     price: 11.0,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 51,
@@ -889,6 +944,7 @@ export const produkte: Product[] = [
     price: 12.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 52,
@@ -898,6 +954,7 @@ export const produkte: Product[] = [
     price: 12.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 53,
@@ -907,6 +964,7 @@ export const produkte: Product[] = [
     price: 13.0,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 54,
@@ -916,6 +974,7 @@ export const produkte: Product[] = [
     price: 13.0,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 55,
@@ -926,6 +985,7 @@ export const produkte: Product[] = [
     price: 13.0,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 56,
@@ -935,6 +995,7 @@ export const produkte: Product[] = [
     price: 12.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 57,
@@ -944,6 +1005,7 @@ export const produkte: Product[] = [
     price: 11.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
   {
     id: 58,
@@ -953,6 +1015,7 @@ export const produkte: Product[] = [
     price: 12.5,
     category: "Pasta",
     cuisine: "Italienisch",
+    options: [pastaExtrasOption, pastaSorteOption],
   },
 
   // Italienisch — Schnitzel
@@ -1036,6 +1099,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.0 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1048,6 +1112,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.0 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1060,6 +1125,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.0 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1072,6 +1138,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.0 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1084,6 +1151,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.0 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1096,6 +1164,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.0 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1108,6 +1177,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.5 },
       { name: "Menü", price: 12.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 15 },
     ],
   },
   {
@@ -1120,6 +1190,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.0 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1131,6 +1202,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 5.5 },
       { name: "Menü", price: 8.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
   {
@@ -1142,6 +1214,7 @@ export const produkte: Product[] = [
     variants: [
       { name: "Einzel", price: 8.5 },
       { name: "Menü", price: 11.5 },
+      { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
 
