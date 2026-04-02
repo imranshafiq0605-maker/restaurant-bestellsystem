@@ -57,37 +57,37 @@ const offerSlides: OfferSlide[] = [
   {
     title: "Angebot 1",
     price: 34.5,
-    text: "2 Familien Pizzen 36 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
+    text: "2 Familien Pizzen 36 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
   },
   {
     title: "Angebot 2",
     price: 22.5,
-    text: "3 kleine Pizzen 24 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
+    text: "3 kleine Pizzen 24 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
   },
   {
     title: "Angebot 3",
     price: 37.5,
-    text: "3 normale Pizzen 31 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
+    text: "3 normale Pizzen 31 cm nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
   },
   {
     title: "Angebot 4",
     price: 23.5,
-    text: "2 Nudeln nach Wahl / 1 Liter Cola, Fanta oder Bizzi",
+    text: "2 Nudeln nach Wahl / 1 Liter Cola, Fanta oder Bizzl",
   },
   {
     title: "Angebot 5",
     price: 32.5,
-    text: "2x Schnitzel nach Wahl / 1 Liter Cola, Fanta oder Bizzi nach Wahl",
+    text: "2x Schnitzel nach Wahl / 1 Liter Cola, Fanta oder Bizzl nach Wahl",
   },
   {
     title: "Angebot 6",
     price: 53.5,
-    text: "1 normale Pizza 31 cm nach Ihrer Wahl / 1 Schnitzel nach Ihrer Wahl / 1 Nudel nach Ihrer Wahl / 1 Salat nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzi",
+    text: "1 normale Pizza 31 cm nach Ihrer Wahl / 1 Schnitzel nach Ihrer Wahl / 1 Nudel nach Ihrer Wahl / 1 Salat nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzl",
   },
   {
     title: "Angebot 452",
     price: 33.5,
-    text: "2 indische Gerichte nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzi",
+    text: "2 indische Gerichte nach Ihrer Wahl / 1 Liter Cola, Fanta oder Bizzl",
   },
 ];
 
