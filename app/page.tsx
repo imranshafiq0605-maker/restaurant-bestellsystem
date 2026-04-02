@@ -439,6 +439,8 @@ const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
   Record<string, { name: string; price: number }[]>
 >({});
   const [modalError, setModalError] = useState("");
+  const [activeOffer, setActiveOffer] = useState<OfferSlide | null>(null);
+const [offerInputText, setOfferInputText] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
   const offersTrackRef = useRef<HTMLDivElement | null>(null);
@@ -536,8 +538,43 @@ const status = specialClosed
     setTimeout(() => setCartPulse(false), 700);
     setTimeout(() => setShowAddedEffect(false), 1800);
   }
+function addOfferToCartWithText(offer: OfferSlide, customText: string) {
+  const cleanedText = customText.trim();
 
+  if (!cleanedText) return;
+
+  const uniqueKey = `offer-${offer.title}-${cleanedText}`;
+
+  setCart((prevCart) => {
+    const found = prevCart.find((item) => item.uniqueKey === uniqueKey);
+
+    if (found) {
+      return prevCart.map((item) =>
+        item.uniqueKey === uniqueKey
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+    }
+
+    return [
+      ...prevCart,
+      {
+        id: Date.now(),
+        name: offer.title,
+        price: offer.price,
+        quantity: 1,
+        category: "Angebote",
+        cuisine: "Angebote",
+        selectedOptions: [cleanedText],
+        uniqueKey,
+      },
+    ];
+  });
+
+  triggerAddFeedback(offer.title);
+}
   function addOfferToCart(offer: OfferSlide) {
+ 
     const uniqueKey = `offer-${offer.title}`;
 
     setCart((prevCart) => {
@@ -1290,7 +1327,10 @@ const status = specialClosed
 
                     <button
                       className="offer-cart-button"
-                      onClick={() => addOfferToCart(slide)}
+                      onClick={() => {
+  setActiveOffer(slide);
+  setOfferInputText("");
+}}
                       type="button"
                     >
                       In den Warenkorb
@@ -2054,6 +2094,60 @@ const status = specialClosed
             </div>
           </div>
         )}
+        {activeOffer && (
+  <div className="modal-backdrop" onClick={() => setActiveOffer(null)}>
+    <div className="product-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <div>
+          <span className="eyebrow">Angebot</span>
+          <h3>{activeOffer.title}</h3>
+        </div>
+
+        <button
+          className="modal-close"
+          onClick={() => setActiveOffer(null)}
+          type="button"
+        >
+          ×
+        </button>
+      </div>
+
+      <p className="modal-description">{activeOffer.text}</p>
+
+      <div className="modal-section">
+        <h4>Was möchtest du genau?</h4>
+
+        <textarea
+          placeholder="z.B. Pizza Salami, Pizza Spinat, Cola"
+          value={offerInputText}
+          onChange={(e) => setOfferInputText(e.target.value)}
+          rows={5}
+        />
+      </div>
+
+      <div className="modal-footer">
+        <div className="modal-price-box">
+          <span>Angebotspreis</span>
+          <strong>{activeOffer.price.toFixed(2)} €</strong>
+        </div>
+
+        <button
+          className="checkout-button"
+          type="button"
+          onClick={() => {
+            if (!offerInputText.trim()) return;
+
+            addOfferToCartWithText(activeOffer, offerInputText);
+            setActiveOffer(null);
+            setOfferInputText("");
+          }}
+        >
+          In den Warenkorb
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         <div
           onClick={() => setAdminClicks((c) => c + 1)}
