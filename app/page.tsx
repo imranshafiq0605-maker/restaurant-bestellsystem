@@ -1974,7 +1974,7 @@ const status = specialClosed
                 <div className="modal-section">
                   <h4>Variante wählen</h4>
                   <div className="modal-choice-list">
-                    {selectedProduct.variants.map((variant) => (
+                    {selectedProduct.variants?.map((variant) => (
                       <button
                         key={variant.name}
                         type="button"
