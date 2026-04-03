@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import {
-  deleteDoc,
-  doc,
-  getDoc,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import admin from "firebase-admin";
+import { adminDb } from "../../lib/firebase-admin";
 import { sendOrderEmail } from "../../lib/send-order-email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
 function istRestaurantGeradeGeoeffnet(date: Date) {
-  const tag = date.getDay(); // 0 = Sonntag, 6 = Samstag
+  const tag = date.getDay();
   const minuten = date.getHours() * 60 + date.getMinutes();
   const istWochenende = tag === 0 || tag === 6;
 
@@ -76,27 +69,32 @@ export async function POST(req: NextRequest) {
       throw new Error("pendingOrderId fehlt in Stripe metadata");
     }
 
-    const pendingOrderRef = doc(db, "pendingOrders", pendingOrderId);
-    const pendingOrderSnap = await getDoc(pendingOrderRef);
+    const pendingOrderRef = adminDb.collection("pendingOrders").doc(pendingOrderId);
+    const pendingOrderSnap = await pendingOrderRef.get();
 
-    if (!pendingOrderSnap.exists()) {
+    if (!pendingOrderSnap.exists) {
       throw new Error(`pendingOrder nicht gefunden: ${pendingOrderId}`);
     }
 
     const pendingOrderData = pendingOrderSnap.data();
+
+    if (!pendingOrderData) {
+      throw new Error("pendingOrderData ist leer");
+    }
+
     console.log("✅ pendingOrder gefunden");
 
-    const counterRef = doc(db, "system", "orderCounter");
+    const counterRef = adminDb.collection("system").doc("orderCounter");
 
-    const neueBestellnummer = await runTransaction(db, async (transaction) => {
+    const neueBestellnummer = await adminDb.runTransaction(async (transaction) => {
       const counterSnap = await transaction.get(counterRef);
 
-      if (!counterSnap.exists()) {
+      if (!counterSnap.exists) {
         transaction.set(counterRef, { current: 1001 });
         return 1001;
       }
 
-      const current = counterSnap.data().current || 1000;
+      const current = counterSnap.data()?.current || 1000;
       const next = current + 1;
 
       transaction.update(counterRef, { current: next });
@@ -106,24 +104,24 @@ export async function POST(req: NextRequest) {
     console.log("✅ neue Bestellnummer:", neueBestellnummer);
 
     const jetzt = new Date();
-const istGeradeGeoeffnet = istRestaurantGeradeGeoeffnet(jetzt);
+    const istGeradeGeoeffnet = istRestaurantGeradeGeoeffnet(jetzt);
 
-const releaseDate = istGeradeGeoeffnet
-  ? jetzt
-  : getNaechsterOeffnungszeitpunkt(jetzt);
+    const releaseDate = istGeradeGeoeffnet
+      ? jetzt
+      : getNaechsterOeffnungszeitpunkt(jetzt);
 
-const finaleBestellung = {
-  ...pendingOrderData,
-  orderNumber: neueBestellnummer,
-  status: "neu",
-  bezahlt: true,
-  stripeSessionId: session.id,
-  releaseAt: Timestamp.fromDate(releaseDate),
-  acceptedAt: null,
-  createdAt: serverTimestamp(),
-};
+    const finaleBestellung = {
+      ...pendingOrderData,
+      orderNumber: neueBestellnummer,
+      status: "neu",
+      bezahlt: true,
+      stripeSessionId: session.id,
+      releaseAt: admin.firestore.Timestamp.fromDate(releaseDate),
+      acceptedAt: null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
 
-    await setDoc(doc(db, "bestellungen", pendingOrderId), finaleBestellung);
+    await adminDb.collection("bestellungen").doc(pendingOrderId).set(finaleBestellung);
     console.log("✅ Bestellung in bestellungen gespeichert");
 
     const kunde = pendingOrderData?.kunde || {};
@@ -153,7 +151,7 @@ const finaleBestellung = {
       console.log("⚠️ Keine Kunden-E-Mail vorhanden, Mail wurde nicht gesendet.");
     }
 
-    await deleteDoc(pendingOrderRef);
+    await pendingOrderRef.delete();
     console.log("✅ pendingOrder gelöscht");
 
     return NextResponse.json({
