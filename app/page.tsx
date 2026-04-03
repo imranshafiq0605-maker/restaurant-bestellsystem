@@ -1236,7 +1236,7 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
     </div>
   </section>
 )}
-            <section className="hero-image-section">
+           <section className="hero-image-section">
   <div className="container">
     <div
       className="hero-image-card"
@@ -1247,6 +1247,12 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
       <div className="hero-image-overlay" />
 
       <div className="hero-image-content">
+        <img
+          src="/images/halal.png"
+          alt="Halal"
+          className="hero-halal-badge"
+        />
+
         <span className="hero-kicker">Willkommen</span>
         <h2 className="hero-image-title">Willkommen bei La Rosa GmbH</h2>
         <p className="hero-image-text">
@@ -1254,6 +1260,13 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
         </p>
       </div>
     </div>
+  </div>
+</section>
+<section className="container hero-benefits-section">
+  <div className="hero-benefits-bar">
+    <span className="hero-benefit-pill">10% Rabatt auf deine Bestellung</span>
+    <span className="hero-benefit-divider">•</span>
+    <span className="hero-benefit-pill">Kostenloser Versand</span>
   </div>
 </section>
 
