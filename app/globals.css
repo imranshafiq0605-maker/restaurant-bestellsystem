@@ -2980,3 +2980,22 @@ border-radius: 50%;
 .hero-benefit-pill {
   font-size: 0.82rem;
 }
+.header-halal-badge {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  margin-left: 10px;
+  border-radius: 999px;
+  background: white;
+  padding: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+.header-halal-badge {
+  width: 28px;
+  height: 28px;
+  margin-left: 6px;
+}
+.brand-box {
+  display: flex;
+  align-items: center;
+}

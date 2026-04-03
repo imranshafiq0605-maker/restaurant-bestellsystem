@@ -1183,12 +1183,19 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
       <main className="page-shell">
         <header className="premium-header">
           <div className="container nav-inner">
-            <div className="brand-box">
-              <img src="/images/logo.jpg" alt="La Rosa Logo" className="logo-img" />
-              <div className="brand-text">
-                <h1 className="brand-title">La Rosa GmbH</h1>
-              </div>
-            </div>
+           <div className="brand-box">
+  <img src="/images/logo.jpg" alt="La Rosa Logo" className="logo-img" />
+
+  <div className="brand-text">
+    <h1 className="brand-title">La Rosa GmbH</h1>
+  </div>
+
+  <img
+    src="/images/halal.png"
+    alt="Halal"
+    className="header-halal-badge"
+  />
+</div>
 
             <div className="nav-right">
               <button
@@ -1247,11 +1254,7 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
       <div className="hero-image-overlay" />
 
       <div className="hero-image-content">
-        <img
-          src="/images/halal.png"
-          alt="Halal"
-          className="hero-halal-badge"
-        />
+        
 
         <span className="hero-kicker">Willkommen</span>
         <h2 className="hero-image-title">Willkommen bei La Rosa GmbH</h2>
