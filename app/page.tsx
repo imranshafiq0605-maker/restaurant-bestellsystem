@@ -316,9 +316,10 @@ function getPreorderWindowForDate(dateString: string) {
   };
 }
 
-function getAvailablePreorderDates(days = 1) {
+function getAvailablePreorderDates() {
   const today = new Date();
-  return Array.from({ length: days }, (_, index) => {
+
+  return [0, 1].map((index) => {
     const d = new Date(today);
     d.setDate(today.getDate() + index);
     return formatDateInput(d);
@@ -451,7 +452,7 @@ const status = specialClosed
   ? { isOpen: false }
   : baseStatus;
 
-  const availablePreorderDates = useMemo(() => getAvailablePreorderDates(21), []);
+  const availablePreorderDates = useMemo(() => getAvailablePreorderDates(), []);
   const availableTimeSlots = useMemo(
     () => getAvailableTimeSlots(vorbestellungDatum),
     [vorbestellungDatum]
