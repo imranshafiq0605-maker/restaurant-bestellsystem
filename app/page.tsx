@@ -1267,7 +1267,7 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
 </section>
 <section className="container hero-benefits-section">
   <div className="hero-benefits-bar">
-    <span className="hero-benefit-pill">10% Rabatt auf deine Bestellung</span>
+    <span className="hero-benefit-pill">10% Rabatt auf deine Bestellung und</span>
     <span className="hero-benefit-divider">•</span>
     <span className="hero-benefit-pill">Kostenloser Versand</span>
   </div>
