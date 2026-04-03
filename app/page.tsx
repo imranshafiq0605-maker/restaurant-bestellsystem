@@ -316,7 +316,7 @@ function getPreorderWindowForDate(dateString: string) {
   };
 }
 
-function getAvailablePreorderDates(days = 21) {
+function getAvailablePreorderDates(days = 1) {
   const today = new Date();
   return Array.from({ length: days }, (_, index) => {
     const d = new Date(today);
