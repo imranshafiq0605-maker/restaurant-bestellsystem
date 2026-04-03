@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { doc, onSnapshot, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 type OrderItem = {
@@ -79,68 +79,31 @@ function OrderStatusContent() {
   }, []);
 
   useEffect(() => {
-  if (!orderId) {
-    setLoading(false);
-    return;
-  }
-
-  let unsubscribeBestellung: (() => void) | null = null;
-  let unsubscribePending: (() => void) | null = null;
-
-  const startListening = async () => {
-    try {
-      const bestellungRef = doc(db, "bestellungen", orderId);
-      const bestellungSnap = await getDoc(bestellungRef);
-
-      if (bestellungSnap.exists()) {
-        unsubscribeBestellung = onSnapshot(
-          bestellungRef,
-          (snapshot) => {
-            if (snapshot.exists()) {
-              setOrder(snapshot.data() as OrderData);
-            } else {
-              setOrder(null);
-            }
-            setLoading(false);
-          },
-          (error) => {
-            console.error("Fehler beim Laden der Bestellung:", error);
-            setLoading(false);
-          }
-        );
-        return;
-      }
-
-      const pendingRef = doc(db, "pendingOrders", orderId);
-
-      unsubscribePending = onSnapshot(
-        pendingRef,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            setOrder(snapshot.data() as OrderData);
-          } else {
-            setOrder(null);
-          }
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Fehler beim Laden der pendingOrder:", error);
-          setLoading(false);
-        }
-      );
-    } catch (error) {
-      console.error("Fehler beim Initialisieren des Bestellstatus:", error);
+    if (!orderId) {
       setLoading(false);
+      return;
     }
-  };
 
-  startListening();
+    const orderRef = doc(db, "bestellungen", orderId);
 
-  return () => {
-    if (unsubscribeBestellung) unsubscribeBestellung();
-    if (unsubscribePending) unsubscribePending();
-  };
-}, [orderId]);
+    const unsubscribe = onSnapshot(
+      orderRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setOrder(snapshot.data() as OrderData);
+        } else {
+          setOrder(null);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Fehler beim Laden der Bestellung:", error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [orderId]);
 
   useEffect(() => {
     if (!paidFromUrl || order) {
