@@ -19,3 +19,4 @@ export default function RootLayout({
     </html>
   );
 }
+import { Analytics } from "@vercel/analytics/next"
