@@ -6,10 +6,49 @@ import { sendOrderEmail } from "../../lib/send-order-email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+function getBerlinDateParts(date: Date) {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin",
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(date);
+
+  const getPart = (type: string) =>
+    parts.find((p) => p.type === type)?.value || "";
+
+  const weekday = getPart("weekday").toLowerCase();
+
+  const dayMap: Record<string, number> = {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6,
+  };
+
+  return {
+    day: dayMap[weekday] ?? 1,
+    year: Number(getPart("year")),
+    month: Number(getPart("month")),
+    dayOfMonth: Number(getPart("day")),
+    hour: Number(getPart("hour")),
+    minute: Number(getPart("minute")),
+  };
+}
+
 function istRestaurantGeradeGeoeffnet(date: Date) {
-  const tag = date.getDay();
-  const minuten = date.getHours() * 60 + date.getMinutes();
-  const istWochenende = tag === 0 || tag === 6;
+  const berlin = getBerlinDateParts(date);
+  const minuten = berlin.hour * 60 + berlin.minute;
+  const istWochenende = berlin.day === 0 || berlin.day === 6;
 
   const offenAb = istWochenende ? 14 * 60 : 11 * 60;
   const offenBis = 23 * 60;
@@ -18,22 +57,37 @@ function istRestaurantGeradeGeoeffnet(date: Date) {
 }
 
 function getNaechsterOeffnungszeitpunkt(fromDate: Date) {
-  const d = new Date(fromDate);
+  const nowBerlin = getBerlinDateParts(fromDate);
+  const istWochenende = nowBerlin.day === 0 || nowBerlin.day === 6;
+  const openHourToday = istWochenende ? 14 : 11;
+  const openMinutesToday = openHourToday * 60;
+  const currentMinutes = nowBerlin.hour * 60 + nowBerlin.minute;
+
+  if (currentMinutes < openMinutesToday) {
+    const result = new Date(fromDate);
+    result.setUTCMinutes(
+      result.getUTCMinutes() + (openMinutesToday - currentMinutes)
+    );
+    result.setUTCSeconds(0, 0);
+    return result;
+  }
+
+  const result = new Date(fromDate);
+  result.setUTCDate(result.getUTCDate() + 1);
+  result.setUTCHours(0, 0, 0, 0);
 
   while (true) {
-    const tag = d.getDay();
-    const istWochenende = tag === 0 || tag === 6;
-    const openHour = istWochenende ? 14 : 11;
+    const berlin = getBerlinDateParts(result);
+    const isWeekend = berlin.day === 0 || berlin.day === 6;
+    const openHour = isWeekend ? 14 : 11;
 
-    const candidate = new Date(d);
-    candidate.setHours(openHour, 0, 0, 0);
-
-    if (candidate.getTime() > fromDate.getTime()) {
-      return candidate;
+    if (berlin.hour == 0 && berlin.minute == 0) {
+      result.setUTCMinutes(result.getUTCMinutes() + openHour * 60);
+      return result;
     }
 
-    d.setDate(d.getDate() + 1);
-    d.setHours(0, 0, 0, 0);
+    result.setUTCDate(result.getUTCDate() + 1);
+    result.setUTCHours(0, 0, 0, 0);
   }
 }
 
