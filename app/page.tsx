@@ -21,6 +21,7 @@ type ViewStep = "kitchens" | "categories" | "products" | "checkout";
 
 type CartItem = {
   id: number;
+  number?: string;
   name: string;
   price: number;
   quantity: number;
@@ -768,19 +769,20 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
       }
 
       return [
-        ...prevCart,
-        {
-          id: produkt.id,
-          name: produkt.name,
-          price: finalPrice,
-          quantity: 1,
-          category: produkt.category,
-          cuisine: produkt.cuisine,
-          variantName,
-          selectedOptions,
-          uniqueKey,
-        },
-      ];
+  ...prevCart,
+  {
+    id: produkt.id,
+    number: produkt.number ? String(produkt.number) : "",
+    name: produkt.name,
+    price: finalPrice,
+    quantity: 1,
+    category: produkt.category,
+    cuisine: produkt.cuisine,
+    variantName,
+    selectedOptions,
+    uniqueKey,
+  },
+];
     });
 
     triggerAddFeedback(produkt.name);
@@ -1081,18 +1083,19 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
     }
 
     const artikelOhneUndefined = cart.map((item) => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      category: item.category,
-      cuisine: item.cuisine,
-      uniqueKey: item.uniqueKey,
-      ...(item.variantName ? { variantName: item.variantName } : {}),
-      ...(item.selectedOptions && item.selectedOptions.length > 0
-        ? { selectedOptions: item.selectedOptions }
-        : {}),
-    }));
+  id: item.id,
+  ...(item.number ? { number: item.number } : {}),
+  name: item.name,
+  price: item.price,
+  quantity: item.quantity,
+  category: item.category,
+  cuisine: item.cuisine,
+  uniqueKey: item.uniqueKey,
+  ...(item.variantName ? { variantName: item.variantName } : {}),
+  ...(item.selectedOptions && item.selectedOptions.length > 0
+    ? { selectedOptions: item.selectedOptions }
+    : {}),
+}));
 
     try {
       setIsSubmitting(true);
