@@ -318,13 +318,7 @@ function getPreorderWindowForDate(dateString: string) {
 }
 
 function getAvailablePreorderDates() {
-  const today = new Date();
-
-  return [0, 1].map((index) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() + index);
-    return formatDateInput(d);
-  });
+  return [formatDateInput(new Date())];
 }
 
 function getAvailableTimeSlots(dateString: string) {
