@@ -68,7 +68,7 @@ const offerSlides: OfferSlide[] = [
   },
   {
     title: "Angebot 2",
-    price: 22.5,
+    price: 24,
     text: "3× Pizza (24 cm) + 1L Getränk nach Wahl",
   },
   {
