@@ -16,7 +16,7 @@ export async function sendOrderEmail({
   statusUrl,
 }: SendOrderEmailArgs) {
   const response = await resend.emails.send({
-    from: "La Rosa GmbH <onboarding@resend.dev>",
+    from: "La Rosa GmbH <bestellung@pizzerialarosagmbh.de>",
     to,
     subject: `Deine Bestellung bei La Rosa GmbH${orderNumber ? ` #${orderNumber}` : ""}`,
     html: `
