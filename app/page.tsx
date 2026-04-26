@@ -397,6 +397,7 @@ export default function HomePage() {
 const MANUAL_NOTICE_TEXT = "( Heute öffnen wir erst ab 14 Uhr )";
 const MANUAL_CHECKOUT_BLOCKED = false;
   const [cart, setCart] = useState<CartItem[]>([]);
+const [cartLoaded, setCartLoaded] = useState(false);
   const [bestellart, setBestellart] = useState<Bestellart>("abholung");
   const [name, setName] = useState("");
   const [telefon, setTelefon] = useState("");
@@ -882,6 +883,33 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
       behavior: "smooth",
     });
   }
+useEffect(() => {
+  try {
+    const savedCart = localStorage.getItem("larosa_cart");
+
+    if (savedCart) {
+      const parsedCart = JSON.parse(savedCart);
+
+      if (Array.isArray(parsedCart)) {
+        setCart(parsedCart);
+      }
+    }
+  } catch (error) {
+    console.error("Warenkorb konnte nicht geladen werden:", error);
+  } finally {
+    setCartLoaded(true);
+  }
+}, []);
+
+useEffect(() => {
+  if (!cartLoaded) return;
+
+  try {
+    localStorage.setItem("larosa_cart", JSON.stringify(cart));
+  } catch (error) {
+    console.error("Warenkorb konnte nicht gespeichert werden:", error);
+  }
+}, [cart, cartLoaded]);
 
   useEffect(() => {
     if (!status.isOpen) {
