@@ -355,6 +355,18 @@ const softdrink033Option: ProductOption = {
     { name: "Mezzo Mix", price: 0 },
   ],
 };
+const Fritz033Option: ProductOption = {
+  group: "Fritz Sorte",
+  required: true,
+  items: [
+    { name: "Fritz Kola", price: 0 },
+    { name: "Fritz Kola Light", price: 0 },
+    { name: "Fritz Limo Orange", price: 0 },
+    { name: "Fritz Cola & Orange", price: 0 },
+    { name: "Fritz Spritz Bio-Apfelschorle", price: 0 },
+    { name: "Fritz Limo Zitrone", price: 0 },
+  ],
+};
 
 const softdrink1LOption: ProductOption = {
   group: "Flasche Sorte",
@@ -1837,6 +1849,15 @@ export const produkte: Product[] = [
 
   // Getränke
   {
+    id: 118,
+    name: "Fritz 0,33L",
+    description: "Softgetränk",
+    price: 3.0,
+    category: "Getränke",
+    cuisine: "Getränke",
+    options: [Fritz033Option],
+  },
+  {
     id: 108,
     name: "Softdrink 0,33L",
     description: "Softgetränk",
@@ -1922,4 +1943,5 @@ export const produkte: Product[] = [
     cuisine: "Getränke",
     options: [bizzlOption],
   },
+
 ];
