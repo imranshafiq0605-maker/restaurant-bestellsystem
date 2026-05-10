@@ -1146,6 +1146,15 @@ export const produkte: Product[] = [
     cuisine: "Italienisch",
     options: [pastaExtrasOption, pastaSorteOption],
   },
+  {
+    id: 350,
+    name: "Lasagne",
+    description: "Hackfleischsoße, Käse überbacken",
+    price: 12.5,
+    category: "Pasta",
+    cuisine: "Italienisch",
+    
+  },
 
   // Italienisch — Schnitzel
   {
