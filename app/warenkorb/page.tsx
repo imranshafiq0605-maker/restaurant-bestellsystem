@@ -29,7 +29,7 @@ type LiefergebietConfig = {
 const CART_STORAGE_KEY = "larosa_cart";
 
 const MANUAL_NOTICE_TEXT = "( Heute öffnen wir erst ab 14 Uhr )";
-const MANUAL_CHECKOUT_BLOCKED = false;
+const MANUAL_CHECKOUT_BLOCKED = true;
 
 const liefergebiete: Record<string, LiefergebietConfig> = {
   "64546": { city: "Mörfelden-Walldorf", minOrder: 12 },
@@ -337,14 +337,21 @@ export default function WarenkorbPage() {
   }
 
   function nextFromCart() {
-    setFehlermeldung("");
-    if (cart.length === 0) {
-      setFehlermeldung("Dein Warenkorb ist leer.");
-      return;
-    }
-    setStep("daten");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  setFehlermeldung("");
+
+  if (MANUAL_CHECKOUT_BLOCKED) {
+    setFehlermeldung(MANUAL_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
+    return;
   }
+
+  if (cart.length === 0) {
+    setFehlermeldung("Dein Warenkorb ist leer.");
+    return;
+  }
+
+  setStep("daten");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
   function nextFromDaten() {
     setFehlermeldung("");
@@ -793,7 +800,16 @@ export default function WarenkorbPage() {
                 </button>
               )}
 
-              {step === "warenkorb" && <button className="primary-button" onClick={nextFromCart} type="button">Weiter</button>}
+              {step === "warenkorb" && (
+  <button
+    className="primary-button"
+    onClick={nextFromCart}
+    type="button"
+    disabled={MANUAL_CHECKOUT_BLOCKED}
+  >
+    {MANUAL_CHECKOUT_BLOCKED ? "Aktuell geschlossen" : "Weiter"}
+  </button>
+)}
               {step === "daten" && <button className="primary-button" onClick={nextFromDaten} type="button">Weiter</button>}
               {step === "zeit" && <button className="primary-button" onClick={nextFromZeit} type="button">Zur Zahlung</button>}
               {step === "checkout" && (
