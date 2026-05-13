@@ -29,7 +29,7 @@ type LiefergebietConfig = {
 const CART_STORAGE_KEY = "larosa_cart";
 
 const MANUAL_NOTICE_TEXT = "( Heute öffnen wir erst ab 14 Uhr )";
-const MANUAL_CHECKOUT_BLOCKED = false;
+const MANUAL_CHECKOUT_BLOCKED = true;
 
 const liefergebiete: Record<string, LiefergebietConfig> = {
   "64546": { city: "Mörfelden-Walldorf", minOrder: 12 },
