@@ -1752,7 +1752,7 @@ useEffect(() => {
         />
       </main>
 
-      <style jsx global>{`
+      <style>{`
         * {
           box-sizing: border-box;
         }

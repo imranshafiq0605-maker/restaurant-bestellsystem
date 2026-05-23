@@ -822,7 +822,7 @@ export default function WarenkorbPage() {
         </div>
       </section>
 
-      <style jsx global>{`
+      <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; background: #f6f7f9; color: #111827; font-family: Inter, Arial, sans-serif; }
         button, input, textarea, select { font: inherit; }
