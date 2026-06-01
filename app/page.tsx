@@ -1194,10 +1194,12 @@ useEffect(() => {
       }
 
       setFehlermeldung("Keine Stripe-URL erhalten.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Fehler bei pending order oder Stripe:", error);
+      const message =
+        error instanceof Error ? error.message : "Bestellung konnte nicht verarbeitet werden.";
       setFehlermeldung(
-        error?.message || "Bestellung konnte nicht verarbeitet werden."
+        message || "Bestellung konnte nicht verarbeitet werden."
       );
     } finally {
       setIsSubmitting(false);
@@ -1269,8 +1271,7 @@ useEffect(() => {
     </div>
   </section>
 )}
-           <section className="hero-image-section">
-  <div className="container">
+           <section className="container hero-image-section">
     <div
       className="hero-image-card"
       style={{
@@ -1282,28 +1283,41 @@ useEffect(() => {
       <div className="hero-image-content">
         
 
-        <span className="hero-kicker">Willkommen</span>
-        <h2 className="hero-image-title">Willkommen bei La Rosa GmbH</h2>
+        <span className="hero-kicker">Online bestellen</span>
+        <h2 className="hero-image-title">La Rosa GmbH</h2>
         <p className="hero-image-text">
           Italienische und indische Spezialitäten direkt online bestellen.
         </p>
+        <div className="hero-actions">
+          <a className="hero-primary-link" href="#bestellen">
+            Jetzt bestellen
+          </a>
+          <button
+            className="hero-secondary-link"
+            onClick={openCheckout}
+            type="button"
+          >
+            Warenkorb ansehen
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 </section>
 <section className="container hero-benefits-section">
   <div className="hero-benefits-bar">
-    <span className="hero-benefit-pill">10% Rabatt auf deine Bestellung und</span>
+    <span className="hero-benefit-pill">1. Kueche waehlen</span>
     <span className="hero-benefit-divider">•</span>
-    <span className="hero-benefit-pill">Kostenloser Versand</span>
+    <span className="hero-benefit-pill">2. Gericht antippen</span>
+    <span className="hero-benefit-divider">/</span>
+    <span className="hero-benefit-pill">3. 10% sparen</span>
   </div>
 </section>
 
             <section className="container section-spacing offers-section">
               <div className="section-topline offers-headline">
                 <div>
-                  <span className="eyebrow">Angebote</span>
-                  <h3 className="section-title">Unsere Angebote</h3>
+                  <span className="eyebrow">Beliebt</span>
+                  <h3 className="section-title">Angebote fuer Gruppen</h3>
                 </div>
 
                 <div className="offers-nav-desktop">
@@ -1355,11 +1369,11 @@ useEffect(() => {
               </div>
             </section>
 
-            <section className="container section-spacing kitchens-section">
+            <section className="container section-spacing kitchens-section" id="bestellen">
               <div className="section-topline">
                 <div>
-                  <span className="eyebrow">Auswahl</span>
-                  <h3 className="section-title">Küchen & Getränke</h3>
+                  <span className="eyebrow">Speisekarte</span>
+                  <h3 className="section-title">Was möchtest du bestellen?</h3>
                 </div>
               </div>
 
@@ -1380,8 +1394,8 @@ useEffect(() => {
                       <p>{card.text}</p>
                       <span className="cuisine-link">
                         {card.cuisine === "Getränke"
-                          ? "Direkt zu den Getränken"
-                          : "Kategorie öffnen"}
+                          ? "Getränke ansehen"
+                          : "Kategorien ansehen"}
                       </span>
                     </div>
                   </button>
@@ -1746,6 +1760,14 @@ useEffect(() => {
   </div>
 )}
 
+        {gesamtAnzahl > 0 && (
+          <button className="mobile-cart-dock" onClick={openCheckout} type="button">
+            <span>{gesamtAnzahl} Artikel</span>
+            <strong>{formatEuro(gesamtpreis)}</strong>
+            <em>Zum Warenkorb</em>
+          </button>
+        )}
+
         <div
           onClick={() => setAdminClicks((c) => c + 1)}
           className="secret-admin-dot"
@@ -1768,6 +1790,9 @@ useEffect(() => {
             linear-gradient(180deg, #fcfcfd 0%, #f6f7f9 100%);
           color: #101214;
           font-family: Inter, Arial, sans-serif;
+          overflow-x: hidden;
+          text-rendering: optimizeLegibility;
+          -webkit-font-smoothing: antialiased;
         }
 
         button,
@@ -1794,7 +1819,7 @@ useEffect(() => {
 
         .premium-header {
           position: sticky;
-          top: 0;
+          top: env(safe-area-inset-top, 0);
           z-index: 80;
           backdrop-filter: blur(18px);
           background: rgba(255, 255, 255, 0.86);
@@ -1835,6 +1860,7 @@ useEffect(() => {
           font-weight: 800;
           letter-spacing: 0.01em;
           color: #111827;
+          overflow-wrap: anywhere;
         }
 
         .nav-right {
@@ -1859,6 +1885,8 @@ useEffect(() => {
           cursor: pointer;
           transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
           box-shadow: 0 14px 30px rgba(17, 24, 39, 0.14);
+          min-height: 44px;
+          touch-action: manipulation;
         }
 
         .cart-button:hover,
@@ -1986,6 +2014,8 @@ useEffect(() => {
           overflow-x: auto;
           padding: 6px 2px 10px;
           scroll-snap-type: x mandatory;
+          scroll-padding-inline: 2px;
+          overscroll-behavior-inline: contain;
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
         }
@@ -1998,6 +2028,7 @@ useEffect(() => {
           min-width: 360px;
           max-width: 360px;
           scroll-snap-align: start;
+          scroll-snap-stop: always;
           display: flex;
           flex-direction: column;
           gap: 16px;
@@ -2228,6 +2259,7 @@ useEffect(() => {
           justify-content: space-between;
           gap: 14px;
           align-items: start;
+          min-width: 0;
         }
 
         .product-number {
@@ -2248,6 +2280,7 @@ useEffect(() => {
           font-weight: 800;
           white-space: nowrap;
           font-size: 0.94rem;
+          flex-shrink: 0;
         }
 
         .mini-chip-row {
@@ -2264,6 +2297,7 @@ useEffect(() => {
           background: rgba(255, 255, 255, 0.94);
           color: #374151;
           border: 1px solid rgba(0, 0, 0, 0.06);
+          overflow-wrap: anywhere;
         }
 
         .mini-chip.soft {
@@ -2773,12 +2807,12 @@ useEffect(() => {
 
         @media (max-width: 760px) {
           .container {
-            width: min(100%, calc(100% - 18px));
+            width: min(100%, calc(100% - 16px));
           }
 
           .nav-inner {
-            min-height: 72px;
-            gap: 10px;
+            min-height: 66px;
+            gap: 8px;
           }
 
           .logo-img {
@@ -2788,13 +2822,14 @@ useEffect(() => {
           }
 
           .brand-title {
-            font-size: 0.98rem;
+            font-size: 0.92rem;
+            line-height: 1.15;
           }
 
           .cart-button.compact {
-            min-width: 42px;
-            min-height: 42px;
-            padding: 10px 11px;
+            min-width: 44px;
+            min-height: 44px;
+            padding: 10px;
           }
 
           .cart-icon {
@@ -2811,8 +2846,8 @@ useEffect(() => {
           }
 
           .hero-image-card {
-            min-height: 240px;
-            border-radius: 24px;
+            min-height: clamp(220px, 62vw, 300px);
+            border-radius: 22px;
             background-position: center;
           }
 
@@ -2844,14 +2879,16 @@ useEffect(() => {
 
           .offers-track {
             gap: 14px;
-            padding-bottom: 6px;
+            margin-inline: -8px;
+            padding: 6px 8px 10px;
+            scroll-padding-inline: 8px;
           }
 
           .offer-card {
-            min-width: 86%;
-            max-width: 86%;
-            padding: 20px;
-            border-radius: 22px;
+            min-width: min(86%, 340px);
+            max-width: min(86%, 340px);
+            padding: 18px;
+            border-radius: 20px;
           }
 
           .offer-card h4 {
@@ -2865,8 +2902,8 @@ useEffect(() => {
           }
 
           .cuisine-card {
-            min-height: 280px;
-            border-radius: 24px;
+            min-height: 250px;
+            border-radius: 22px;
           }
 
           .cuisine-card-content {
@@ -2876,7 +2913,17 @@ useEffect(() => {
           .glass-card,
           .product-card,
           .category-card-inner {
-            padding: 18px;
+            padding: 16px;
+            border-radius: 20px;
+          }
+
+          .product-card-top {
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .product-price {
+            align-self: flex-start;
           }
 
           .switch-row button {
@@ -2900,7 +2947,7 @@ useEffect(() => {
           .added-toast {
             right: 10px;
             left: 10px;
-            bottom: 12px;
+            bottom: max(12px, env(safe-area-inset-bottom));
             min-width: auto;
           }
         }
@@ -2915,8 +2962,8 @@ useEffect(() => {
           }
 
           .offer-card {
-            min-width: 90%;
-            max-width: 90%;
+            min-width: 88%;
+            max-width: 88%;
           }
 
           .offer-price {
@@ -2929,12 +2976,742 @@ useEffect(() => {
           }
 
           .quantity-box button {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
           }
 
           .modal-choice {
             padding: 13px 14px;
+          }
+        }
+
+        /* Fresh ordering layout */
+        body {
+          background: #f4f6f8;
+          color: #17202a;
+        }
+
+        .page-shell {
+          padding-bottom: 0;
+        }
+
+        .container {
+          width: min(1180px, calc(100% - 40px));
+        }
+
+        .premium-header {
+          background: rgba(255, 255, 255, 0.94);
+          border-bottom: 1px solid #dde3ea;
+          box-shadow: 0 8px 28px rgba(23, 32, 42, 0.06);
+        }
+
+        .nav-inner {
+          min-height: 70px;
+          padding: 8px 0;
+        }
+
+        .brand-box {
+          gap: 10px;
+        }
+
+        .logo-img {
+          width: 48px;
+          height: 48px;
+          border-radius: 8px;
+          box-shadow: none;
+        }
+
+        .header-halal-badge {
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
+          background: #ffffff;
+          box-shadow: none;
+          border: 1px solid #dde3ea;
+        }
+
+        .brand-title {
+          font-size: 1rem;
+          letter-spacing: 0;
+        }
+
+        .cart-button-clean,
+        .cart-button,
+        .offer-cart-button,
+        .add-button,
+        .checkout-button,
+        .back-button,
+        .hero-primary-link,
+        .hero-secondary-link {
+          border-radius: 8px;
+          min-height: 46px;
+          box-shadow: none;
+          letter-spacing: 0;
+        }
+
+        .cart-button-clean,
+        .cart-button,
+        .add-button,
+        .checkout-button,
+        .hero-primary-link {
+          background: #17202a;
+          color: #ffffff;
+        }
+
+        .cart-button-clean:hover,
+        .cart-button:hover,
+        .offer-cart-button:hover,
+        .add-button:hover,
+        .checkout-button:hover {
+          transform: none;
+          box-shadow: none;
+        }
+
+        .cart-button-text {
+          display: inline-flex;
+        }
+
+        .cart-count-clean,
+        .cart-count {
+          background: #ffffff;
+          color: #17202a;
+          border: 1px solid rgba(255, 255, 255, 0.28);
+          font-weight: 900;
+        }
+
+        .hero-image-section {
+          padding-top: 20px;
+        }
+
+        .hero-image-card {
+          min-height: 430px;
+          border-radius: 8px;
+          box-shadow: none;
+          border: 1px solid #dde3ea;
+          display: flex;
+          align-items: flex-end;
+          overflow: hidden;
+          position: relative;
+          background-position: center;
+        }
+
+        .hero-image-overlay {
+          background:
+            linear-gradient(90deg, rgba(9, 15, 22, 0.82), rgba(9, 15, 22, 0.34) 56%, rgba(9, 15, 22, 0.12)),
+            linear-gradient(0deg, rgba(9, 15, 22, 0.42), transparent 54%);
+          backdrop-filter: none;
+        }
+
+        .hero-image-content {
+          position: relative;
+          z-index: 2;
+          width: min(650px, 100%);
+          min-height: 0;
+          padding: 42px;
+          text-align: left;
+          color: #ffffff;
+          animation: none;
+        }
+
+        .hero-kicker,
+        .eyebrow,
+        .opening-hours-label,
+        .checkout-kicker {
+          letter-spacing: 0;
+          text-transform: none;
+        }
+
+        .hero-kicker {
+          padding: 7px 10px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.14);
+          border: 1px solid rgba(255, 255, 255, 0.24);
+          font-size: 0.86rem;
+          font-weight: 800;
+        }
+
+        .hero-image-title {
+          margin: 18px 0 0;
+          font-size: 3rem;
+          line-height: 1.02;
+          letter-spacing: 0;
+          color: #ffffff;
+          text-shadow: none;
+        }
+
+        .hero-image-text {
+          margin: 14px 0 0;
+          max-width: 560px;
+          font-size: 1.08rem;
+          line-height: 1.55;
+          color: rgba(255, 255, 255, 0.92);
+          text-shadow: none;
+        }
+
+        .hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 22px;
+        }
+
+        .hero-primary-link,
+        .hero-secondary-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 13px 16px;
+          font-weight: 900;
+          text-decoration: none;
+          cursor: pointer;
+          border: 1px solid transparent;
+        }
+
+        .hero-secondary-link {
+          background: rgba(255, 255, 255, 0.12);
+          color: #ffffff;
+          border-color: rgba(255, 255, 255, 0.28);
+        }
+
+        .hero-benefits-section {
+          padding-top: 12px;
+        }
+
+        .hero-benefits-bar {
+          justify-content: flex-start;
+          padding: 12px;
+          border-radius: 8px;
+          background: #ffffff;
+          border: 1px solid #dde3ea;
+          box-shadow: none;
+        }
+
+        .hero-benefit-pill {
+          color: #17202a;
+          font-size: 0.92rem;
+          font-weight: 900;
+        }
+
+        .hero-benefit-divider {
+          color: #b7c0cb;
+        }
+
+        .section-spacing {
+          padding-top: 52px;
+        }
+
+        .section-topline {
+          align-items: flex-end;
+          margin-bottom: 16px;
+        }
+
+        .eyebrow {
+          color: #c2410c;
+          font-size: 0.85rem;
+          margin-bottom: 6px;
+        }
+
+        .section-title {
+          font-size: 2rem;
+          letter-spacing: 0;
+          line-height: 1.12;
+        }
+
+        .offers-track {
+          gap: 12px;
+          padding: 2px 2px 12px;
+        }
+
+        .offer-card,
+        .category-card,
+        .product-card,
+        .opening-hours-clean-card,
+        .special-closure-banner {
+          border-radius: 8px;
+          background: #ffffff;
+          border: 1px solid #dde3ea;
+          box-shadow: none;
+        }
+
+        .offer-card {
+          min-width: 310px;
+          max-width: 310px;
+          padding: 18px;
+        }
+
+        .offer-label,
+        .category-badge,
+        .cuisine-tag {
+          border-radius: 8px;
+          background: #e11d48;
+          color: #ffffff;
+          padding: 7px 9px;
+          font-size: 0.82rem;
+        }
+
+        .offer-price {
+          color: #17202a;
+          font-size: 1.18rem;
+        }
+
+        .offer-card h4 {
+          font-size: 1.35rem;
+          letter-spacing: 0;
+        }
+
+        .offer-card p,
+        .cuisine-card p,
+        .product-desc,
+        .category-card p {
+          line-height: 1.55;
+        }
+
+        .offer-tags span,
+        .mini-chip,
+        .cart-option-pill {
+          border-radius: 8px;
+          background: #edf2f7;
+          color: #334155;
+          border: 1px solid #dde3ea;
+        }
+
+        .offer-cart-button {
+          margin-top: auto;
+          background: #0f766e;
+          color: #ffffff;
+        }
+
+        .cuisine-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .cuisine-card {
+          min-height: 300px;
+          border-radius: 8px;
+          box-shadow: none;
+          border: 1px solid #dde3ea;
+        }
+
+        .cuisine-card:hover,
+        .category-card:hover {
+          transform: none;
+          box-shadow: none;
+        }
+
+        .cuisine-card::after {
+          background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.9));
+        }
+
+        .cuisine-card-content {
+          padding: 20px;
+        }
+
+        .cuisine-card h4 {
+          font-size: 1.55rem;
+          letter-spacing: 0;
+        }
+
+        .cuisine-link,
+        .category-link {
+          color: #c2410c;
+        }
+
+        .opening-hours-section {
+          padding-top: 52px;
+        }
+
+        .opening-hours-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .opening-hours-clean-card {
+          padding: 18px;
+        }
+
+        .opening-hours-card-head,
+        .opening-hours-row {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 14px;
+        }
+
+        .opening-hours-card-head h4 {
+          margin: 4px 0 0;
+          font-size: 1.2rem;
+        }
+
+        .opening-status-pill {
+          border-radius: 8px;
+          padding: 7px 9px;
+          font-size: 0.85rem;
+          font-weight: 900;
+        }
+
+        .opening-status-pill.open {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .opening-status-pill.closed {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .opening-hours-rows {
+          display: grid;
+          gap: 10px;
+          margin-top: 18px;
+        }
+
+        .opening-hours-row {
+          padding-top: 10px;
+          border-top: 1px solid #edf2f7;
+        }
+
+        .category-page-section,
+        .product-page-section {
+          padding-top: 24px;
+        }
+
+        .inner-page-topline {
+          position: sticky;
+          top: 70px;
+          z-index: 50;
+          align-items: center;
+          padding: 12px 0;
+          background: rgba(244, 246, 248, 0.94);
+          backdrop-filter: blur(12px);
+        }
+
+        .category-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .category-card-inner {
+          padding: 18px;
+        }
+
+        .category-card h4 {
+          font-size: 1.18rem;
+          letter-spacing: 0;
+        }
+
+        .products-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .product-card {
+          padding: 16px;
+          gap: 12px;
+        }
+
+        .product-card-shine {
+          display: none;
+        }
+
+        .product-card-top {
+          align-items: flex-start;
+        }
+
+        .product-number {
+          letter-spacing: 0;
+          margin-bottom: 6px;
+          color: #64748b;
+        }
+
+        .product-card h4 {
+          font-size: 1.1rem;
+          line-height: 1.25;
+          letter-spacing: 0;
+          overflow-wrap: anywhere;
+        }
+
+        .product-price {
+          border-radius: 8px;
+          background: #17202a;
+          font-size: 0.9rem;
+        }
+
+        .add-button {
+          width: 100%;
+          margin-top: auto;
+          background: #0f766e;
+        }
+
+        .site-footer {
+          margin-top: 52px;
+          background: #ffffff;
+          border-top: 1px solid #dde3ea;
+        }
+
+        .footer-inner {
+          grid-template-columns: 1fr auto;
+          padding: 22px 0;
+        }
+
+        .footer-copy {
+          grid-column: 1 / -1;
+        }
+
+        .modal-backdrop {
+          background: rgba(23, 32, 42, 0.38);
+          padding: 16px;
+          align-items: center;
+        }
+
+        .product-modal {
+          border-radius: 8px;
+          background: #ffffff;
+          box-shadow: none;
+          border: 1px solid #dde3ea;
+        }
+
+        .modal-choice {
+          border-radius: 8px;
+          text-align: left;
+        }
+
+        .modal-choice.active {
+          background: #ecfdf5;
+          border-color: #0f766e;
+        }
+
+        .modal-close {
+          border-radius: 8px;
+        }
+
+        .mobile-cart-dock {
+          display: none;
+        }
+
+        @media (max-width: 980px) {
+          .cuisine-grid,
+          .category-grid,
+          .products-grid,
+          .opening-hours-grid,
+          .footer-inner {
+            grid-template-columns: 1fr;
+          }
+
+          .hero-image-card {
+            min-height: 390px;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .container {
+            width: min(100%, calc(100% - 16px));
+          }
+
+          .nav-inner {
+            min-height: 62px;
+          }
+
+          .logo-img {
+            width: 42px;
+            height: 42px;
+          }
+
+          .header-halal-badge {
+            width: 30px;
+            height: 30px;
+          }
+
+          .brand-title {
+            font-size: 0.95rem;
+          }
+
+          .cart-button-text {
+            display: none;
+          }
+
+          .hero-image-section {
+            padding-top: 10px;
+          }
+
+          .hero-image-card {
+            min-height: 360px;
+          }
+
+          .hero-image-overlay {
+            background:
+              linear-gradient(0deg, rgba(9, 15, 22, 0.84), rgba(9, 15, 22, 0.16)),
+              linear-gradient(90deg, rgba(9, 15, 22, 0.46), rgba(9, 15, 22, 0.12));
+          }
+
+          .hero-image-content {
+            padding: 22px;
+            width: 100%;
+          }
+
+          .hero-image-title {
+            font-size: 2.15rem;
+          }
+
+          .hero-image-text {
+            font-size: 1rem;
+          }
+
+          .hero-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+
+          .hero-primary-link,
+          .hero-secondary-link {
+            width: 100%;
+          }
+
+          .hero-benefits-bar {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+
+          .hero-benefit-divider {
+            display: none;
+          }
+
+          .section-spacing,
+          .opening-hours-section {
+            padding-top: 34px;
+          }
+
+          .section-title {
+            font-size: 1.55rem;
+          }
+
+          .section-topline {
+            align-items: stretch;
+          }
+
+          .offers-track {
+            margin-inline: -8px;
+            padding-inline: 8px;
+          }
+
+          .offer-card {
+            min-width: 86%;
+            max-width: 86%;
+          }
+
+          .cuisine-card {
+            min-height: 218px;
+          }
+
+          .cuisine-card-content {
+            padding: 16px;
+          }
+
+          .opening-hours-card-head,
+          .opening-hours-row,
+          .product-card-top {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+
+          .inner-page-topline {
+            top: 62px;
+            margin-bottom: 14px;
+          }
+
+          .back-button {
+            width: 100%;
+          }
+
+          .products-grid {
+            padding-bottom: 74px;
+          }
+
+          .product-card {
+            padding: 14px;
+          }
+
+          .product-desc {
+            margin: 0;
+          }
+
+          .modal-backdrop {
+            align-items: flex-end;
+            padding: 10px;
+          }
+
+          .product-modal {
+            width: 100%;
+            max-height: 88vh;
+          }
+
+          .modal-footer {
+            align-items: stretch;
+          }
+
+          .mobile-cart-dock {
+            position: fixed;
+            left: 8px;
+            right: 8px;
+            bottom: max(8px, env(safe-area-inset-bottom));
+            z-index: 90;
+            display: grid;
+            grid-template-columns: auto auto 1fr;
+            gap: 10px;
+            align-items: center;
+            min-height: 54px;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: #17202a;
+            color: #ffffff;
+            box-shadow: 0 16px 36px rgba(23, 32, 42, 0.24);
+            font: inherit;
+            text-align: left;
+          }
+
+          .mobile-cart-dock span,
+          .mobile-cart-dock strong,
+          .mobile-cart-dock em {
+            font-style: normal;
+            font-weight: 900;
+            white-space: nowrap;
+          }
+
+          .mobile-cart-dock em {
+            justify-self: end;
+            color: #a7f3d0;
+          }
+
+          .site-footer {
+            padding-bottom: 74px;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .hero-image-card {
+            min-height: 330px;
+          }
+
+          .hero-image-title {
+            font-size: 1.9rem;
+          }
+
+          .offer-card {
+            min-width: 90%;
+            max-width: 90%;
+          }
+
+          .mobile-cart-dock {
+            grid-template-columns: 1fr auto;
+          }
+
+          .mobile-cart-dock em {
+            grid-column: 1 / -1;
+            justify-self: stretch;
           }
         }
       `}</style>
