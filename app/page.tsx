@@ -4127,6 +4127,173 @@ useEffect(() => {
             transition-duration: 0.001ms !important;
           }
         }
+
+        /* Calm glass refinement */
+        body {
+          background:
+            radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.95), transparent 32%),
+            radial-gradient(circle at 86% 12%, rgba(226, 232, 240, 0.56), transparent 30%),
+            linear-gradient(180deg, #f7f8fa 0%, #eef1f4 100%);
+          color: #111827;
+        }
+
+        .premium-header {
+          background: rgba(255, 255, 255, 0.72);
+          border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+          box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+          backdrop-filter: blur(24px) saturate(1.25);
+        }
+
+        .hero-image-card {
+          border: 1px solid rgba(255, 255, 255, 0.48);
+          box-shadow:
+            0 34px 90px rgba(15, 23, 42, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        }
+
+        .hero-image-overlay {
+          background:
+            linear-gradient(90deg, rgba(2, 6, 23, 0.92), rgba(2, 6, 23, 0.74) 48%, rgba(2, 6, 23, 0.46)),
+            linear-gradient(0deg, rgba(2, 6, 23, 0.72), rgba(2, 6, 23, 0.2));
+        }
+
+        .hero-image-content {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06));
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 18px;
+          margin: 0 0 36px 36px;
+          padding: 30px;
+          max-width: 650px;
+          backdrop-filter: blur(18px) saturate(1.15);
+          box-shadow: 0 18px 52px rgba(0, 0, 0, 0.18);
+        }
+
+        .hero-image-title,
+        .hero-image-text {
+          text-shadow: 0 2px 18px rgba(0, 0, 0, 0.42);
+        }
+
+        .hero-kicker {
+          background: rgba(255, 255, 255, 0.16);
+          border-color: rgba(255, 255, 255, 0.24);
+        }
+
+        .hero-primary-link,
+        .cart-button-clean,
+        .cart-button,
+        .checkout-button {
+          background: linear-gradient(180deg, #1f2937, #111827);
+        }
+
+        .hero-secondary-link {
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        .offer-cart-button,
+        .add-button {
+          background: linear-gradient(180deg, #334155, #1f2937);
+        }
+
+        .hero-benefits-bar,
+        .offer-card,
+        .category-card,
+        .product-card,
+        .opening-hours-clean-card,
+        .special-closure-banner,
+        .product-modal {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.52));
+          border: 1px solid rgba(255, 255, 255, 0.62);
+          box-shadow:
+            0 18px 52px rgba(15, 23, 42, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.72);
+          backdrop-filter: blur(22px) saturate(1.2);
+        }
+
+        .offer-card {
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,250,252,0.58));
+          border-color: rgba(255, 255, 255, 0.66);
+        }
+
+        .offer-label,
+        .category-badge,
+        .cuisine-tag {
+          background: rgba(17, 24, 39, 0.88);
+          color: #ffffff;
+          backdrop-filter: blur(10px);
+        }
+
+        .eyebrow,
+        .cuisine-link,
+        .category-link {
+          color: #475569;
+        }
+
+        .offer-tags span,
+        .mini-chip,
+        .cart-option-pill,
+        .back-button,
+        .modal-choice {
+          background: rgba(255, 255, 255, 0.58);
+          border-color: rgba(148, 163, 184, 0.26);
+          backdrop-filter: blur(14px);
+        }
+
+        .hero-benefit-pill::before {
+          background: #64748b;
+          box-shadow: 0 0 0 4px rgba(100, 116, 139, 0.1);
+        }
+
+        .cuisine-card {
+          border-color: rgba(255, 255, 255, 0.68);
+          box-shadow: 0 20px 54px rgba(15, 23, 42, 0.12);
+        }
+
+        .cuisine-card::after {
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.86)),
+            linear-gradient(0deg, rgba(248,250,252,0.22), rgba(248,250,252,0));
+        }
+
+        .product-price {
+          background: rgba(17, 24, 39, 0.9);
+          box-shadow: none;
+        }
+
+        .opening-status-pill.open {
+          background: rgba(241, 245, 249, 0.86);
+          color: #334155;
+          animation: none;
+        }
+
+        .opening-status-pill.closed {
+          background: rgba(241, 245, 249, 0.86);
+          color: #64748b;
+        }
+
+        .mobile-cart-dock {
+          background: rgba(17, 24, 39, 0.88);
+          backdrop-filter: blur(22px) saturate(1.2);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .mobile-cart-dock em {
+          color: #e2e8f0;
+        }
+
+        @media (max-width: 760px) {
+          .hero-image-content {
+            margin: 0 12px 12px;
+            padding: 18px;
+            border-radius: 16px;
+          }
+
+          .hero-image-overlay {
+            background:
+              linear-gradient(0deg, rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.42)),
+              linear-gradient(90deg, rgba(2, 6, 23, 0.74), rgba(2, 6, 23, 0.32));
+          }
+        }
       `}</style>
     </>
   );
