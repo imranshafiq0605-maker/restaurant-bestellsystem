@@ -1286,7 +1286,7 @@ useEffect(() => {
         <span className="hero-kicker">Online bestellen</span>
         <h2 className="hero-image-title">La Rosa GmbH</h2>
         <p className="hero-image-text">
-          Italienische und indische Spezialitäten direkt online bestellen.
+          Wähle deine Küche, stelle dein Gericht zusammen und bestelle bequem mit 10% Rabatt.
         </p>
         <div className="hero-actions">
           <a className="hero-primary-link" href="#bestellen">
@@ -1305,7 +1305,7 @@ useEffect(() => {
 </section>
 <section className="container hero-benefits-section">
   <div className="hero-benefits-bar">
-    <span className="hero-benefit-pill">1. Kueche waehlen</span>
+    <span className="hero-benefit-pill">1. Küche wählen</span>
     <span className="hero-benefit-divider">•</span>
     <span className="hero-benefit-pill">2. Gericht antippen</span>
     <span className="hero-benefit-divider">/</span>
@@ -1317,7 +1317,7 @@ useEffect(() => {
               <div className="section-topline offers-headline">
                 <div>
                   <span className="eyebrow">Beliebt</span>
-                  <h3 className="section-title">Angebote fuer Gruppen</h3>
+                  <h3 className="section-title">Angebote für Gruppen</h3>
                 </div>
 
                 <div className="offers-nav-desktop">
@@ -3712,6 +3712,419 @@ useEffect(() => {
           .mobile-cart-dock em {
             grid-column: 1 / -1;
             justify-self: stretch;
+          }
+        }
+
+        /* Polish, motion, and richer visual finish */
+        body {
+          background:
+            radial-gradient(circle at 12% 8%, rgba(225, 29, 72, 0.09), transparent 28%),
+            radial-gradient(circle at 88% 18%, rgba(15, 118, 110, 0.1), transparent 26%),
+            linear-gradient(180deg, #fbfaf8 0%, #f3f6f8 46%, #eef3f5 100%);
+        }
+
+        .premium-header {
+          animation: headerDrop 0.6s ease both;
+        }
+
+        .logo-img,
+        .header-halal-badge {
+          transition: transform 0.24s ease, filter 0.24s ease;
+        }
+
+        .brand-box:hover .logo-img,
+        .brand-box:hover .header-halal-badge {
+          transform: translateY(-1px) scale(1.03);
+          filter: saturate(1.08);
+        }
+
+        .hero-image-card {
+          isolation: isolate;
+          transform-origin: center;
+          animation: heroReveal 0.85s cubic-bezier(.2,.8,.2,1) both;
+          box-shadow: 0 24px 80px rgba(23, 32, 42, 0.14);
+        }
+
+        .hero-image-card::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          background: inherit;
+          background-size: cover;
+          background-position: center;
+          transform: scale(1.05);
+          animation: heroPhotoDrift 13s ease-in-out infinite alternate;
+        }
+
+        .hero-image-card > * {
+          position: relative;
+          z-index: 1;
+        }
+
+        .hero-image-overlay {
+          z-index: 1;
+          background:
+            linear-gradient(100deg, rgba(13, 18, 25, 0.88), rgba(13, 18, 25, 0.45) 50%, rgba(13, 18, 25, 0.08)),
+            radial-gradient(circle at 18% 78%, rgba(225, 29, 72, 0.34), transparent 34%),
+            radial-gradient(circle at 64% 18%, rgba(15, 118, 110, 0.24), transparent 30%);
+        }
+
+        .hero-image-content {
+          animation: heroTextIn 0.75s ease 0.12s both;
+        }
+
+        .hero-kicker {
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
+        }
+
+        .hero-image-title {
+          max-width: 560px;
+        }
+
+        .hero-primary-link,
+        .hero-secondary-link,
+        .cart-button,
+        .offer-cart-button,
+        .add-button,
+        .checkout-button,
+        .back-button {
+          position: relative;
+          overflow: hidden;
+          transition:
+            transform 0.22s ease,
+            box-shadow 0.22s ease,
+            background-color 0.22s ease,
+            border-color 0.22s ease;
+        }
+
+        .hero-primary-link::after,
+        .hero-secondary-link::after,
+        .cart-button::after,
+        .offer-cart-button::after,
+        .add-button::after,
+        .checkout-button::after {
+          content: "";
+          position: absolute;
+          inset: -40% auto -40% -55%;
+          width: 44%;
+          transform: skewX(-18deg);
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.32), transparent);
+          transition: transform 0.55s ease;
+        }
+
+        .hero-primary-link:hover::after,
+        .hero-secondary-link:hover::after,
+        .cart-button:hover::after,
+        .offer-cart-button:hover::after,
+        .add-button:hover::after,
+        .checkout-button:hover::after {
+          transform: translateX(360%) skewX(-18deg);
+        }
+
+        .hero-primary-link:hover,
+        .hero-secondary-link:hover,
+        .cart-button:hover,
+        .offer-cart-button:hover,
+        .add-button:hover,
+        .checkout-button:hover,
+        .back-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 14px 30px rgba(23, 32, 42, 0.16);
+        }
+
+        .hero-primary-link:active,
+        .hero-secondary-link:active,
+        .cart-button:active,
+        .offer-cart-button:active,
+        .add-button:active,
+        .checkout-button:active,
+        .back-button:active,
+        .mobile-cart-dock:active {
+          transform: translateY(0) scale(0.99);
+        }
+
+        .hero-secondary-link {
+          backdrop-filter: blur(10px);
+        }
+
+        .hero-benefits-bar {
+          box-shadow: 0 14px 42px rgba(23, 32, 42, 0.08);
+          animation: softRise 0.65s ease 0.22s both;
+        }
+
+        .hero-benefit-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .hero-benefit-pill::before {
+          content: "";
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #0f766e;
+          box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+        }
+
+        .offer-card,
+        .cuisine-card,
+        .category-card,
+        .product-card,
+        .opening-hours-clean-card {
+          transition:
+            transform 0.22s ease,
+            box-shadow 0.22s ease,
+            border-color 0.22s ease,
+            filter 0.22s ease;
+          animation: cardIn 0.55s ease both;
+        }
+
+        .offer-card:nth-child(2),
+        .cuisine-card:nth-child(2),
+        .category-card:nth-child(2),
+        .product-card:nth-child(2) {
+          animation-delay: 0.05s;
+        }
+
+        .offer-card:nth-child(3),
+        .cuisine-card:nth-child(3),
+        .category-card:nth-child(3),
+        .product-card:nth-child(3) {
+          animation-delay: 0.1s;
+        }
+
+        .offer-card:hover,
+        .cuisine-card:hover,
+        .category-card:hover,
+        .product-card:hover,
+        .opening-hours-clean-card:hover {
+          transform: translateY(-4px);
+          border-color: rgba(225, 29, 72, 0.24);
+          box-shadow: 0 18px 44px rgba(23, 32, 42, 0.12);
+          filter: saturate(1.03);
+        }
+
+        .offer-card {
+          background:
+            linear-gradient(180deg, #ffffff, #fff8f2);
+          border-color: rgba(225, 29, 72, 0.14);
+        }
+
+        .offer-label {
+          background: linear-gradient(135deg, #e11d48, #f97316);
+        }
+
+        .offer-cart-button,
+        .add-button {
+          background: linear-gradient(135deg, #0f766e, #10b981);
+        }
+
+        .cuisine-card {
+          transform-origin: center;
+        }
+
+        .cuisine-card::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: rgba(255,255,255,0);
+          z-index: 1;
+          transition: background 0.25s ease;
+        }
+
+        .cuisine-card:hover::before {
+          background: rgba(255,255,255,0.08);
+        }
+
+        .cuisine-card-content {
+          transition: transform 0.25s ease;
+        }
+
+        .cuisine-card:hover .cuisine-card-content {
+          transform: translateY(-4px);
+        }
+
+        .cuisine-tag,
+        .category-badge {
+          background: linear-gradient(135deg, #17202a, #334155);
+        }
+
+        .product-card {
+          background: linear-gradient(180deg, #ffffff, #f8fbfb);
+        }
+
+        .product-price {
+          background: linear-gradient(135deg, #17202a, #334155);
+          box-shadow: 0 8px 18px rgba(23, 32, 42, 0.12);
+        }
+
+        .mini-chip {
+          transition: transform 0.18s ease, background-color 0.18s ease;
+        }
+
+        .mini-chip:hover {
+          transform: translateY(-1px);
+          background: #ffffff;
+        }
+
+        .opening-status-pill.open {
+          animation: statusGlow 2.4s ease-in-out infinite;
+        }
+
+        .product-modal {
+          animation: modalPop 0.24s ease both;
+        }
+
+        .modal-choice {
+          transition:
+            transform 0.18s ease,
+            border-color 0.18s ease,
+            background-color 0.18s ease;
+        }
+
+        .modal-choice:hover {
+          transform: translateX(3px);
+          border-color: rgba(15, 118, 110, 0.38);
+        }
+
+        .added-toast {
+          animation: toastIn 1.8s ease forwards;
+        }
+
+        .mobile-cart-dock {
+          animation: dockIn 0.28s ease both;
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .mobile-cart-dock:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 20px 44px rgba(23, 32, 42, 0.28);
+        }
+
+        @keyframes headerDrop {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes heroReveal {
+          from {
+            opacity: 0;
+            transform: translateY(14px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes heroPhotoDrift {
+          from {
+            transform: scale(1.05) translate3d(-6px, -4px, 0);
+          }
+          to {
+            transform: scale(1.1) translate3d(8px, 5px, 0);
+          }
+        }
+
+        @keyframes heroTextIn {
+          from {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes softRise {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes cardIn {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes modalPop {
+          from {
+            opacity: 0;
+            transform: translateY(16px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes dockIn {
+          from {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes statusGlow {
+          0%,
+          100% {
+            box-shadow: 0 0 0 0 rgba(22, 101, 52, 0);
+          }
+          50% {
+            box-shadow: 0 0 0 5px rgba(22, 101, 52, 0.1);
+          }
+        }
+
+        @media (max-width: 760px) {
+          .hero-image-card::before {
+            animation-duration: 16s;
+          }
+
+          .offer-card:hover,
+          .cuisine-card:hover,
+          .category-card:hover,
+          .product-card:hover,
+          .opening-hours-clean-card:hover {
+            transform: none;
+          }
+
+          .modal-choice:hover {
+            transform: none;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+            transition-duration: 0.001ms !important;
           }
         }
       `}</style>
