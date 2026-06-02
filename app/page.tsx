@@ -1303,7 +1303,7 @@ useEffect(() => {
 
             <div className="nav-right">
               <a className="call-button" href="tel:06105297883" aria-label="La Rosa anrufen">
-                <span className="call-icon" aria-hidden="true">☎</span>
+                <span className="call-icon" aria-hidden="true">📞</span>
                 <span className="call-text">
                   <small>Anrufen</small>
                   <strong>06105 297883</strong>
