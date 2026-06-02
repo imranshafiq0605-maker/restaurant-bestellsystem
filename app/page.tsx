@@ -4864,11 +4864,7 @@ useEffect(() => {
         }
 
         .cart-icon {
-          font-size: 0.72rem;
-          letter-spacing: 0;
-          text-transform: uppercase;
-          color: rgba(255,255,255,0.72);
-          font-weight: 900;
+          display: none;
         }
 
         .cart-count-clean {
@@ -4899,7 +4895,7 @@ useEffect(() => {
           }
 
           .nav-inner {
-            grid-template-columns: 1fr auto;
+            grid-template-columns: minmax(164px, 1fr) auto;
             gap: 8px;
           }
 
@@ -4907,17 +4903,18 @@ useEffect(() => {
             min-width: 0;
             padding: 8px;
             border-radius: 20px;
+            gap: 8px;
           }
 
           .brand-logo-shell {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 16px;
           }
 
           .logo-img {
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             border-radius: 13px;
           }
 
@@ -4926,7 +4923,8 @@ useEffect(() => {
           }
 
           .brand-title {
-            font-size: 0.98rem;
+            font-size: 0.92rem;
+            white-space: nowrap;
           }
 
           .nav-right {
@@ -4972,10 +4970,6 @@ useEffect(() => {
             padding: 8px 10px;
           }
 
-          .cart-icon {
-            display: none;
-          }
-
           .header-search {
             min-height: 50px;
             border-radius: 20px;
@@ -4984,10 +4978,10 @@ useEffect(() => {
 
         @media (max-width: 440px) {
           .brand-title {
-            max-width: 94px;
+            max-width: none;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: visible;
+            text-overflow: clip;
           }
 
           .nav-right {
