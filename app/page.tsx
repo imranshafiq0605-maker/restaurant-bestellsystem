@@ -422,6 +422,7 @@ const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
   const [viewStep, setViewStep] = useState<ViewStep>("kitchens");
   const [activeCuisine, setActiveCuisine] = useState<Cuisine | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [cartPulse, setCartPulse] = useState(false);
   const [showAddedEffect, setShowAddedEffect] = useState(false);
   const [addedProductName, setAddedProductName] = useState("");
@@ -873,6 +874,27 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
     );
   }, [activeCuisine, activeCategory]);
 
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+
+    return produkte
+      .filter((produkt) => {
+        const searchable = [
+          produkt.number?.toString() ?? "",
+          produkt.name,
+          produkt.description,
+          produkt.category,
+          produkt.cuisine,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return searchable.includes(query);
+      })
+      .slice(0, 8);
+  }, [searchQuery]);
+
   function scrollOffers(direction: "left" | "right") {
     const container = offersTrackRef.current;
     if (!container) return;
@@ -1224,6 +1246,63 @@ useEffect(() => {
     className="header-halal-badge"
   />
 </div>
+
+            <div className="header-search-wrap">
+              <div className="header-search-glow" />
+              <label className="header-search" htmlFor="produkt-suche">
+                <span className="search-symbol" aria-hidden="true" />
+                <input
+                  id="produkt-suche"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Produkt suchen..."
+                  autoComplete="off"
+                />
+                {searchQuery && (
+                  <button
+                    className="search-clear"
+                    onClick={() => setSearchQuery("")}
+                    type="button"
+                    aria-label="Suche löschen"
+                  >
+                    ×
+                  </button>
+                )}
+              </label>
+
+              {searchQuery.trim() && (
+                <div className="search-results-panel">
+                  {searchResults.length > 0 ? (
+                    searchResults.map((produkt) => (
+                      <button
+                        className="search-result-item"
+                        key={produkt.id}
+                        onClick={() => {
+                          setSearchQuery("");
+                          openProductModal(produkt);
+                        }}
+                        type="button"
+                      >
+                        <span className="search-result-main">
+                          <strong>{produkt.name}</strong>
+                          <small>
+                            {produkt.cuisine} · {produkt.category}
+                          </small>
+                        </span>
+                        <span className="search-result-price">
+                          {formatEuro(getProductBasePrice(produkt))}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="search-empty-state">
+                      Kein Produkt gefunden
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="nav-right">
               <button
@@ -4292,6 +4371,277 @@ useEffect(() => {
             background:
               linear-gradient(0deg, rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.42)),
               linear-gradient(90deg, rgba(2, 6, 23, 0.74), rgba(2, 6, 23, 0.32));
+          }
+        }
+
+        /* Glass product search */
+        .header-search-wrap {
+          position: relative;
+          flex: 1;
+          max-width: 520px;
+          min-width: 220px;
+          z-index: 100;
+        }
+
+        .header-search-glow {
+          position: absolute;
+          inset: -8px;
+          border-radius: 22px;
+          background:
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.9), transparent 34%),
+            radial-gradient(circle at 80% 70%, rgba(148, 163, 184, 0.32), transparent 42%);
+          filter: blur(14px);
+          opacity: 0;
+          transform: scale(0.96);
+          transition: opacity 0.28s ease, transform 0.28s ease;
+          pointer-events: none;
+        }
+
+        .header-search {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 48px;
+          padding: 0 12px;
+          border-radius: 18px;
+          background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.46));
+          border: 1px solid rgba(255, 255, 255, 0.72);
+          box-shadow:
+            0 12px 36px rgba(15, 23, 42, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.84);
+          backdrop-filter: blur(22px) saturate(1.25);
+          transition:
+            border-color 0.22s ease,
+            box-shadow 0.22s ease,
+            transform 0.22s ease,
+            background 0.22s ease;
+        }
+
+        .header-search-wrap:focus-within .header-search-glow {
+          opacity: 1;
+          transform: scale(1);
+          animation: searchAura 2.8s ease-in-out infinite;
+        }
+
+        .header-search-wrap:focus-within .header-search {
+          transform: translateY(-1px);
+          border-color: rgba(255, 255, 255, 0.92);
+          background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.58));
+          box-shadow:
+            0 18px 48px rgba(15, 23, 42, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        }
+
+        .search-symbol {
+          width: 16px;
+          height: 16px;
+          flex: 0 0 auto;
+          border: 2px solid #64748b;
+          border-radius: 999px;
+          opacity: 0.86;
+          position: relative;
+          transition: transform 0.24s ease, border-color 0.24s ease;
+        }
+
+        .search-symbol::after {
+          content: "";
+          position: absolute;
+          width: 7px;
+          height: 2px;
+          right: -6px;
+          bottom: -4px;
+          border-radius: 999px;
+          background: #64748b;
+          transform: rotate(45deg);
+          transform-origin: center;
+        }
+
+        .header-search-wrap:focus-within .search-symbol {
+          transform: rotate(-8deg) scale(1.06);
+          border-color: #111827;
+        }
+
+        .header-search input {
+          min-height: 44px;
+          width: 100%;
+          padding: 0;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: #111827;
+          font-weight: 800;
+          box-shadow: none;
+        }
+
+        .header-search input::placeholder {
+          color: #64748b;
+          font-weight: 700;
+        }
+
+        .header-search input::-webkit-search-decoration,
+        .header-search input::-webkit-search-cancel-button {
+          display: none;
+        }
+
+        .search-clear {
+          width: 30px;
+          height: 30px;
+          border: 1px solid rgba(148, 163, 184, 0.28);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.62);
+          color: #334155;
+          display: grid;
+          place-items: center;
+          cursor: pointer;
+          font-size: 1.1rem;
+          line-height: 1;
+          transition: transform 0.18s ease, background-color 0.18s ease;
+        }
+
+        .search-clear:hover {
+          transform: scale(1.06);
+          background: rgba(255, 255, 255, 0.9);
+        }
+
+        .search-results-panel {
+          position: absolute;
+          top: calc(100% + 10px);
+          left: 0;
+          right: 0;
+          max-height: min(420px, calc(100vh - 120px));
+          overflow-y: auto;
+          padding: 8px;
+          border-radius: 20px;
+          background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.64));
+          border: 1px solid rgba(255, 255, 255, 0.72);
+          box-shadow:
+            0 24px 70px rgba(15, 23, 42, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.82);
+          backdrop-filter: blur(26px) saturate(1.25);
+          animation: searchPanelIn 0.22s ease both;
+        }
+
+        .search-result-item {
+          width: 100%;
+          border: 1px solid transparent;
+          border-radius: 14px;
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          background: transparent;
+          color: #111827;
+          cursor: pointer;
+          text-align: left;
+          transition:
+            transform 0.18s ease,
+            background-color 0.18s ease,
+            border-color 0.18s ease;
+        }
+
+        .search-result-item:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.72);
+          border-color: rgba(148, 163, 184, 0.22);
+        }
+
+        .search-result-main {
+          display: grid;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .search-result-main strong {
+          overflow-wrap: anywhere;
+          line-height: 1.25;
+        }
+
+        .search-result-main small {
+          color: #64748b;
+          line-height: 1.35;
+        }
+
+        .search-result-price {
+          flex: 0 0 auto;
+          padding: 7px 9px;
+          border-radius: 999px;
+          background: rgba(17, 24, 39, 0.9);
+          color: #ffffff;
+          font-size: 0.85rem;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+
+        .search-empty-state {
+          padding: 16px;
+          color: #64748b;
+          font-weight: 800;
+          text-align: center;
+        }
+
+        @keyframes searchAura {
+          0%,
+          100% {
+            opacity: 0.78;
+            transform: scale(0.99);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.02);
+          }
+        }
+
+        @keyframes searchPanelIn {
+          from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @media (max-width: 860px) {
+          .nav-inner {
+            flex-wrap: wrap;
+          }
+
+          .header-search-wrap {
+            order: 3;
+            width: 100%;
+            max-width: none;
+            flex-basis: 100%;
+          }
+
+          .premium-header {
+            padding-bottom: 8px;
+          }
+        }
+
+        @media (max-width: 520px) {
+          .header-search {
+            min-height: 46px;
+            border-radius: 16px;
+          }
+
+          .search-results-panel {
+            position: fixed;
+            top: 118px;
+            left: 8px;
+            right: 8px;
+            max-height: calc(100vh - 132px);
+            border-radius: 18px;
+          }
+
+          .search-result-item {
+            padding: 11px;
+          }
+
+          .search-result-price {
+            font-size: 0.8rem;
           }
         }
       `}</style>
