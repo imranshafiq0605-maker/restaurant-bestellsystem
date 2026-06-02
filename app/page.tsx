@@ -1234,17 +1234,14 @@ useEffect(() => {
         <header className="premium-header">
           <div className="container nav-inner">
            <div className="brand-box">
-  <img src="/images/logo.jpg" alt="La Rosa Logo" className="logo-img" />
-
-  <div className="brand-text">
-    <h1 className="brand-title">La Rosa GmbH</h1>
+  <div className="brand-logo-shell">
+    <img src="/images/logo.jpg" alt="La Rosa Logo" className="logo-img" />
   </div>
 
-  <img
-    src="/images/halal.png"
-    alt="Halal"
-    className="header-halal-badge"
-  />
+  <div className="brand-text">
+    <span className="brand-kicker">Restaurant & Lieferservice</span>
+    <h1 className="brand-title">La Rosa GmbH</h1>
+  </div>
 </div>
 
             <div className="header-search-wrap">
@@ -1305,13 +1302,26 @@ useEffect(() => {
             </div>
 
             <div className="nav-right">
+              <a className="call-button" href="tel:06105297883" aria-label="La Rosa anrufen">
+                <span className="call-icon" aria-hidden="true">☎</span>
+                <span className="call-text">
+                  <small>Anrufen</small>
+                  <strong>06105 297883</strong>
+                </span>
+              </a>
+
+              <div className="halal-chip" aria-label="Halal">
+                <img src="/images/halal.png" alt="" className="header-halal-badge" />
+                <span>Halal</span>
+              </div>
+
               <button
   className={`cart-button compact cart-button-clean ${cartPulse ? "pulse" : ""}`}
   onClick={openCheckout}
   type="button"
   aria-label="Warenkorb öffnen"
 >
-  <span className="cart-icon">🛒</span>
+  <span className="cart-icon" aria-hidden="true">Bag</span>
 
   <span className="cart-button-text">
     Warenkorb
@@ -4643,6 +4653,352 @@ useEffect(() => {
 
           .search-result-price {
             font-size: 0.8rem;
+          }
+        }
+
+        /* High-end glass header */
+        .premium-header {
+          padding: 12px 0;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.52));
+          border-bottom: 1px solid rgba(255, 255, 255, 0.7);
+          box-shadow:
+            0 18px 58px rgba(15, 23, 42, 0.1),
+            inset 0 1px 0 rgba(255,255,255,0.82);
+          backdrop-filter: blur(30px) saturate(1.35);
+        }
+
+        .nav-inner {
+          min-height: 76px;
+          padding: 0;
+          display: grid;
+          grid-template-columns: minmax(245px, 0.8fr) minmax(300px, 1.2fr) auto;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .brand-box,
+        .header-search,
+        .call-button,
+        .halal-chip,
+        .cart-button-clean {
+          border: 1px solid rgba(255, 255, 255, 0.72);
+          background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,250,252,0.58));
+          box-shadow:
+            0 14px 40px rgba(15, 23, 42, 0.08),
+            inset 0 1px 0 rgba(255,255,255,0.9);
+          backdrop-filter: blur(24px) saturate(1.25);
+        }
+
+        .brand-box {
+          align-self: stretch;
+          border-radius: 24px;
+          padding: 10px 14px 10px 10px;
+          flex: initial;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .brand-box::after {
+          content: "";
+          position: absolute;
+          inset: -60% auto -60% -48%;
+          width: 42%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.48), transparent);
+          transform: skewX(-18deg);
+          transition: transform 0.7s ease;
+          pointer-events: none;
+        }
+
+        .brand-box:hover::after {
+          transform: translateX(430%) skewX(-18deg);
+        }
+
+        .brand-logo-shell {
+          width: 56px;
+          height: 56px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          background: rgba(255, 255, 255, 0.86);
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+          flex: 0 0 auto;
+        }
+
+        .logo-img {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          border: none;
+          box-shadow: none;
+        }
+
+        .brand-text {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .brand-kicker {
+          color: #64748b;
+          font-size: 0.76rem;
+          font-weight: 800;
+          line-height: 1.1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .brand-title {
+          font-size: 1.08rem;
+          line-height: 1.1;
+          color: #0f172a;
+        }
+
+        .header-search-wrap {
+          max-width: none;
+          min-width: 0;
+        }
+
+        .header-search {
+          min-height: 58px;
+          border-radius: 24px;
+          padding: 0 16px;
+        }
+
+        .header-search input {
+          font-size: 0.98rem;
+        }
+
+        .nav-right {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          min-width: max-content;
+        }
+
+        .call-button {
+          min-height: 58px;
+          border-radius: 24px;
+          padding: 8px 14px 8px 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          color: #0f172a;
+          text-decoration: none;
+          transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+        }
+
+        .call-button:hover,
+        .halal-chip:hover,
+        .cart-button-clean:hover {
+          transform: translateY(-2px);
+          border-color: rgba(255,255,255,0.92);
+          box-shadow:
+            0 20px 52px rgba(15, 23, 42, 0.14),
+            inset 0 1px 0 rgba(255,255,255,0.96);
+        }
+
+        .call-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(180deg, #111827, #334155);
+          color: #ffffff;
+          font-size: 1rem;
+          box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+        }
+
+        .call-text {
+          display: grid;
+          gap: 2px;
+          line-height: 1.1;
+        }
+
+        .call-text small {
+          color: #64748b;
+          font-size: 0.72rem;
+          font-weight: 800;
+        }
+
+        .call-text strong {
+          color: #0f172a;
+          font-size: 0.9rem;
+          white-space: nowrap;
+        }
+
+        .halal-chip {
+          min-height: 58px;
+          border-radius: 24px;
+          padding: 8px 12px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #0f172a;
+          font-weight: 900;
+          transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+        }
+
+        .halal-chip .header-halal-badge {
+          width: 36px;
+          height: 36px;
+          margin: 0;
+          padding: 4px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.9);
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          box-shadow: none;
+        }
+
+        .cart-button-clean {
+          min-height: 58px;
+          border-radius: 24px;
+          padding: 8px 12px;
+          background: linear-gradient(180deg, rgba(17,24,39,0.95), rgba(30,41,59,0.92));
+          border-color: rgba(255,255,255,0.18);
+          color: #ffffff;
+          gap: 8px;
+        }
+
+        .cart-icon {
+          font-size: 0.72rem;
+          letter-spacing: 0;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.72);
+          font-weight: 900;
+        }
+
+        .cart-count-clean {
+          min-width: 28px;
+          height: 28px;
+          padding: 0 8px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255,255,255,0.96);
+          color: #0f172a;
+        }
+
+        @media (max-width: 1160px) {
+          .nav-inner {
+            grid-template-columns: minmax(230px, 1fr) auto;
+          }
+
+          .header-search-wrap {
+            grid-column: 1 / -1;
+            order: 3;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .premium-header {
+            padding: 8px 0;
+          }
+
+          .nav-inner {
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+          }
+
+          .brand-box {
+            min-width: 0;
+            padding: 8px;
+            border-radius: 20px;
+          }
+
+          .brand-logo-shell {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+          }
+
+          .logo-img {
+            width: 42px;
+            height: 42px;
+            border-radius: 13px;
+          }
+
+          .brand-kicker {
+            display: none;
+          }
+
+          .brand-title {
+            font-size: 0.98rem;
+          }
+
+          .nav-right {
+            gap: 7px;
+          }
+
+          .call-button {
+            min-height: 48px;
+            width: 48px;
+            padding: 5px;
+            border-radius: 18px;
+            justify-content: center;
+          }
+
+          .call-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 14px;
+          }
+
+          .call-text {
+            display: none;
+          }
+
+          .halal-chip {
+            min-height: 48px;
+            padding: 5px;
+            border-radius: 18px;
+          }
+
+          .halal-chip span {
+            display: none;
+          }
+
+          .halal-chip .header-halal-badge {
+            width: 36px;
+            height: 36px;
+          }
+
+          .cart-button-clean {
+            min-height: 48px;
+            border-radius: 18px;
+            padding: 8px 10px;
+          }
+
+          .cart-icon {
+            display: none;
+          }
+
+          .header-search {
+            min-height: 50px;
+            border-radius: 20px;
+          }
+        }
+
+        @media (max-width: 440px) {
+          .brand-title {
+            max-width: 94px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .nav-right {
+            gap: 5px;
+          }
+
+          .call-button,
+          .halal-chip,
+          .cart-button-clean {
+            width: 46px;
+            min-width: 46px;
           }
         }
       `}</style>
