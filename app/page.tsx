@@ -4405,12 +4405,12 @@ useEffect(() => {
           min-height: 48px;
           padding: 0 12px;
           border-radius: 18px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.46));
-          border: 1px solid rgba(255, 255, 255, 0.72);
+          background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.88));
+          border: 1px solid rgba(255, 255, 255, 0.94);
           box-shadow:
-            0 12px 36px rgba(15, 23, 42, 0.08),
+            0 12px 36px rgba(15, 23, 42, 0.1),
             inset 0 1px 0 rgba(255, 255, 255, 0.84);
-          backdrop-filter: blur(22px) saturate(1.25);
+          backdrop-filter: blur(34px) saturate(1.45);
           transition:
             border-color 0.22s ease,
             box-shadow 0.22s ease,
@@ -4427,7 +4427,7 @@ useEffect(() => {
         .header-search-wrap:focus-within .header-search {
           transform: translateY(-1px);
           border-color: rgba(255, 255, 255, 0.92);
-          background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.58));
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
           box-shadow:
             0 18px 48px rgba(15, 23, 42, 0.14),
             inset 0 1px 0 rgba(255, 255, 255, 0.92);
@@ -4489,7 +4489,7 @@ useEffect(() => {
           height: 30px;
           border: 1px solid rgba(148, 163, 184, 0.28);
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.62);
+          background: rgba(241, 245, 249, 0.95);
           color: #334155;
           display: grid;
           place-items: center;
@@ -4513,12 +4513,13 @@ useEffect(() => {
           overflow-y: auto;
           padding: 8px;
           border-radius: 20px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.64));
-          border: 1px solid rgba(255, 255, 255, 0.72);
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255, 255, 255, 0.96);
           box-shadow:
-            0 24px 70px rgba(15, 23, 42, 0.18),
+            0 24px 70px rgba(15, 23, 42, 0.22),
             inset 0 1px 0 rgba(255, 255, 255, 0.82);
-          backdrop-filter: blur(26px) saturate(1.25);
+          backdrop-filter: blur(40px) saturate(1.35);
           animation: searchPanelIn 0.22s ease both;
         }
 
@@ -4543,7 +4544,7 @@ useEffect(() => {
 
         .search-result-item:hover {
           transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.72);
+          background: rgba(226, 232, 240, 0.72);
           border-color: rgba(148, 163, 184, 0.22);
         }
 
