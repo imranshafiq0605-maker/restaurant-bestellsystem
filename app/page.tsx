@@ -426,7 +426,6 @@ const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
   const [cartPulse, setCartPulse] = useState(false);
   const [showAddedEffect, setShowAddedEffect] = useState(false);
   const [addedProductName, setAddedProductName] = useState("");
-  const [isHeroVideoFading, setIsHeroVideoFading] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariantName, setSelectedVariantName] = useState("");
@@ -443,7 +442,6 @@ const [offerInputText, setOfferInputText] = useState("");
 
   const [adminClicks, setAdminClicks] = useState(0);
   const offersTrackRef = useRef<HTMLDivElement | null>(null);
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const baseStatus = getServiceStatus(bestellart);
 
@@ -907,24 +905,6 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
       behavior: "smooth",
     });
   }
-
-  function handleHeroVideoTimeUpdate() {
-    const video = heroVideoRef.current;
-    if (!video || !Number.isFinite(video.duration)) return;
-
-    const remaining = video.duration - video.currentTime;
-    setIsHeroVideoFading(remaining <= 1.05);
-  }
-
-  function restartHeroVideo() {
-    const video = heroVideoRef.current;
-    if (!video) return;
-
-    setIsHeroVideoFading(true);
-    video.currentTime = 0;
-    void video.play();
-    window.setTimeout(() => setIsHeroVideoFading(false), 220);
-  }
 useEffect(() => {
   try {
     const savedCart = localStorage.getItem("larosa_cart");
@@ -1381,19 +1361,12 @@ useEffect(() => {
   </section>
 )}
            <section className="container hero-image-section">
-    <div className="hero-image-card">
-      <video
-        ref={heroVideoRef}
-        className={`hero-video ${isHeroVideoFading ? "is-fading" : ""}`}
-        src="/videos/header-video.mp4"
-        poster="/images/hero-main.jpg"
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        onTimeUpdate={handleHeroVideoTimeUpdate}
-        onEnded={restartHeroVideo}
-      />
+    <div
+      className="hero-image-card"
+      style={{
+        backgroundImage: "url('/images/hero-main.jpg')",
+      }}
+    >
       <div className="hero-image-overlay" />
 
       <div className="hero-image-content">
@@ -2053,23 +2026,6 @@ useEffect(() => {
           background-position: center;
           box-shadow: 0 24px 72px rgba(0, 0, 0, 0.08);
           border: 1px solid rgba(0, 0, 0, 0.04);
-        }
-
-        .hero-video {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          opacity: 0.28;
-          filter: grayscale(0.18) saturate(0.8) contrast(0.9) brightness(0.58) blur(0.4px);
-          transform: scale(1.035);
-          transition: opacity 0.85s ease;
-          pointer-events: none;
-        }
-
-        .hero-video.is-fading {
-          opacity: 0;
         }
 
         .section-spacing {
@@ -4279,42 +4235,15 @@ useEffect(() => {
 
         .hero-image-card {
           border: 1px solid rgba(255, 255, 255, 0.48);
-          background: #020617;
           box-shadow:
             0 34px 90px rgba(15, 23, 42, 0.18),
             inset 0 1px 0 rgba(255, 255, 255, 0.22);
-        }
-
-        .hero-image-card::before {
-          display: none;
         }
 
         .hero-image-overlay {
           background:
             linear-gradient(90deg, rgba(2, 6, 23, 0.92), rgba(2, 6, 23, 0.74) 48%, rgba(2, 6, 23, 0.46)),
             linear-gradient(0deg, rgba(2, 6, 23, 0.72), rgba(2, 6, 23, 0.2));
-        }
-
-        .hero-video {
-          position: absolute;
-          z-index: 0;
-          inset: 0;
-          opacity: 0.24;
-          filter: grayscale(0.22) saturate(0.72) contrast(0.88) brightness(0.5) blur(0.6px);
-        }
-
-        .hero-video.is-fading {
-          opacity: 0;
-        }
-
-        .hero-image-overlay {
-          position: absolute;
-          z-index: 1;
-        }
-
-        .hero-image-content {
-          position: relative;
-          z-index: 2;
         }
 
         .hero-image-content {
