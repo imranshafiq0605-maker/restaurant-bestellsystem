@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { stripeMetadataQuery, verifyFirebaseIdToken } from "../../lib/firebase-rest-auth";
+import { getAdminDb } from "../../lib/firebase-admin";
 
 function validiereEmail(email: string) {
   const emailBereinigt = email.trim();
@@ -14,6 +14,14 @@ function validiereEmail(email: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const stripeApiKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeApiKey) {
+      return NextResponse.json(
+        { error: "Stripe ist lokal noch nicht verbunden. Bitte STRIPE_SECRET_KEY in .env.local eintragen oder die App über Vercel veröffentlichen." },
+        { status: 503 }
+      );
+    }
+    const stripe = new Stripe(stripeApiKey);
     const body = await req.json();
     const {
       pendingOrderId,
@@ -21,7 +29,14 @@ export async function POST(req: NextRequest) {
       gesamtpreis,
       gesamtpreisProdukte,
       rabattBetrag,
+      paymentMethod,
+      source,
     } = body;
+
+    const allowedPaymentMethods = ["card", "paypal", "klarna"] as const;
+    const selectedPaymentMethod = allowedPaymentMethods.includes(paymentMethod)
+      ? paymentMethod
+      : null;
 
     if (!pendingOrderId) {
       return NextResponse.json(
@@ -52,6 +67,40 @@ export async function POST(req: NextRequest) {
       req.headers.get("origin") ||
       "https://restaurant-bestellsystem.vercel.app";
 
+    const adminDb = getAdminDb();
+    const pendingOrderRef = adminDb.collection("pendingOrders").doc(pendingOrderId);
+    const pendingOrderSnap = await pendingOrderRef.get();
+    if (!pendingOrderSnap.exists) {
+      return NextResponse.json({ error: "Die vorbereitete Bestellung wurde nicht gefunden." }, { status: 404 });
+    }
+    const pendingOrder = pendingOrderSnap.data();
+    const storedTotal = Number(pendingOrder?.gesamtpreis);
+    const storedEmail = String(pendingOrder?.kunde?.email || "").trim().toLowerCase();
+    if (Math.abs(storedTotal - gesamtpreis) > 0.001 || storedEmail !== email.trim().toLowerCase()) {
+      return NextResponse.json({ error: "Bestelldaten und Zahlungsbetrag stimmen nicht überein." }, { status: 400 });
+    }
+
+    let stripeCustomerId: string | undefined;
+    let firebaseUid: string | undefined;
+    const authorization = req.headers.get("authorization");
+    if (authorization?.startsWith("Bearer ")) {
+      const account = await verifyFirebaseIdToken(authorization);
+      firebaseUid = account.localId;
+      const customers = await stripe.customers.search({
+        query: stripeMetadataQuery(account.localId),
+        limit: 1,
+      });
+      stripeCustomerId = customers.data[0]?.id;
+    }
+
+    // Ein voller Euro entspricht einer Rose. Eine Rose hat einen Gegenwert von 0,03 €.
+    const rosenVerdient = firebaseUid ? Math.floor(gesamtpreis) : 0;
+    await pendingOrderRef.set({
+      paymentMethod: selectedPaymentMethod || "card",
+      firebaseUid: firebaseUid || null,
+      rosenVerdient,
+    }, { merge: true });
+
     const descriptionParts: string[] = [];
 
     if (typeof gesamtpreisProdukte === "number") {
@@ -65,9 +114,15 @@ export async function POST(req: NextRequest) {
     descriptionParts.push(`Endpreis: ${gesamtpreis.toFixed(2)} €`);
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card","paypal","klarna"],
+      payment_method_types: selectedPaymentMethod
+        ? [selectedPaymentMethod]
+        : ["card", "paypal", "klarna"],
       mode: "payment",
-      customer_email: email.trim(),
+      ...(stripeCustomerId
+        ? { customer: stripeCustomerId }
+        : { customer_email: email.trim() }),
+      locale: "de",
+      origin_context: "mobile_app",
       line_items: [
         {
           price_data: {
@@ -85,20 +140,23 @@ export async function POST(req: NextRequest) {
         pendingOrderId,
         email: email.trim(),
         gesamtpreis: gesamtpreis.toFixed(2),
+        rosenVerdient: String(rosenVerdient),
         rabattBetrag:
           typeof rabattBetrag === "number"
             ? rabattBetrag.toFixed(2)
             : "0.00",
       },
-      success_url: `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}`,
-      cancel_url: `${origin}`,
+      success_url: source === "mobile"
+        ? `${origin}/mobile?tab=account&paid=true&orderId=${pendingOrderId}`
+        : `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}`,
+      cancel_url: source === "mobile" ? `${origin}/warenkorb?source=mobile` : `${origin}`,
     });
 
     return NextResponse.json({ url: session.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Stripe Fehler:", error);
     return NextResponse.json(
-      { error: error?.message || "Stripe Session konnte nicht erstellt werden." },
+      { error: error instanceof Error ? error.message : "Stripe Session konnte nicht erstellt werden." },
       { status: 500 }
     );
   }

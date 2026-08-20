@@ -3,14 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack -H 0.0.0.0",
     "build": "next build",
     "export": "next export",
     "build:static": "next build && next export",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ios:sync": "cap sync ios",
+    "ios:local": "CAPACITOR_SERVER_URL=http://localhost:3000 cap sync ios",
+    "ios:device": "CAPACITOR_SERVER_URL=http://192.168.178.105:3000 cap sync ios",
+    "ios:production": "cap sync ios",
+    "ios:open": "open -a /Users/karina.mhs/Downloads/Xcode-beta.app ios/App/App.xcodeproj",
+    "ios:build:beta": "DEVELOPER_DIR=/Users/karina.mhs/Downloads/Xcode-beta.app/Contents/Developer xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=27.0' CODE_SIGNING_ALLOWED=NO build"
   },
   "dependencies": {
+    "@capacitor-firebase/authentication": "^8.4.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "@vercel/analytics": "^2.0.1",
     "firebase": "^12.11.0",
     "firebase-admin": "^13.7.0",
@@ -21,6 +30,7 @@
     "stripe": "^21.0.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

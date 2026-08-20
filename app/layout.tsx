@@ -1,5 +1,13 @@
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+};
 
 export const metadata = {
   title: "La Rosa GmbH | Italienisch & Indisch online bestellen",

@@ -30,6 +30,7 @@ body {
 
 body {
   min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 img {
@@ -63,6 +64,7 @@ button {
   background: rgba(255, 255, 255, 0.84);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  padding-top: env(safe-area-inset-top);
 }
 
 .topbar-inner {

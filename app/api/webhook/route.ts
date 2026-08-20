@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import admin from "firebase-admin";
-import { adminDb } from "../../lib/firebase-admin";
+import { getAdminDb } from "../../lib/firebase-admin";
 import { sendOrderEmail } from "../../lib/send-order-email";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 function getBerlinDateParts(date: Date) {
   const formatter = new Intl.DateTimeFormat("en-GB", {
@@ -92,6 +90,12 @@ function getNaechsterOeffnungszeitpunkt(fromDate: Date) {
 }
 
 export async function POST(req: NextRequest) {
+  const stripeApiKey = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!stripeApiKey || !webhookSecret) {
+    return NextResponse.json({ error: "Stripe Webhook ist nicht konfiguriert." }, { status: 503 });
+  }
+  const stripe = new Stripe(stripeApiKey);
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
 
@@ -101,11 +105,12 @@ export async function POST(req: NextRequest) {
     event = stripe.webhooks.constructEvent(
       body,
       signature!,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      webhookSecret
     );
-  } catch (err: any) {
-    console.error("❌ Webhook Signatur Fehler:", err.message);
-    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Ungültige Signatur";
+    console.error("❌ Webhook Signatur Fehler:", message);
+    return new NextResponse(`Webhook Error: ${message}`, { status: 400 });
   }
 
   if (event.type !== "checkout.session.completed") {
@@ -114,6 +119,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = event.data.object as Stripe.Checkout.Session;
+    const adminDb = getAdminDb();
     const pendingOrderId = session.metadata?.pendingOrderId;
 
     console.log("👉 checkout.session.completed erhalten");
@@ -127,6 +133,10 @@ export async function POST(req: NextRequest) {
     const pendingOrderSnap = await pendingOrderRef.get();
 
     if (!pendingOrderSnap.exists) {
+      const existingOrder = await adminDb.collection("bestellungen").doc(pendingOrderId).get();
+      if (existingOrder.exists) {
+        return NextResponse.json({ received: true, success: true, duplicate: true, pendingOrderId });
+      }
       throw new Error(`pendingOrder nicht gefunden: ${pendingOrderId}`);
     }
 
@@ -178,6 +188,32 @@ export async function POST(req: NextRequest) {
     await adminDb.collection("bestellungen").doc(pendingOrderId).set(finaleBestellung);
     console.log("✅ Bestellung in bestellungen gespeichert");
 
+    const firebaseUid = typeof pendingOrderData.firebaseUid === "string" ? pendingOrderData.firebaseUid : "";
+    const rosenVerdient = Number.isInteger(pendingOrderData.rosenVerdient) && pendingOrderData.rosenVerdient > 0
+      ? pendingOrderData.rosenVerdient
+      : 0;
+
+    if (firebaseUid && rosenVerdient > 0) {
+      const kundenRef = adminDb.collection("kunden").doc(firebaseUid);
+      const buchungRef = adminDb.collection("rosenBuchungen").doc(pendingOrderId);
+      await adminDb.runTransaction(async (transaction) => {
+        const buchung = await transaction.get(buchungRef);
+        if (buchung.exists) return;
+        transaction.set(kundenRef, {
+          roses: admin.firestore.FieldValue.increment(rosenVerdient),
+          rosesUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(buchungRef, {
+          uid: firebaseUid,
+          amount: rosenVerdient,
+          orderId: pendingOrderId,
+          stripeSessionId: session.id,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+      console.log(`✅ ${rosenVerdient} Rosen gutgeschrieben`);
+    }
+
     const kunde = pendingOrderData?.kunde || {};
     const kundenEmail =
       typeof kunde.email === "string" ? kunde.email.trim() : "";
@@ -198,7 +234,7 @@ export async function POST(req: NextRequest) {
           statusUrl,
         });
         console.log("✅ Bestellmail gesendet an:", kundenEmail);
-      } catch (mailError: any) {
+      } catch (mailError: unknown) {
         console.error("❌ Fehler beim Mailversand:", mailError);
       }
     } else {
@@ -213,12 +249,12 @@ export async function POST(req: NextRequest) {
       success: true,
       pendingOrderId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ Fehler im Webhook:", error);
     return NextResponse.json(
       {
         received: false,
-        error: error?.message || "Unbekannter Webhook-Fehler",
+        error: error instanceof Error ? error.message : "Unbekannter Webhook-Fehler",
       },
       { status: 500 }
     );

@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 type SendOrderEmailArgs = {
   to: string;
   name?: string;
@@ -15,6 +13,9 @@ export async function sendOrderEmail({
   orderNumber,
   statusUrl,
 }: SendOrderEmailArgs) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("E-Mail-Versand ist auf diesem Server nicht konfiguriert.");
+  const resend = new Resend(apiKey);
   const response = await resend.emails.send({
     from: "La Rosa GmbH <bestellung@pizzerialarosagmbh.de>",
     to,

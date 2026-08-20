@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
 
 type Bestellart = "abholung" | "lieferung";
 type Vorbestellung = "sofort" | "spaeter";
 type CheckoutStep = "warenkorb" | "daten" | "zeit" | "checkout";
+type PaymentMethod = "card" | "paypal" | "klarna";
 
 type CartItem = {
   id: number;
@@ -50,6 +52,16 @@ const liefergebiete: Record<string, LiefergebietConfig> = {
 
 function formatEuro(value: number) {
   return `${value.toFixed(2).replace(".", ",")} €`;
+}
+
+function PaymentBrand({ method }: { method: PaymentMethod }) {
+  if (method === "card") {
+    return <svg viewBox="0 0 32 22" aria-hidden="true"><rect x="1" y="1" width="30" height="20" rx="4"/><path d="M1 7h30"/><path d="M5 16h8"/></svg>;
+  }
+  if (method === "paypal") {
+    return <span className="paypal-mark"><b>Pay</b><b>Pal</b></span>;
+  }
+  return <span className="klarna-mark">K.</span>;
 }
 
 function formatDateInput(date: Date) {
@@ -250,21 +262,48 @@ export default function WarenkorbPage() {
 
   const [fehlermeldung, setFehlermeldung] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
+      const saved = sessionStorage.getItem(CART_STORAGE_KEY) || localStorage.getItem(CART_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) setCart(parsed);
       }
-    } catch (_) {}
+      const savedPayment = localStorage.getItem("larosa_payment_method") as PaymentMethod | null;
+      if (savedPayment && (["card", "paypal", "klarna"] as PaymentMethod[]).includes(savedPayment)) {
+        setPaymentMethod(savedPayment);
+      }
+    } catch {}
     setLoaded(true);
   }, []);
 
+  useEffect(() => onAuthStateChanged(auth, async (currentUser) => {
+    setSignedIn(Boolean(currentUser));
+    if (!currentUser) return;
+    setEmail((current) => current || currentUser.email || "");
+    try {
+      const snapshot = await getDoc(doc(db, "kunden", currentUser.uid));
+      if (!snapshot.exists()) return;
+      const data = snapshot.data();
+      setName((current) => current || data.name || "");
+      setTelefon((current) => current || data.phone || "");
+      setStrasse((current) => current || data.street || "");
+      setHausnummer((current) => current || data.houseNumber || "");
+      setPlz((current) => current || data.postalCode || "");
+      setStadt((current) => current || data.city || "");
+    } catch {
+      // Checkout remains usable even if the optional profile cannot be loaded.
+    }
+  }), []);
+
   useEffect(() => {
     if (!loaded) return;
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    const serializedCart = JSON.stringify(cart);
+    localStorage.setItem(CART_STORAGE_KEY, serializedCart);
+    sessionStorage.setItem(CART_STORAGE_KEY, serializedCart);
   }, [cart, loaded]);
 
   const gesamtpreisProdukte = useMemo(
@@ -279,6 +318,7 @@ export default function WarenkorbPage() {
   );
   const gesamtAnzahl = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const gesamtpreis = zwischensummeNachRabatt;
+  const rosenVorschau = signedIn ? Math.floor(gesamtpreis) : 0;
 
   const lieferPruefung = useMemo(() => {
     if (bestellart !== "lieferung") return null;
@@ -333,7 +373,8 @@ export default function WarenkorbPage() {
 
   function goHome() {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-    window.location.href = "/";
+    const isMobileCheckout = new URLSearchParams(window.location.search).get("source") === "mobile";
+    window.location.href = isMobileCheckout ? "/mobile?tab=menu" : "/";
   }
 
   function nextFromCart() {
@@ -480,6 +521,7 @@ export default function WarenkorbPage() {
         liefergebuehr: 0,
         versandKostenlos: true,
         gesamtpreis,
+        paymentMethod,
         status: "pending_payment",
         createdAt: serverTimestamp(),
       };
@@ -488,7 +530,10 @@ export default function WarenkorbPage() {
 
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(auth.currentUser ? { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` } : {}),
+        },
         body: JSON.stringify({
           pendingOrderId: pendingOrderRef.id,
           email: email.trim(),
@@ -496,6 +541,8 @@ export default function WarenkorbPage() {
           gesamtpreisProdukte,
           rabattBetrag,
           gesamtpreis,
+          paymentMethod,
+          source: new URLSearchParams(window.location.search).get("source"),
         }),
       });
 
@@ -512,9 +559,9 @@ export default function WarenkorbPage() {
       }
 
       setFehlermeldung("Keine Stripe-URL erhalten.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Fehler bei pending order oder Stripe:", error);
-      setFehlermeldung(error?.message || "Bestellung konnte nicht verarbeitet werden.");
+      setFehlermeldung(error instanceof Error ? error.message : "Bestellung konnte nicht verarbeitet werden.");
     } finally {
       setIsSubmitting(false);
     }
@@ -545,6 +592,11 @@ export default function WarenkorbPage() {
           <div className="progress-line">
             <div style={{ width: `${stepNumber * 25}%` }} />
           </div>
+          <div className="progress-steps">
+            {["Warenkorb", "Daten", "Zeit", "Zahlung"].map((label, index) => (
+              <span key={label} className={stepNumber >= index + 1 ? "done" : ""}>{index + 1}<small>{label}</small></span>
+            ))}
+          </div>
         </div>
 
         {fehlermeldung && <p className="message error">{fehlermeldung}</p>}
@@ -553,7 +605,12 @@ export default function WarenkorbPage() {
           <div className="main-card">
             {step === "warenkorb" && (
               <>
-                {cart.length === 0 ? (
+                {!loaded ? (
+                  <div className="empty-box loading-cart">
+                    <span className="loading-ring" />
+                    <h2>Warenkorb wird geladen …</h2>
+                  </div>
+                ) : cart.length === 0 ? (
                   <div className="empty-box">
                     <h2>Dein Warenkorb ist leer.</h2>
                     <p>Füge zuerst Produkte hinzu, bevor du zur Bestellung gehst.</p>
@@ -566,7 +623,8 @@ export default function WarenkorbPage() {
                     {cart.map((item) => (
                       <article className="cart-item" key={item.uniqueKey}>
                         <div className="item-top">
-                          <div>
+                          <span className="checkout-qty">{item.quantity}×</span>
+                          <div className="checkout-item-copy">
                             <h3>{item.name}</h3>
                             <p>
                               {item.cuisine} · {item.category}
@@ -602,6 +660,7 @@ export default function WarenkorbPage() {
 
             {step === "daten" && (
               <div className="form-stack">
+                <div className="mobile-step-title"><span>Bestellung erhalten</span><h2>Wie dürfen wir liefern?</h2></div>
                 <div className="choice-grid">
                   <button
                     className={`choice ${bestellart === "abholung" ? "active" : ""}`}
@@ -625,17 +684,17 @@ export default function WarenkorbPage() {
                 <div className="input-grid">
                   <label>
                     Name
-                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Dein Name" />
+                    <input autoComplete="name" enterKeyHint="next" value={name} onChange={(e) => setName(e.target.value)} placeholder="Dein Name" />
                   </label>
                   <label>
                     Telefon
-                    <input value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="Telefonnummer" />
+                    <input type="tel" inputMode="tel" autoComplete="tel" enterKeyHint="next" value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="Telefonnummer" />
                   </label>
                 </div>
 
                 <label>
                   E-Mail-Adresse
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-Mail-Adresse" />
+                  <input type="email" inputMode="email" autoComplete="email" enterKeyHint="next" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-Mail-Adresse" />
                 </label>
 
                 {bestellart === "lieferung" && (
@@ -643,7 +702,7 @@ export default function WarenkorbPage() {
                     <div className="input-grid">
                       <label>
                         Straße
-                        <input value={strasse} onChange={(e) => setStrasse(e.target.value)} placeholder="Straße" />
+                        <input autoComplete="street-address" enterKeyHint="next" value={strasse} onChange={(e) => setStrasse(e.target.value)} placeholder="Straße" />
                       </label>
                       <label>
                         Hausnummer
@@ -657,6 +716,8 @@ export default function WarenkorbPage() {
                         <input
                           value={plz}
                           inputMode="numeric"
+                          autoComplete="postal-code"
+                          enterKeyHint="next"
                           maxLength={5}
                           onChange={(e) => setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))}
                           placeholder="PLZ"
@@ -685,6 +746,7 @@ export default function WarenkorbPage() {
 
             {step === "zeit" && (
               <div className="form-stack">
+                <div className="mobile-step-title"><span>Zeitfenster</span><h2>Wann möchtest du essen?</h2></div>
                 <div className="choice-grid">
                   <button
                     className={`choice ${vorbestellung === "sofort" ? "active" : ""}`}
@@ -767,6 +829,31 @@ export default function WarenkorbPage() {
                   <strong>{vorbestellung === "sofort" ? "So schnell wie möglich" : `${formatDateLabel(vorbestellungDatum)} · ${uhrzeit} Uhr`}</strong>
                 </div>
 
+                <div className="review-box payment-review">
+                  <span>Zahlung</span>
+                  <strong>Zahlungsart auswählen</strong>
+                  <div className="payment-method-grid">
+                    {(["card", "paypal", "klarna"] as PaymentMethod[]).map((method) => (
+                      <button
+                        type="button"
+                        key={method}
+                        className={paymentMethod === method ? "selected" : ""}
+                        onClick={() => {
+                          setPaymentMethod(method);
+                          localStorage.setItem("larosa_payment_method", method);
+                        }}
+                      >
+                        <span className="payment-logo"><PaymentBrand method={method} /></span>
+                        <strong>{{ card: "Kreditkarte", paypal: "PayPal", klarna: "Klarna" }[method]}</strong>
+                        <i>{paymentMethod === method ? "✓" : ""}</i>
+                      </button>
+                    ))}
+                  </div>
+                  <small>{paymentMethod === "card" ? "Deine gespeicherte Karte oder eine neue Kredit-/Debitkarte wird in Stripe angeboten." : paymentMethod === "klarna" ? "Klarna erscheint, wenn die Bestellung die Klarna-Voraussetzungen erfüllt und Klarna in Stripe aktiviert ist." : "Du wirst im sicheren Stripe Checkout zu PayPal weitergeleitet."}</small>
+                </div>
+
+                <div className="rose-preview"><span>🌹</span><div>{signedIn ? <><strong>Du erhältst {rosenVorschau} Rosen</strong><small>Nach erfolgreicher Zahlung werden sie automatisch deinem Account gutgeschrieben.</small></> : <><strong>Für Rosen bitte anmelden</strong><small>Rosen können nur einem angemeldeten Kundenkonto sicher gutgeschrieben werden.</small></>}</div></div>
+
                 {hinweis.trim() && (
                   <div className="review-box">
                     <span>Hinweis</span>
@@ -784,6 +871,7 @@ export default function WarenkorbPage() {
             <div className="summary-row discount"><span>10% Rabatt</span><strong>-{formatEuro(rabattBetrag)}</strong></div>
             <div className="summary-row"><span>Versand</span><strong>Kostenlos</strong></div>
             <div className="summary-row total"><span>Gesamt</span><strong>{formatEuro(gesamtpreis)}</strong></div>
+            <p className="stripe-note">🔒 Kartendaten werden ausschließlich von Stripe verarbeitet.</p>
 
             <div className="action-row">
               {step !== "warenkorb" && (
@@ -864,6 +952,7 @@ export default function WarenkorbPage() {
         .empty-box { text-align: center; padding: 26px 10px; }
         .empty-box h2 { margin: 0 0 8px; }
         .empty-box p { margin: 0 0 18px; color: #6b7280; }
+        .loading-cart { min-height: 180px; display: grid; place-items: center; align-content: center; gap: 14px; }.loading-ring { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #e1e6ee; border-top-color: #12356b; animation: cartLoad .7s linear infinite; }.loading-cart h2 { color: #778094; font-size: 15px; }@keyframes cartLoad { to { transform: rotate(360deg); } }
 
         .form-stack { display: grid; gap: 14px; }
         .choice-grid, .input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -887,6 +976,17 @@ export default function WarenkorbPage() {
         .review-box span { color: #6b7280; font-weight: 800; font-size: .86rem; }
         .review-box strong { line-height: 1.45; }
         .review-box small { color: #4b5563; line-height: 1.45; }
+        .payment-method-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:10px 0; }
+        .payment-method-grid button { min-height:86px; padding:10px; border:1px solid #e0e4ea; border-radius:15px; background:#f8f9fb; color:#17233d; display:grid; grid-template-columns:1fr auto; grid-template-rows:42px auto; align-items:center; text-align:left; }
+        .payment-method-grid button>strong { grid-column:1/-1; color:#17233d; font-size:12px; font-weight:850; }
+        .payment-logo { width:58px; height:36px; display:grid; place-items:center; border-radius:10px; background:white; box-shadow:0 2px 8px rgba(15,23,42,.06); }
+        .payment-logo svg{width:29px;height:21px;fill:none;stroke:#15396e;stroke-width:1.8}.paypal-mark{display:flex;align-items:baseline;font-size:12px;font-weight:900;letter-spacing:-.6px}.paypal-mark b:first-child{color:#173b74}.paypal-mark b:last-child{color:#1789c9}.klarna-mark{width:36px;height:24px;display:grid;place-items:center;border-radius:6px;background:#ffb3c7;color:#111;font-size:14px;font-weight:950}
+        .payment-method-grid button i { width:20px; height:20px; display:grid; place-items:center; border-radius:50%; background:#e5e7eb; color:transparent; font-style:normal; font-size:12px; }
+        .payment-method-grid button.selected { border-color:#12356b; background:#f0f5fb; box-shadow:0 0 0 2px rgba(18,53,107,.08); }
+        .payment-method-grid button.selected i { background:#12356b; color:white; }
+        .rose-preview { display:flex; gap:12px; align-items:center; margin-top:14px; padding:14px; border-radius:17px; background:linear-gradient(135deg,#fff5f6,#f8eef1); }
+        .rose-preview>span { width:40px; height:40px; display:grid; place-items:center; border-radius:13px; background:white; font-size:21px; }
+        .rose-preview>div { display:flex; flex-direction:column; gap:3px; }.rose-preview strong{font-size:14px}.rose-preview small{color:#6b7280;line-height:1.35}
 
         .summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,.08); }
         .summary-row span { color: #4b5563; }
@@ -904,7 +1004,7 @@ export default function WarenkorbPage() {
           .cart-nav { height: 64px; }
           .cart-wrap { padding: 16px 0 34px; }
           .layout { grid-template-columns: 1fr; }
-          .summary-card { position: static; order: -1; }
+          .summary-card { position: static; order: initial; }
           .progress-card, .main-card, .summary-card { border-radius: 22px; }
           .progress-card, .main-card, .summary-card { padding: 16px; }
           .choice-grid, .input-grid { grid-template-columns: 1fr; }
@@ -912,6 +1012,43 @@ export default function WarenkorbPage() {
           .item-top strong { align-self: flex-start; }
           .plain-back { padding: 10px 12px; font-size: .92rem; }
           .brand-mini { font-size: .95rem; }
+        }
+
+        /* Native-feeling mobile checkout */
+        .cart-page { min-height: 100dvh; background: #f5f5f7; color: #17233d; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif; }
+        .cart-header { background: rgba(247,248,251,.96); border-bottom-color: rgba(15,23,42,.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .plain-back { border: 0; background: #e9eef6; color: #12356b; box-shadow: none; }
+        .brand-mini { color: #12356b; letter-spacing: -.02em; }
+        .progress-card { color: white; border: 0; background: linear-gradient(135deg,#102e5e,#1d4c86); box-shadow: 0 18px 40px rgba(18,53,107,.2); }
+        .progress-card>span { color: rgba(255,255,255,.65); }.progress-card h1 { color: white; }
+        .progress-line { height: 5px; background: rgba(255,255,255,.16); }.progress-line div { background: white; }
+        .progress-steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-top: 15px; }
+        .progress-steps>span { display: flex; flex-direction: column; align-items: center; gap: 4px; color: rgba(255,255,255,.38); font-size: 11px; font-weight: 850; }
+        .progress-steps>span::before { content:""; width: 24px; height: 24px; border-radius: 9px; background: rgba(255,255,255,.1); position: absolute; }
+        .progress-steps>span { position: relative; justify-content: center; min-height: 43px; }.progress-steps>span>small { margin-top: 17px; font-size: 9px; font-weight: 650; }
+        .progress-steps>span.done { color: white; }.progress-steps>span.done::before { background: rgba(255,255,255,.18); }
+        .main-card,.summary-card { border: 1px solid rgba(15,23,42,.045); box-shadow: 0 7px 26px rgba(15,23,42,.045); }
+        .mobile-step-title { margin-bottom: 2px; }.mobile-step-title span { color: #b32031; font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }.mobile-step-title h2 { margin: 5px 0 3px; font-size: 22px; letter-spacing: -.04em; }
+        .cart-item { border: 0; background: #f7f8fa; padding: 15px; }.item-top { display: grid; grid-template-columns: 35px minmax(0,1fr) auto; align-items: start; }.checkout-qty { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 12px; background: #e5edf8; color: #12356b; font-size: 12px; font-weight: 900; }.checkout-item-copy { min-width: 0; }.checkout-item-copy h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .qty-row { margin-left: 47px; padding: 4px 6px; background: #edf0f4; }.qty-row button { width: 31px; height: 31px; background: white; color: #12356b; box-shadow: 0 2px 7px rgba(15,23,42,.07); }
+        .option-list { margin-left: 47px; }.option-list span { background: #eef0f4; border: 0; font-size: .73rem; }
+        .choice { border: 1px solid #e2e5ea; background: #f8f9fb; min-height: 88px; }.choice.active { border-color: #12356b; background: #12356b; }
+        .form-stack { position: relative; z-index: 2; }.form-stack label { color: #616a7b; font-size: 12px; }
+        input,textarea,select { min-height: 52px; border-radius: 15px; border-color: #dfe3e9; background: #fafbfc; color: #17233d; font-size: 16px !important; user-select: text; -webkit-user-select: text; touch-action: manipulation; -webkit-appearance: none; pointer-events: auto; }
+        textarea { min-height: 110px; }.form-stack input:focus,.form-stack textarea:focus,.form-stack select:focus { background: white; border-color: #7192c1; box-shadow: 0 0 0 4px rgba(38,112,216,.1); }
+        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .summary-card h2 { color: #17233d; }.summary-row.total { font-size: 1.25rem; }.stripe-note { margin: 14px 0 0; color: #778094; font-size: 11px; line-height: 1.45; text-align: center; }
+        .primary-button { min-height: 54px; background: linear-gradient(135deg,#102e5e,#173f7b); box-shadow: 0 12px 26px rgba(18,53,107,.2); }.secondary-button { min-height: 50px; color: #12356b; }
+        @media (max-width: 880px) {
+          .cart-container { width: min(100%,calc(100% - 24px)); }
+          .cart-header { padding-top: env(safe-area-inset-top); }
+          .cart-wrap { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+          .progress-card { border-radius: 24px; padding: 18px; }.progress-card h1 { font-size: 28px; }
+          .main-card,.summary-card { border-radius: 24px; padding: 17px; }
+          .layout { gap: 13px; }.item-top { flex-direction: initial; }
+          .item-top strong { align-self: auto; font-size: 14px; }
+          .choice-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }.choice { padding: 14px; }
+          .choice span { font-size: 12px; }.action-row { margin-top: 14px; }
         }
       `}</style>
     </main>

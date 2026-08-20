@@ -1198,6 +1198,7 @@ useEffect(() => {
           gesamtpreisProdukte,
           rabattBetrag,
           gesamtpreis,
+          paymentMethod: localStorage.getItem("larosa_payment_method"),
         }),
       });
 
