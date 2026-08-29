@@ -175,6 +175,7 @@ function Icon({ name }: { name: PrimaryTab | "rose" | "chevron" | "plus" | "orde
 }
 
 export default function MobileAppPage() {
+  const [showLaunch, setShowLaunch] = useState(true);
   const [tab, setTab] = useState<Tab>("home");
   const [category, setCategory] = useState("Alle");
   const [search, setSearch] = useState("");
@@ -242,6 +243,12 @@ export default function MobileAppPage() {
       if (!silent) setOrdersBusy(false);
     }
   }, [selectedOrderId]);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = window.setTimeout(() => setShowLaunch(false), reducedMotion ? 500 : 2350);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -570,6 +577,23 @@ export default function MobileAppPage() {
 
   return (
     <main className={styles.appShell}>
+      {showLaunch && <div className={styles.launchScreen} role="status" aria-label="La Rosa wird gestartet">
+        <div className={styles.launchBrand}>
+          <div className={styles.launchLogoImage} aria-hidden="true" />
+          <div><strong>LA ROSA</strong><span>PIZZERIA · SEIT 1993</span></div>
+        </div>
+        <div className={styles.launchScene} aria-hidden="true">
+          <div className={styles.launchRoad}><i /><i /><i /></div>
+          <div className={styles.launchSmoke}><i /><i /><i /></div>
+          <div className={styles.deliveryCar}>
+            <div className={styles.carRoof}><span /></div>
+            <div className={styles.carBody}><strong>LA ROSA</strong><span className={styles.carDoor}><Icon name="rose" /></span><i className={styles.carLight} /></div>
+            <span className={`${styles.carWheel} ${styles.carWheelBack}`} /><span className={`${styles.carWheel} ${styles.carWheelFront}`} />
+          </div>
+          <div className={styles.launchPizza}><i /><i /><i /><div><span>🍕</span></div></div>
+        </div>
+        <div className={styles.launchCaption}><strong>Frisch unterwegs.</strong><span>Dein Essen kommt von La Rosa.</span></div>
+      </div>}
       <div className={styles.statusGlow} />
       <section className={styles.content}>
         {tab === "home" && (
