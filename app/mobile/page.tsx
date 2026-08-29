@@ -3,36 +3,28 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createUserWithEmailAndPassword,
-  getMultiFactorResolver,
   getRedirectResult,
   GoogleAuthProvider,
-  multiFactor,
   OAuthProvider,
   onAuthStateChanged,
-  PhoneAuthProvider,
-  PhoneMultiFactorGenerator,
-  RecaptchaVerifier,
-  reload,
   sendEmailVerification,
   signInWithCustomToken,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
   signOut,
-  type MultiFactorResolver,
-  type MultiFactorError,
   type User,
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "../lib/firebase";
+import { auth } from "../lib/firebase";
 import { produkte, type Product } from "../data/menu";
 import styles from "./mobile.module.css";
 
 type Tab = "home" | "menu" | "cart" | "account";
 type AuthMode = "login" | "register";
+type AccountView = "overview" | "orders" | "details";
 
 type AccountOrder = {
   id: string;
@@ -90,14 +82,6 @@ type Profile = {
 };
 
 const CART_KEY = "larosa_cart";
-const NativeMfa = registerPlugin<{
-  sendEnrollmentCode(options: { phoneNumber: string }): Promise<{ verificationId: string }>;
-  confirmEnrollmentCode(options: { verificationId: string; verificationCode: string }): Promise<void>;
-  startEmailSignIn(options: { email: string; password: string }): Promise<{ mfaRequired: boolean; idToken?: string; phoneHint?: string }>;
-  startProviderSignIn(options: { provider: "google" | "apple"; idToken: string; accessToken?: string; nonce?: string }): Promise<{ mfaRequired: boolean; idToken?: string; phoneHint?: string }>;
-  sendSignInCode(): Promise<{ verificationId: string }>;
-  confirmSignInCode(options: { verificationId: string; verificationCode: string }): Promise<{ mfaRequired: boolean; idToken?: string }>;
-}>("NativeMfa");
 const emptyProfile: Profile = {
   name: "",
   phone: "",
@@ -143,11 +127,7 @@ function authErrorMessage(error: unknown) {
   if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user") return "Das Anmeldefenster wurde geschlossen oder blockiert. Bitte erneut versuchen.";
   if (code === "auth/unauthorized-domain") return "Diese App-Adresse ist in Firebase noch nicht als autorisierte Domain eingetragen.";
   if (code === "auth/operation-not-allowed") return "Diese Anmeldeart ist in Firebase noch nicht aktiviert.";
-  if (code === "auth/billing-not-enabled") return "SMS-Schutz benötigt Firebase Authentication mit Identity Platform und aktivierter Abrechnung.";
-  if (code === "auth/invalid-phone-number") return "Bitte gib eine gültige Mobilnummer mit Ländervorwahl ein, zum Beispiel +49 170 1234567.";
   if (code === "auth/requires-recent-login") return "Bitte melde dich aus Sicherheitsgründen neu an und versuche es danach erneut.";
-  if (code === "auth/second-factor-already-in-use") return "Diese Telefonnummer ist für den SMS-Schutz bereits eingerichtet.";
-  if (code === "auth/unsupported-first-factor") return "Diese Anmeldeart kann nicht mit SMS-Zwei-Faktor kombiniert werden.";
   if (code === "auth/account-exists-with-different-credential") return "Für diese E-Mail besteht bereits ein Konto mit einer anderen Anmeldeart.";
   if (code === "auth/network-request-failed") return "Keine Verbindung zu Firebase. Bitte Internetverbindung prüfen.";
   return error instanceof Error ? error.message : "Anmeldung nicht möglich.";
@@ -161,7 +141,7 @@ function GoogleLogo() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.3c1.9-1.8 2.9-4.4 2.9-7.4Z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.5c-.9.6-2.1 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3a10 10 0 0 0 0 9.1L6.4 14Z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.9 1.5l2.9-2.9A9.7 9.7 0 0 0 3 7.5l3.4 2.6C7.2 7.8 9.4 6 12 6Z"/></svg>;
 }
 
-function Icon({ name }: { name: Tab | "rose" | "chevron" | "plus" }) {
+function Icon({ name }: { name: Tab | "rose" | "chevron" | "plus" | "orders" | "details" | "logout" | "trash" }) {
   const paths: Record<string, React.ReactNode> = {
     home: <><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-7h5v7"/></>,
     menu: <><path d="M5 3v18M19 3v18M5 8h14M5 16h14"/><path d="M9 8v8M15 8v8"/></>,
@@ -170,6 +150,10 @@ function Icon({ name }: { name: Tab | "rose" | "chevron" | "plus" }) {
     rose: <><path d="M12 21c0-5 0-9 1-12"/><path d="M13 9c-5-1-6-7-1-7 4 0 7 4 3 8-2 2-5 1-6-1"/><path d="M12 15c-4-3-7-1-7-1 2 4 5 4 7 3M13 13c3-3 6-2 6-2-1 4-4 5-6 4"/></>,
     chevron: <path d="m9 18 6-6-6-6"/>,
     plus: <><path d="M12 5v14M5 12h14"/></>,
+    orders: <><path d="M7 3h10l2 3v15H5V6l2-3Z"/><path d="M8 9h8M8 13h8M8 17h5"/></>,
+    details: <><circle cx="8" cy="8" r="3"/><path d="M3.5 17a4.5 4.5 0 0 1 9 0"/><path d="M15 8h6M15 12h6M15 16h4"/></>,
+    logout: <><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></>,
+    trash: <><path d="M4 7h16M9 3h6l1 4H8l1-4ZM7 7l1 14h8l1-14M10 11v6M14 11v6"/></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -182,17 +166,13 @@ export default function MobileAppPage() {
   const [cartLoaded, setCartLoaded] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>("register");
+  const [accountView, setAccountView] = useState<AccountView>("overview");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [smsCode, setSmsCode] = useState("");
-  const [verificationId, setVerificationId] = useState("");
-  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
-  const [mfaMode, setMfaMode] = useState<"enroll" | "signin" | null>(null);
-  const [nativeMfaSignIn, setNativeMfaSignIn] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
@@ -204,6 +184,25 @@ export default function MobileAppPage() {
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState("");
   const [returningFromPayment, setReturningFromPayment] = useState(false);
+
+  const loadProfile = useCallback(async (currentUser: User) => {
+    const token = await currentUser.getIdToken();
+    const response = await fetch("/api/account/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Profildaten konnten nicht geladen werden.");
+    setProfile({
+      name: data.profile?.name ?? "",
+      phone: data.profile?.phone ?? "",
+      street: data.profile?.street ?? "",
+      houseNumber: data.profile?.houseNumber ?? "",
+      postalCode: data.profile?.postalCode ?? "",
+      city: data.profile?.city ?? "",
+      roses: Number(data.profile?.roses) || 0,
+    });
+  }, []);
 
   const loadOrders = useCallback(async (currentUser: User, silent = false) => {
     if (!silent) setOrdersBusy(true);
@@ -237,6 +236,7 @@ export default function MobileAppPage() {
     setCategory(params.get("category") || "Alle");
     if (params.get("paid") === "true") {
       setTab("account");
+      setAccountView("orders");
       setReturningFromPayment(true);
       setSelectedOrderId(params.get("orderId") || "");
       setMessage("Zahlung erfolgreich. Deine Bestellung wird gerade bestätigt.");
@@ -263,24 +263,12 @@ export default function MobileAppPage() {
       }
       setEmail(nextUser.email ?? "");
       try {
-        const snapshot = await getDoc(doc(db, "kunden", nextUser.uid));
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setProfile({
-            name: data.name ?? "",
-            phone: data.phone ?? "",
-            street: data.street ?? "",
-            houseNumber: data.houseNumber ?? "",
-            postalCode: data.postalCode ?? "",
-            city: data.city ?? "",
-            roses: typeof data.roses === "number" ? data.roses : 0,
-          });
-        }
+        await loadProfile(nextUser);
       } catch {
         setMessage("Dein Account ist angemeldet. Gespeicherte Profildaten konnten gerade nicht geladen werden.");
       }
     });
-  }, []);
+  }, [loadProfile]);
 
   useEffect(() => {
     if (!user) {
@@ -424,36 +412,26 @@ export default function MobileAppPage() {
     setBusy(true);
     setMessage("");
     try {
-      if (authMode === "register") {
+      if (Capacitor.isNativePlatform()) {
+        if (authMode === "register") {
+          await FirebaseAuthentication.createUserWithEmailAndPassword({ email: email.trim(), password });
+          await FirebaseAuthentication.sendEmailVerification();
+        } else {
+          await FirebaseAuthentication.signInWithEmailAndPassword({ email: email.trim(), password });
+        }
+        const { token } = await FirebaseAuthentication.getIdToken({ forceRefresh: true });
+        await completeNativeSignIn(token);
+        setMessage(authMode === "register" ? "Account erstellt. Bitte bestätige jetzt deine E-Mail-Adresse." : "Willkommen zurück.");
+      } else if (authMode === "register") {
         const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await sendEmailVerification(result.user);
         setMessage("Account erstellt. Bitte bestätige jetzt deine E-Mail-Adresse.");
       } else {
-        if (Capacitor.isNativePlatform()) {
-          const result = await NativeMfa.startEmailSignIn({ email: email.trim(), password });
-          if (result.mfaRequired) {
-            setNativeMfaSignIn(true);
-            setMfaMode("signin");
-            setMessage(`Bitte fordere jetzt den SMS-Code für ${result.phoneHint || "dein Mobiltelefon"} an.`);
-            return;
-          }
-          if (!result.idToken) throw new Error("Die sichere iPhone-Anmeldung hat kein Token zurückgegeben.");
-          await completeNativeSignIn(result.idToken);
-          setMessage("Willkommen zurück.");
-          return;
-        }
         await signInWithEmailAndPassword(auth, email.trim(), password);
         setMessage("Willkommen zurück.");
       }
     } catch (error) {
-      if (error instanceof FirebaseError && error.code === "auth/multi-factor-auth-required") {
-        const resolver = getMultiFactorResolver(auth, error as MultiFactorError);
-        setMfaResolver(resolver);
-        setMfaMode("signin");
-        setMessage("Bitte fordere jetzt den SMS-Code für deinen hinterlegten zweiten Faktor an.");
-        return;
-      }
-      setMessage(error instanceof Error ? error.message : "Anmeldung nicht möglich.");
+      setMessage(authErrorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -464,25 +442,10 @@ export default function MobileAppPage() {
     setMessage("");
     try {
       if (Capacitor.isNativePlatform()) {
-        const result = providerName === "apple"
-          ? await FirebaseAuthentication.signInWithApple({ skipNativeAuth: true })
-          : await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
-        const credential = result.credential;
-        if (!credential?.idToken) throw new Error("Der Anbieter hat kein gültiges Anmeldetoken zurückgegeben.");
-        const nativeResult = await NativeMfa.startProviderSignIn({
-          provider: providerName,
-          idToken: credential.idToken,
-          ...(credential.accessToken ? { accessToken: credential.accessToken } : {}),
-          ...(credential.nonce ? { nonce: credential.nonce } : {}),
-        });
-        if (nativeResult.mfaRequired) {
-          setNativeMfaSignIn(true);
-          setMfaMode("signin");
-          setMessage(`Bitte fordere jetzt den SMS-Code für ${nativeResult.phoneHint || "dein Mobiltelefon"} an.`);
-          return;
-        }
-        if (!nativeResult.idToken) throw new Error("Die sichere iPhone-Anmeldung hat kein Token zurückgegeben.");
-        await completeNativeSignIn(nativeResult.idToken);
+        if (providerName === "apple") await FirebaseAuthentication.signInWithApple();
+        else await FirebaseAuthentication.signInWithGoogle();
+        const { token } = await FirebaseAuthentication.getIdToken({ forceRefresh: true });
+        await completeNativeSignIn(token);
         setMessage("Anmeldung erfolgreich. Willkommen bei La Rosa.");
         return;
       }
@@ -501,30 +464,10 @@ export default function MobileAppPage() {
       }
       await signInWithPopup(auth, provider);
     } catch (error) {
-      if (error instanceof FirebaseError && error.code === "auth/multi-factor-auth-required") {
-        const resolver = getMultiFactorResolver(auth, error as MultiFactorError);
-        setMfaResolver(resolver);
-        setMfaMode("signin");
-        setMessage("Bitte fordere jetzt den SMS-Code für deinen hinterlegten zweiten Faktor an.");
-      } else {
-        setMessage(authErrorMessage(error));
-      }
+      setMessage(authErrorMessage(error));
     } finally {
       setBusy(false);
     }
-  }
-
-  async function syncNativeFirebaseUser(currentUser: User) {
-    const idToken = await currentUser.getIdToken();
-    const response = await fetch("/api/auth/native-token", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${idToken}` },
-    });
-    const data = await response.json();
-    if (!response.ok || !data.token) {
-      throw new Error(data.error || "Die sichere iPhone-Anmeldung konnte nicht vorbereitet werden.");
-    }
-    await FirebaseAuthentication.signInWithCustomToken({ token: data.token });
   }
 
   async function completeNativeSignIn(nativeIdToken: string) {
@@ -539,178 +482,24 @@ export default function MobileAppPage() {
     await signInWithCustomToken(auth, data.token);
   }
 
-  function createRecaptcha() {
-    const triggerId = document.getElementById("mfa-send-button") ? "mfa-send-button" : "mobile-recaptcha";
-    if (triggerId === "mobile-recaptcha") {
-      const container = document.getElementById(triggerId);
-      if (container) container.innerHTML = "";
-    }
-    return new RecaptchaVerifier(auth, triggerId, { size: "invisible" });
-  }
-
-  async function sendMfaCode(
-    mode: "enroll" | "signin" = "enroll",
-    resolver: MultiFactorResolver | null = mfaResolver
-  ) {
-    setBusy(true);
-    setMessage("");
-    let verifier: RecaptchaVerifier | null = null;
-    try {
-      if (mode === "enroll" && user) {
-        await reload(user);
-      }
-      if (mode === "enroll" && user && !auth.currentUser?.emailVerified) {
-        throw new Error("Bitte bestätige zuerst deine E-Mail-Adresse. Danach kannst du den SMS-Schutz aktivieren.");
-      }
-      if (mode === "enroll" && user && Capacitor.isNativePlatform()) {
-        if (!phoneNumber.startsWith("+")) throw new Error("Telefonnummer bitte mit Ländervorwahl eingeben, z. B. +49.");
-        await syncNativeFirebaseUser(user);
-        const result = await NativeMfa.sendEnrollmentCode({ phoneNumber });
-        setVerificationId(result.verificationId);
-        setMfaMode("enroll");
-        setMessage("Der SMS-Code wurde versendet.");
-        return;
-      }
-      if (mode === "signin" && nativeMfaSignIn && Capacitor.isNativePlatform()) {
-        const result = await NativeMfa.sendSignInCode();
-        setVerificationId(result.verificationId);
-        setMessage("Der SMS-Code wurde versendet.");
-        return;
-      }
-      verifier = createRecaptcha();
-      await verifier.render();
-      const provider = new PhoneAuthProvider(auth);
-      if (mode === "signin" && resolver) {
-        const hint = resolver.hints[0];
-        if (!hint) throw new Error("Kein SMS-Faktor für diesen Account gefunden.");
-        setVerificationId(await provider.verifyPhoneNumber({
-          multiFactorHint: hint,
-          session: resolver.session,
-        }, verifier));
-      } else {
-        if (!user) throw new Error("Bitte melde dich zuerst an.");
-        if (!phoneNumber.startsWith("+")) throw new Error("Telefonnummer bitte mit Ländervorwahl eingeben, z. B. +49.");
-        const session = await multiFactor(user).getSession();
-        setVerificationId(await provider.verifyPhoneNumber({
-          phoneNumber,
-          session,
-        }, verifier));
-        setMfaMode("enroll");
-      }
-      setMessage("Der SMS-Code wurde versendet.");
-    } catch (error) {
-      const code = error instanceof FirebaseError ? error.code : "";
-      if (code === "auth/operation-not-allowed") setMessage("SMS-Zwei-Faktor ist in Firebase noch nicht aktiviert. Öffne Firebase → Authentication → Sign-in method → SMS Multi-factor.");
-      else if (code === "auth/billing-not-enabled") setMessage("SMS-Zwei-Faktor benötigt Firebase Authentication mit Identity Platform und aktivierter Abrechnung.");
-      else if (code === "auth/invalid-app-credential" || code === "auth/captcha-check-failed") setMessage("Die Sicherheitsprüfung konnte nicht abgeschlossen werden. Prüfe in Firebase die autorisierten Domains und versuche es erneut.");
-      else if (code === "auth/too-many-requests") setMessage("Zu viele SMS-Versuche. Bitte später erneut versuchen oder eine Firebase-Testnummer verwenden.");
-      else if (code === "auth/quota-exceeded") setMessage("Das Firebase-SMS-Limit ist erreicht.");
-      else setMessage(authErrorMessage(error));
-    } finally {
-      verifier?.clear();
-      setBusy(false);
-    }
-  }
-
-  async function resendVerificationEmail() {
-    if (!user) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      await sendEmailVerification(user);
-      setMessage("Bestätigungs-E-Mail wurde versendet. Öffne den Link und tippe danach auf „Status aktualisieren“.");
-    } catch (error) {
-      setMessage(authErrorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function refreshEmailStatus() {
-    if (!user) return;
-    setBusy(true);
-    try {
-      await reload(user);
-      const current = auth.currentUser;
-      setUser(current);
-      setMessage(current?.emailVerified ? "E-Mail ist bestätigt. Du kannst jetzt den SMS-Code anfordern." : "Die E-Mail ist noch nicht bestätigt.");
-    } catch (error) {
-      setMessage(authErrorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function confirmMfaCode() {
-    if (!verificationId || !smsCode) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      if (mfaMode === "signin" && nativeMfaSignIn && Capacitor.isNativePlatform()) {
-        const result = await NativeMfa.confirmSignInCode({
-          verificationId,
-          verificationCode: smsCode,
-        });
-        if (!result.idToken) throw new Error("Die SMS-Anmeldung hat kein gültiges Token zurückgegeben.");
-        await completeNativeSignIn(result.idToken);
-        setVerificationId("");
-        setSmsCode("");
-        setMfaResolver(null);
-        setMfaMode(null);
-        setNativeMfaSignIn(false);
-        setMessage("Sicher angemeldet. Willkommen bei La Rosa.");
-        return;
-      }
-      if (mfaMode === "enroll" && user && Capacitor.isNativePlatform()) {
-        await syncNativeFirebaseUser(user);
-        await NativeMfa.confirmEnrollmentCode({
-          verificationId,
-          verificationCode: smsCode,
-        });
-        await reload(user);
-        setVerificationId("");
-        setSmsCode("");
-        setMfaResolver(null);
-        setMfaMode(null);
-        setMessage("SMS-Zwei-Faktor-Authentifizierung ist aktiv.");
-        return;
-      }
-      const credential = PhoneAuthProvider.credential(verificationId, smsCode);
-      const assertion = PhoneMultiFactorGenerator.assertion(credential);
-      if (mfaMode === "signin" && mfaResolver) {
-        await mfaResolver.resolveSignIn(assertion);
-      } else if (user) {
-        await multiFactor(user).enroll(assertion, "Mobiltelefon");
-      }
-      setVerificationId("");
-      setSmsCode("");
-      setMfaResolver(null);
-      setMfaMode(null);
-      setMessage("SMS-Zwei-Faktor-Authentifizierung ist aktiv.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Code konnte nicht bestätigt werden.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function saveProfile(event: FormEvent) {
     event.preventDefault();
     if (!user) return;
     setBusy(true);
     setMessage("");
     try {
-      await setDoc(doc(db, "kunden", user.uid), {
-        name: profile.name,
-        phone: profile.phone,
-        street: profile.street,
-        houseNumber: profile.houseNumber,
-        postalCode: profile.postalCode,
-        city: profile.city,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      const token = await user.getIdToken();
+      const response = await fetch("/api/account/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profile),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Speichern nicht möglich.");
+      await loadProfile(user);
       setMessage("Deine Angaben wurden gespeichert.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Speichern nicht möglich.");
@@ -723,6 +512,38 @@ export default function MobileAppPage() {
     await signOut(auth);
     if (Capacitor.isNativePlatform()) {
       await FirebaseAuthentication.signOut().catch(() => undefined);
+    }
+    setAccountView("overview");
+    setSelectedOrderId("");
+    setMessage("Du wurdest vollständig abgemeldet.");
+  }
+
+  async function deleteAccount() {
+    if (!user) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const token = await user.getIdToken(true);
+      const response = await fetch("/api/account/profile", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Account konnte nicht gelöscht werden.");
+      await signOut(auth).catch(() => undefined);
+      if (Capacitor.isNativePlatform()) {
+        await FirebaseAuthentication.signOut().catch(() => undefined);
+      }
+      setProfile(emptyProfile);
+      setOrders([]);
+      setAccountView("overview");
+      setSelectedOrderId("");
+      setDeleteConfirmOpen(false);
+      setMessage("Dein Account wurde vollständig gelöscht.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Account konnte nicht gelöscht werden.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -795,15 +616,7 @@ export default function MobileAppPage() {
         {tab === "account" && (
           <>
             <header className={styles.header}><div><span className={styles.eyebrow}>Persönlicher Bereich</span><h1>Account</h1></div></header>
-            {!user && mfaMode === "signin" ? <section className={styles.formCard}>
-              <h2>SMS-Code bestätigen</h2>
-              <p>Für diesen Account ist Zwei-Faktor-Authentifizierung aktiviert.</p>
-              {!verificationId ? <button id="mfa-send-button" className={styles.primaryButton} type="button" disabled={busy} onClick={() => sendMfaCode("signin")}>SMS-Code anfordern</button> : <>
-                <label>Sechsstelliger Code<input inputMode="numeric" autoComplete="one-time-code" value={smsCode} onChange={(e) => setSmsCode(e.target.value)} /></label>
-                <button className={styles.primaryButton} type="button" disabled={busy || smsCode.length < 6} onClick={confirmMfaCode}>Sicher anmelden</button>
-              </>}
-              {message && <p className={styles.message}>{message}</p>}
-            </section> : !user ? <form className={styles.formCard} onSubmit={submitAuth}>
+            {!user ? <form className={styles.formCard} onSubmit={submitAuth}>
               <div className={styles.segmented}><button type="button" className={authMode === "register" ? styles.segmentActive : ""} onClick={() => setAuthMode("register")}>Registrieren</button><button type="button" className={authMode === "login" ? styles.segmentActive : ""} onClick={() => setAuthMode("login")}>Anmelden</button></div>
               <h2>{authMode === "register" ? "Dein La-Rosa-Konto" : "Willkommen zurück"}</h2>
               <p>Adressen speichern, Bestellungen verfolgen und Rosen sammeln.</p>
@@ -817,49 +630,72 @@ export default function MobileAppPage() {
               <button className={styles.primaryButton} disabled={busy}>{busy ? "Bitte warten …" : authMode === "register" ? "Account erstellen" : "Anmelden"}</button>
               {message && <p className={styles.message}>{message}</p>}
             </form> : <>
-              <div className={styles.accountHero}><div className={styles.largeAvatar}>{profile.name[0] || user.email?.[0]?.toUpperCase()}</div><div><h2>{profile.name || "Dein Account"}</h2><p>{user.email}</p><span className={user.emailVerified ? styles.verified : styles.unverified}>{user.emailVerified ? "✓ E-Mail bestätigt" : "E-Mail noch bestätigen"}</span></div></div>
-              <section className={styles.roseWallet}><div className={styles.roseIcon}><Icon name="rose" /></div><div><small>DEIN ROSENKONTO</small><strong>{profile.roses} Rosen</strong><span>Wert: {euro(profile.roses * 0.03)} · 1 € Umsatz = 1 Rose</span></div></section>
-              <section className={styles.ordersSection}>
-                <header><div><small>IMMER IN DER APP</small><h2>Meine Bestellungen</h2></div><button type="button" disabled={ordersBusy} onClick={() => loadOrders(user)}>↻</button></header>
-                {returningFromPayment && !selectedOrder && <div className={styles.orderProcessing}><i /><div><strong>Zahlung erfolgreich</strong><small>Deine Bestellung wird gerade bestätigt und erscheint gleich hier.</small></div></div>}
-                {ordersBusy && orders.length === 0 ? <p className={styles.ordersEmpty}>Bestellungen werden geladen …</p> : orders.length === 0 && !returningFromPayment ? <p className={styles.ordersEmpty}>Noch keine Bestellungen in diesem Account.</p> : <div className={styles.orderList}>{orders.map((order) => {
-                  const status = orderStatus(order.status, order.paid);
-                  return <button type="button" key={order.id} onClick={() => setSelectedOrderId(order.id)}><span className={`${styles.orderStatusDot} ${styles[status.tone]}`} /><div><strong>Bestellung #{order.orderNumber || "—"}</strong><small>{orderDate(order.createdAt)} · {order.orderType === "lieferung" ? "Lieferung" : "Abholung"}</small><b>{status.label}</b></div><span>{euro(order.total)} ›</span></button>;
-                })}</div>}
-              </section>
-              <form className={styles.formCard} onSubmit={saveProfile}>
-                <h2>Kontakt & Rechnungsadresse</h2>
-                <div className={styles.inputGrid}>
-                  <label className={styles.full}>Name<input required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label>
-                  <label className={styles.full}>Telefon<input type="tel" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /></label>
-                  <label>Straße<input value={profile.street} onChange={(e) => setProfile({ ...profile, street: e.target.value })} /></label>
-                  <label>Nr.<input value={profile.houseNumber} onChange={(e) => setProfile({ ...profile, houseNumber: e.target.value })} /></label>
-                  <label>PLZ<input inputMode="numeric" value={profile.postalCode} onChange={(e) => setProfile({ ...profile, postalCode: e.target.value })} /></label>
-                  <label>Ort<input value={profile.city} onChange={(e) => setProfile({ ...profile, city: e.target.value })} /></label>
-                </div>
-                <button className={styles.primaryButton} disabled={busy}>Angaben speichern</button>
-                {message && <p className={styles.message}>{message}</p>}
-              </form>
-              <section className={styles.formCard}>
-                <h2>SMS-Zwei-Faktor-Schutz</h2>
-                <p>{multiFactor(user).enrolledFactors.length > 0 ? "SMS-Schutz ist für deinen Account eingerichtet." : "Schütze deinen Account zusätzlich mit einem SMS-Code."}</p>
-                {multiFactor(user).enrolledFactors.length === 0 && <>
-                  {!user.emailVerified && <div className={styles.verificationBox}><strong>E-Mail zuerst bestätigen</strong><small>Firebase erlaubt SMS-Zwei-Faktor erst nach bestätigter E-Mail-Adresse.</small><div><button type="button" disabled={busy} onClick={resendVerificationEmail}>E-Mail senden</button><button type="button" disabled={busy} onClick={refreshEmailStatus}>Status aktualisieren</button></div></div>}
-                  <label>Mobilnummer mit Ländervorwahl<input type="tel" placeholder="+49 170 1234567" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} /></label>
-                  {!verificationId ? <button id="mfa-send-button" type="button" className={styles.primaryButton} disabled={busy || !user.emailVerified} onClick={() => sendMfaCode("enroll")}>{user.emailVerified ? "SMS-Code anfordern" : "Zuerst E-Mail bestätigen"}</button> : <>
-                    <label>SMS-Code<input inputMode="numeric" autoComplete="one-time-code" value={smsCode} onChange={(e) => setSmsCode(e.target.value)} /></label>
-                    <button type="button" className={styles.primaryButton} disabled={busy || smsCode.length < 6} onClick={confirmMfaCode}>Zwei-Faktor-Schutz aktivieren</button>
-                  </>}
-                </>}
+              {accountView === "overview" && <>
+                <div className={styles.accountHero}><div className={styles.largeAvatar}>{profile.name[0] || user.email?.[0]?.toUpperCase()}</div><div><h2>{profile.name || "Dein Account"}</h2><p>{user.email}</p><span className={user.emailVerified ? styles.verified : styles.unverified}>{user.emailVerified ? "✓ E-Mail bestätigt" : "E-Mail noch bestätigen"}</span></div></div>
+                <section className={styles.roseWallet}><div className={styles.roseIcon}><Icon name="rose" /></div><div><small>DEIN ROSENKONTO</small><strong>{profile.roses} Rosen</strong><span>Wert: {euro(profile.roses * 0.03)} · 1 € Umsatz = 1 Rose</span></div></section>
+                <section className={styles.accountMenu}>
+                  <button type="button" onClick={() => setAccountView("orders")}><span><Icon name="orders" /></span><div><strong>Bestellungen</strong><small>{orders.length ? `${orders.length} ${orders.length === 1 ? "Bestellung" : "Bestellungen"} ansehen` : "Bestellverlauf und Status ansehen"}</small></div><Icon name="chevron" /></button>
+                  <button type="button" onClick={() => setAccountView("details")}><span><Icon name="details" /></span><div><strong>Kontakt- & Rechnungsdaten</strong><small>Name, Telefon und Rechnungsadresse</small></div><Icon name="chevron" /></button>
+                </section>
+                <section className={styles.accountActions}>
+                  <button type="button" onClick={signOutAll}><Icon name="logout" /><span>Abmelden</span></button>
+                  <button type="button" className={styles.deleteAccountButton} onClick={() => setDeleteConfirmOpen(true)}><Icon name="trash" /><span>Account löschen</span></button>
+                </section>
                 {message && <p className={styles.message} aria-live="polite">{message}</p>}
-              </section>
-              <button className={styles.signOut} onClick={signOutAll}>Abmelden</button>
+              </>}
+
+              {accountView === "orders" && <>
+                <button className={styles.accountBack} type="button" onClick={() => setAccountView("overview")}>‹ Account</button>
+                <section className={styles.ordersSection}>
+                  <header><div><small>DEIN BESTELLVERLAUF</small><h2>Bestellungen</h2></div><button type="button" aria-label="Bestellungen aktualisieren" disabled={ordersBusy} onClick={() => loadOrders(user)}>↻</button></header>
+                  {returningFromPayment && !selectedOrder && <div className={styles.orderProcessing}><i /><div><strong>Zahlung erfolgreich</strong><small>Deine Bestellung wird gerade bestätigt und erscheint gleich hier.</small></div></div>}
+                  {ordersBusy && orders.length === 0 ? <p className={styles.ordersEmpty}>Bestellungen werden geladen …</p> : orders.length === 0 && !returningFromPayment ? <p className={styles.ordersEmpty}>Noch keine Bestellungen in diesem Account.</p> : <div className={styles.orderList}>{orders.map((order) => {
+                    const status = orderStatus(order.status, order.paid);
+                    return <button type="button" key={order.id} onClick={() => setSelectedOrderId(order.id)}><span className={`${styles.orderStatusDot} ${styles[status.tone]}`} /><div><strong>Bestellung #{order.orderNumber || "—"}</strong><small>{orderDate(order.createdAt)} · {order.orderType === "lieferung" ? "Lieferung" : "Abholung"}</small><b>{status.label}</b></div><span>{euro(order.total)} ›</span></button>;
+                  })}</div>}
+                </section>
+              </>}
+
+              {accountView === "details" && <>
+                <button className={styles.accountBack} type="button" onClick={() => setAccountView("overview")}>‹ Account</button>
+                <form className={styles.formCard} onSubmit={saveProfile}>
+                  <h2>Kontakt- & Rechnungsdaten</h2>
+                  <p>Diese Angaben bleiben in deinem Account gespeichert und stehen beim Bestellen wieder bereit.</p>
+                  <h3 className={styles.formSectionTitle}>Kontaktdaten</h3>
+                  <div className={styles.inputGrid}>
+                    <label className={styles.full}>Name<input autoComplete="name" required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></label>
+                    <label className={styles.full}>E-Mail-Adresse<input type="email" autoComplete="email" disabled value={user.email || ""} /></label>
+                    <label className={styles.full}>Telefon<input type="tel" autoComplete="tel" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /></label>
+                  </div>
+                  <h3 className={styles.formSectionTitle}>Rechnungsadresse</h3>
+                  <div className={styles.inputGrid}>
+                    <label>Straße<input autoComplete="address-line1" value={profile.street} onChange={(e) => setProfile({ ...profile, street: e.target.value })} /></label>
+                    <label>Nr.<input value={profile.houseNumber} onChange={(e) => setProfile({ ...profile, houseNumber: e.target.value })} /></label>
+                    <label>PLZ<input inputMode="numeric" autoComplete="postal-code" value={profile.postalCode} onChange={(e) => setProfile({ ...profile, postalCode: e.target.value })} /></label>
+                    <label>Ort<input autoComplete="address-level2" value={profile.city} onChange={(e) => setProfile({ ...profile, city: e.target.value })} /></label>
+                  </div>
+                  <button className={styles.primaryButton} disabled={busy}>{busy ? "Wird gespeichert …" : "Daten speichern"}</button>
+                  {message && <p className={styles.message} aria-live="polite">{message}</p>}
+                </form>
+              </>}
             </>}
           </>
         )}
       </section>
 
       {addedName && <div className={styles.addedToast}><span>✓</span><div><strong>Im Warenkorb</strong><small>{addedName}</small></div></div>}
+
+      {deleteConfirmOpen && <div className={styles.sheetBackdrop} onClick={() => !busy && setDeleteConfirmOpen(false)}>
+        <section className={`${styles.productSheet} ${styles.deleteSheet}`} onClick={(event) => event.stopPropagation()}>
+          <div className={styles.sheetHandle} />
+          <header><div><small>ACCOUNT & DATEN</small><h2>Account endgültig löschen?</h2><p>Dein Login, deine gespeicherten Angaben, Bestellungen und Rosen werden dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.</p></div><button disabled={busy} onClick={() => setDeleteConfirmOpen(false)}>×</button></header>
+          <div className={styles.deleteSheetActions}>
+            <button type="button" disabled={busy} onClick={() => setDeleteConfirmOpen(false)}>Abbrechen</button>
+            <button type="button" disabled={busy} onClick={deleteAccount}>{busy ? "Wird gelöscht …" : "Account endgültig löschen"}</button>
+          </div>
+          {message && <p className={styles.message} aria-live="polite">{message}</p>}
+        </section>
+      </div>}
 
       {selectedProduct && <div className={styles.sheetBackdrop} onClick={() => setSelectedProduct(null)}>
         <section className={styles.productSheet} onClick={(event) => event.stopPropagation()}>
@@ -898,10 +734,8 @@ export default function MobileAppPage() {
         </section></div>;
       })()}
 
-      <div id="mobile-recaptcha" className={styles.recaptchaMount} />
-
       <nav className={`${styles.tabBar} ${cartPulse ? styles.cartPulse : ""}`}>{(["home", "menu", "cart", "account"] as Tab[]).map((item) => (
-        <button key={item} className={tab === item ? styles.activeTab : ""} onClick={() => setTab(item)}>
+        <button key={item} className={tab === item ? styles.activeTab : ""} onClick={() => { setTab(item); if (item === "account") setAccountView("overview"); }}>
           <span className={styles.tabIcon}><Icon name={item} />{item === "cart" && cartCount > 0 && <i>{cartCount}</i>}</span>
           <small>{{ home: "Entdecken", menu: "Speisekarte", cart: "Warenkorb", account: "Account" }[item]}</small>
         </button>

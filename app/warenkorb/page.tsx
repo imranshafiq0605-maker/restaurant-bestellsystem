@@ -64,6 +64,16 @@ function PaymentBrand({ method }: { method: PaymentMethod }) {
   return <span className="klarna-mark">K.</span>;
 }
 
+function CheckoutStepIcon({ step }: { step: number }) {
+  const paths = [
+    <><path key="basket" d="M4 9h16l-1.5 10h-13L4 9Z"/><path key="handle" d="m8 9 4-5 4 5"/></>,
+    <><circle key="head" cx="8" cy="8" r="3"/><path key="person" d="M3.5 18a4.5 4.5 0 0 1 9 0"/><path key="lines" d="M15 8h6M15 12h6M15 16h4"/></>,
+    <><circle key="clock" cx="12" cy="12" r="9"/><path key="hands" d="M12 7v5l3 2"/></>,
+    <><rect key="card" x="2.5" y="5" width="19" height="14" rx="3"/><path key="stripe" d="M3 10h18M7 15h4"/></>,
+  ];
+  return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[step] ?? paths[0]}</svg>;
+}
+
 function formatDateInput(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -331,15 +341,27 @@ export default function WarenkorbPage() {
       // The checkout remains usable without reward redemption.
     }
     try {
-      const snapshot = await getDoc(doc(db, "kunden", currentUser.uid));
-      if (!snapshot.exists()) return;
-      const data = snapshot.data();
-      setName((current) => current || data.name || "");
-      setTelefon((current) => current || data.phone || "");
-      setStrasse((current) => current || data.street || "");
-      setHausnummer((current) => current || data.houseNumber || "");
-      setPlz((current) => current || data.postalCode || "");
-      setStadt((current) => current || data.city || "");
+      const mobileSource = new URLSearchParams(window.location.search).get("source") === "mobile";
+      let data: Record<string, unknown>;
+      if (mobileSource) {
+        const profileResponse = await fetch("/api/account/profile", {
+          headers: { Authorization: `Bearer ${idToken}` },
+          cache: "no-store",
+        });
+        if (!profileResponse.ok) return;
+        const result = await profileResponse.json();
+        data = result.profile ?? {};
+      } else {
+        const snapshot = await getDoc(doc(db, "kunden", currentUser.uid));
+        if (!snapshot.exists()) return;
+        data = snapshot.data();
+      }
+      setName((current) => current || (typeof data.name === "string" ? data.name : ""));
+      setTelefon((current) => current || (typeof data.phone === "string" ? data.phone : ""));
+      setStrasse((current) => current || (typeof data.street === "string" ? data.street : ""));
+      setHausnummer((current) => current || (typeof data.houseNumber === "string" ? data.houseNumber : ""));
+      setPlz((current) => current || (typeof data.postalCode === "string" ? data.postalCode : ""));
+      setStadt((current) => current || (typeof data.city === "string" ? data.city : ""));
     } catch {
       // Checkout remains usable even if the optional profile cannot be loaded.
     }
@@ -657,9 +679,9 @@ export default function WarenkorbPage() {
           <div className="progress-line">
             <div style={{ width: `${stepNumber * 25}%` }} />
           </div>
-          <div className="progress-steps">
+          <div className={`progress-steps ${isMobileCheckout ? "with-icons" : ""}`}>
             {["Warenkorb", "Daten", "Zeit", "Zahlung"].map((label, index) => (
-              <span key={label} className={stepNumber >= index + 1 ? "done" : ""}>{index + 1}<small>{label}</small></span>
+              <span key={label} className={stepNumber >= index + 1 ? "done" : ""}>{isMobileCheckout ? <CheckoutStepIcon step={index} /> : index + 1}<small>{label}</small></span>
             ))}
           </div>
         </div>
@@ -1103,6 +1125,7 @@ export default function WarenkorbPage() {
         .progress-steps>span::before { content:""; width: 24px; height: 24px; border-radius: 9px; background: rgba(255,255,255,.1); position: absolute; }
         .progress-steps>span { position: relative; justify-content: center; min-height: 43px; }.progress-steps>span>small { margin-top: 17px; font-size: 9px; font-weight: 650; }
         .progress-steps>span.done { color: white; }.progress-steps>span.done::before { background: rgba(255,255,255,.18); }
+        .progress-steps.with-icons>span>svg { position: absolute; z-index: 1; top: 5px; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .main-card,.summary-card { border: 1px solid rgba(15,23,42,.045); box-shadow: 0 7px 26px rgba(15,23,42,.045); }
         .mobile-step-title { margin-bottom: 2px; }.mobile-step-title span { color: #b32031; font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }.mobile-step-title h2 { margin: 5px 0 3px; font-size: 22px; letter-spacing: -.04em; }
         .cart-item { border: 0; background: #f7f8fa; padding: 15px; }.item-top { display: grid; grid-template-columns: 35px minmax(0,1fr) auto; align-items: start; }.checkout-qty { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 12px; background: #e5edf8; color: #12356b; font-size: 12px; font-weight: 900; }.checkout-item-copy { min-width: 0; }.checkout-item-copy h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
