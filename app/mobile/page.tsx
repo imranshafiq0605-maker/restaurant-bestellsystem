@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import {
   createUserWithEmailAndPassword,
   getRedirectResult,
@@ -22,7 +22,8 @@ import { auth } from "../lib/firebase";
 import { produkte, type Product } from "../data/menu";
 import styles from "./mobile.module.css";
 
-type Tab = "home" | "menu" | "cart" | "account";
+type PrimaryTab = "home" | "menu" | "cart" | "account";
+type Tab = PrimaryTab | "roses";
 type AuthMode = "login" | "register";
 type AccountView = "overview" | "orders" | "details";
 
@@ -70,6 +71,21 @@ const offers: Offer[] = [
   { title: "Angebot 6", price: 53.5, text: "Pizza, Schnitzel, Pasta, Salat + 1L Getränk" },
   { title: "Angebot 452", price: 33.5, text: "2× indische Gerichte + 1L Getränk nach Wahl" },
 ];
+
+const quickChoices = [
+  { label: "Pizza", category: "Pizza / Calzone", emoji: "🍕" },
+  { label: "Indische Spezialitäten", category: "Indische Spezialitäten", emoji: "🍛" },
+  { label: "Pasta", category: "Pasta", emoji: "🍝" },
+  { label: "Salate", category: "Salate", emoji: "🥗" },
+] as const;
+
+const primaryTabs: PrimaryTab[] = ["home", "menu", "cart", "account"];
+const tabLabels: Record<PrimaryTab, string> = {
+  home: "Entdecken",
+  menu: "Speisekarte",
+  cart: "Warenkorb",
+  account: "Account",
+};
 
 type Profile = {
   name: string;
@@ -141,7 +157,7 @@ function GoogleLogo() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.3c1.9-1.8 2.9-4.4 2.9-7.4Z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.5c-.9.6-2.1 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3a10 10 0 0 0 0 9.1L6.4 14Z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.9 1.5l2.9-2.9A9.7 9.7 0 0 0 3 7.5l3.4 2.6C7.2 7.8 9.4 6 12 6Z"/></svg>;
 }
 
-function Icon({ name }: { name: Tab | "rose" | "chevron" | "plus" | "orders" | "details" | "logout" | "trash" }) {
+function Icon({ name }: { name: PrimaryTab | "rose" | "chevron" | "plus" | "orders" | "details" | "logout" | "trash" }) {
   const paths: Record<string, React.ReactNode> = {
     home: <><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-7h5v7"/></>,
     menu: <><path d="M5 3v18M19 3v18M5 8h14M5 16h14"/><path d="M9 8v8M15 8v8"/></>,
@@ -230,7 +246,7 @@ export default function MobileAppPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("tab") as Tab | null;
-    if (requested && (["home", "menu", "cart", "account"] as Tab[]).includes(requested)) {
+    if (requested && (["home", "menu", "cart", "account", "roses"] as Tab[]).includes(requested)) {
       setTab(requested);
     }
     setCategory(params.get("category") || "Alle");
@@ -294,14 +310,15 @@ export default function MobileAppPage() {
   }, [cart, cartLoaded]);
 
   const categories = useMemo(
-    () => ["Alle", ...Array.from(new Set(produkte.map((item) => item.category)))],
+    () => ["Alle", "Indische Spezialitäten", ...Array.from(new Set(produkte.map((item) => item.category)))],
     []
   );
 
   const visibleProducts = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return produkte.filter((item) => {
-      const inCategory = category === "Alle" || item.category === category;
+      const inCategory = category === "Alle"
+        || (category === "Indische Spezialitäten" ? item.cuisine === "Indisch" : item.category === category);
       const matches = !needle || `${item.name} ${item.description}`.toLowerCase().includes(needle);
       return inCategory && matches;
     });
@@ -310,6 +327,10 @@ export default function MobileAppPage() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null;
+  const roseOrders = orders.filter((order) => order.earnedRoses > 0);
+  const earnedRoseTotal = roseOrders.reduce((sum, order) => sum + order.earnedRoses, 0);
+  const activePrimaryTab: PrimaryTab = tab === "roses" ? "home" : tab;
+  const activeNavIndex = primaryTabs.indexOf(activePrimaryTab);
 
   function showAdded(name: string) {
     setAddedName(name);
@@ -564,21 +585,53 @@ export default function MobileAppPage() {
             </button>
             <div className={styles.sectionTitle}><h2>Schnell wählen</h2><button onClick={() => setTab("menu")}>Alle ansehen</button></div>
             <div className={styles.quickGrid}>
-              {["Pizza", "Indische Spezialitäten", "Pasta", "Salate"].map((item, index) => (
-                <button key={item} onClick={() => { setCategory(item); setTab("menu"); }}>
-                  <span>{["🍕", "🍛", "🍝", "🥗"][index]}</span><strong>{item}</strong>
+              {quickChoices.map((item) => (
+                <button key={item.label} onClick={() => { setSearch(""); setCategory(item.category); setTab("menu"); }}>
+                  <span>{item.emoji}</span><strong>{item.label}</strong>
                 </button>
               ))}
             </div>
-            <div className={styles.roseCard}>
+            <button type="button" className={styles.roseCard} onClick={() => setTab("roses")}>
               <div className={styles.roseIcon}><Icon name="rose" /></div>
               <div><span>Dein Rosenguthaben</span><strong>{profile.roses} Rosen</strong><small>Wert {euro(profile.roses * 0.03)} · nach bezahlten Bestellungen</small></div>
               <Icon name="chevron" />
-            </div>
+            </button>
             <div className={styles.sectionTitle}><h2>Angebote</h2><span>Nur in der App</span></div>
             <div className={styles.offerRail}>{offers.map((offer) => <button key={offer.title} onClick={() => setActiveOffer(offer)}>
               <small>LA ROSA ANGEBOT</small><strong>{offer.title}</strong><p>{offer.text}</p><b>{euro(offer.price)}</b>
             </button>)}</div>
+          </>
+        )}
+
+        {tab === "roses" && (
+          <>
+            <button className={styles.accountBack} type="button" onClick={() => setTab("home")}>‹ Entdecken</button>
+            <header className={styles.header}><div><span className={styles.eyebrow}>La Rosa Treueprogramm</span><h1>Deine Rosen</h1></div></header>
+            <section className={styles.roseBalanceHero}>
+              <div className={styles.roseBalanceIcon}><Icon name="rose" /></div>
+              <div><small>AKTUELLES GUTHABEN</small><strong>{profile.roses} Rosen</strong><span>{euro(profile.roses * 0.03)} verfügbar</span></div>
+            </section>
+            <section className={styles.roseRuleCard}>
+              <span>1 €</span><p><strong>1 Rose pro Euro Umsatz</strong><small>Jede Rose ist 3 Cent wert. Ab 100 Rosen kannst du sie im Checkout einlösen.</small></p>
+            </section>
+            {!user ? (
+              <section className={styles.roseSignInCard}>
+                <div>🌹</div><h2>Dein Rosenverlauf wartet</h2><p>Melde dich an, um zu sehen, aus welcher Bestellung deine Rosen stammen.</p>
+                <button type="button" onClick={() => { setTab("account"); setAccountView("overview"); }}>Anmelden oder registrieren</button>
+              </section>
+            ) : (
+              <section className={styles.roseHistorySection}>
+                <header><div><small>DEINE GUTSCHRIFTEN</small><h2>Rosenverlauf</h2></div><span>{earnedRoseTotal} gesammelt</span></header>
+                {ordersBusy && orders.length === 0 ? <p className={styles.roseHistoryEmpty}>Rosenverlauf wird geladen …</p> : roseOrders.length === 0 ? <p className={styles.roseHistoryEmpty}>Noch keine Rosen erhalten. Nach deiner ersten bezahlten Bestellung erscheint die Gutschrift hier.</p> : <div className={styles.roseHistoryList}>{roseOrders.map((order) => {
+                  const itemSummary = order.items.slice(0, 2).map((item) => `${item.quantity}× ${item.name}`).join(", ");
+                  return <button type="button" key={order.id} onClick={() => setSelectedOrderId(order.id)}>
+                    <span className={styles.roseHistoryMark}><Icon name="rose" /></span>
+                    <div><strong>Bestellung #{order.orderNumber || "—"}</strong><small>{orderDate(order.createdAt)}</small><p>{itemSummary || (order.orderType === "lieferung" ? "Lieferbestellung" : "Abholbestellung")}{order.items.length > 2 ? ` +${order.items.length - 2} weitere` : ""}</p></div>
+                    <b>+{order.earnedRoses}<small>Rosen</small></b>
+                  </button>;
+                })}</div>}
+              </section>
+            )}
           </>
         )}
 
@@ -607,6 +660,7 @@ export default function MobileAppPage() {
                 <div className={styles.cartItemBottom}><small>{euro(item.price)} je Stück</small><div className={styles.stepper}><button aria-label={`${item.name} entfernen`} onClick={() => changeQuantity(item.uniqueKey, -1)}>−</button><span>{item.quantity}</span><button aria-label={`${item.name} hinzufügen`} onClick={() => changeQuantity(item.uniqueKey, 1)}>+</button></div></div>
               </article>)}</div>
               <section className={styles.orderSummary}><div className={styles.summaryHeading}><span>Bestellübersicht</span><small>{cartCount} Artikel</small></div><div><span>Zwischensumme</span><strong>{euro(cartTotal)}</strong></div><div className={styles.discountRow}><span>Online-Rabatt</span><strong>− {euro(cartTotal * .1)}</strong></div><div><span>Liefergebühr</span><strong>Kostenlos</strong></div><div className={styles.grandTotal}><span>Gesamt</span><strong>{euro(cartTotal * .9)}</strong></div></section>
+              <section className={styles.cartRosePreview}><span><Icon name="rose" /></span><div><strong>Mit dieser Bestellung</strong><small>Nach erfolgreicher Zahlung auf deinem Rosenkonto</small></div><b>+{Math.floor(cartTotal * .9)} Rosen</b></section>
               <button className={styles.checkoutButton} onClick={openCheckout}><span><small>Weiter zu Lieferung & Zahlung</small><strong>{euro(cartTotal * .9)}</strong></span><b>→</b></button>
               <p className={styles.secureNote}>Sicher bezahlen über Stripe</p>
             </>}
@@ -734,10 +788,12 @@ export default function MobileAppPage() {
         </section></div>;
       })()}
 
-      <nav className={`${styles.tabBar} ${cartPulse ? styles.cartPulse : ""}`}>{(["home", "menu", "cart", "account"] as Tab[]).map((item) => (
-        <button key={item} className={tab === item ? styles.activeTab : ""} onClick={() => { setTab(item); if (item === "account") setAccountView("overview"); }}>
+      <nav className={`${styles.tabBar} ${cartPulse ? styles.cartPulse : ""}`} style={{ "--active-index": activeNavIndex } as CSSProperties} aria-label="Hauptnavigation">
+        <span className={styles.liquidIndicator} aria-hidden="true"><span key={activePrimaryTab} className={styles.liquidIndicatorCore}><Icon name={activePrimaryTab} />{activePrimaryTab === "cart" && cartCount > 0 && <i>{cartCount}</i>}</span></span>
+        {primaryTabs.map((item) => (
+        <button key={item} className={activePrimaryTab === item ? styles.activeTab : ""} aria-current={activePrimaryTab === item ? "page" : undefined} onClick={() => { setTab(item); if (item === "account") setAccountView("overview"); }}>
           <span className={styles.tabIcon}><Icon name={item} />{item === "cart" && cartCount > 0 && <i>{cartCount}</i>}</span>
-          <small>{{ home: "Entdecken", menu: "Speisekarte", cart: "Warenkorb", account: "Account" }[item]}</small>
+          <small>{tabLabels[item]}</small>
         </button>
       ))}</nav>
     </main>
