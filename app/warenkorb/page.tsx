@@ -116,8 +116,12 @@ function getPreorderWindowForDate(dateString: string) {
   };
 }
 
-function getAvailablePreorderDates() {
-  return [formatDateInput(new Date())];
+function getAvailablePreorderDates(days = 1) {
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+    return formatDateInput(date);
+  });
 }
 
 function getAvailableTimeSlots(dateString: string) {
@@ -264,13 +268,25 @@ export default function WarenkorbPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [signedIn, setSignedIn] = useState(false);
+  const [isMobileCheckout, setIsMobileCheckout] = useState(false);
+  const [availableRoses, setAvailableRoses] = useState(0);
+  const [redeemedRoses, setRedeemedRoses] = useState(0);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setIsMobileCheckout(params.get("source") === "mobile");
     try {
-      const saved = sessionStorage.getItem(CART_STORAGE_KEY) || localStorage.getItem(CART_STORAGE_KEY);
+      // localStorage is the canonical cart. sessionStorage is only a fallback for
+      // older app builds and must never overwrite a newer persistent cart.
+      const saved = localStorage.getItem(CART_STORAGE_KEY) || sessionStorage.getItem(CART_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) setCart(parsed);
+        if (Array.isArray(parsed)) {
+          setCart(parsed);
+          const serializedCart = JSON.stringify(parsed);
+          localStorage.setItem(CART_STORAGE_KEY, serializedCart);
+          sessionStorage.setItem(CART_STORAGE_KEY, serializedCart);
+        }
       }
       const savedPayment = localStorage.getItem("larosa_payment_method") as PaymentMethod | null;
       if (savedPayment && (["card", "paypal", "klarna"] as PaymentMethod[]).includes(savedPayment)) {
@@ -282,8 +298,38 @@ export default function WarenkorbPage() {
 
   useEffect(() => onAuthStateChanged(auth, async (currentUser) => {
     setSignedIn(Boolean(currentUser));
-    if (!currentUser) return;
+    if (!currentUser) {
+      setAvailableRoses(0);
+      setRedeemedRoses(0);
+      return;
+    }
     setEmail((current) => current || currentUser.email || "");
+    const idToken = await currentUser.getIdToken();
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const cancelledOrderId = params.get("cancelledOrderId");
+      if (params.get("source") === "mobile" && cancelledOrderId) {
+        await fetch("/api/account/release-roses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ orderId: cancelledOrderId }),
+        });
+        params.delete("cancelledOrderId");
+        window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+      }
+      const accountResponse = await fetch("/api/account/orders", {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (accountResponse.ok) {
+        const accountData = await accountResponse.json();
+        setAvailableRoses(Number(accountData.roses) || 0);
+      }
+    } catch {
+      // The checkout remains usable without reward redemption.
+    }
     try {
       const snapshot = await getDoc(doc(db, "kunden", currentUser.uid));
       if (!snapshot.exists()) return;
@@ -318,7 +364,18 @@ export default function WarenkorbPage() {
   );
   const gesamtAnzahl = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const gesamtpreis = zwischensummeNachRabatt;
-  const rosenVorschau = signedIn ? Math.floor(gesamtpreis) : 0;
+  const maxRedeemableRoses = useMemo(() => {
+    const availableBlocks = Math.floor(availableRoses / 100);
+    const payableBlocks = Math.max(0, Math.floor((gesamtpreis - 0.5) / 3));
+    return Math.min(availableBlocks, payableBlocks) * 100;
+  }, [availableRoses, gesamtpreis]);
+  const rosenRabatt = isMobileCheckout ? redeemedRoses * 0.03 : 0;
+  const zahlbetrag = Math.max(gesamtpreis - rosenRabatt, 0);
+  const rosenVorschau = signedIn ? Math.floor(zahlbetrag) : 0;
+
+  useEffect(() => {
+    setRedeemedRoses((current) => Math.min(current, maxRedeemableRoses));
+  }, [maxRedeemableRoses]);
 
   const lieferPruefung = useMemo(() => {
     if (bestellart !== "lieferung") return null;
@@ -327,7 +384,12 @@ export default function WarenkorbPage() {
   }, [bestellart, plz]);
 
   const status = getServiceStatus(bestellart);
-  const availablePreorderDates = useMemo(() => getAvailablePreorderDates(), []);
+  // The native app supports preorders for the next week. Keep the website's
+  // existing same-day behavior unchanged.
+  const availablePreorderDates = useMemo(
+    () => getAvailablePreorderDates(isMobileCheckout ? 7 : 1),
+    [isMobileCheckout]
+  );
   const availableTimeSlots = useMemo(() => getAvailableTimeSlots(vorbestellungDatum), [vorbestellungDatum]);
 
   const zusammengesetzteAdresse = useMemo(() => {
@@ -372,7 +434,9 @@ export default function WarenkorbPage() {
   }
 
   function goHome() {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    const serializedCart = JSON.stringify(cart);
+    localStorage.setItem(CART_STORAGE_KEY, serializedCart);
+    sessionStorage.setItem(CART_STORAGE_KEY, serializedCart);
     const isMobileCheckout = new URLSearchParams(window.location.search).get("source") === "mobile";
     window.location.href = isMobileCheckout ? "/mobile?tab=menu" : "/";
   }
@@ -543,6 +607,7 @@ export default function WarenkorbPage() {
           gesamtpreis,
           paymentMethod,
           source: new URLSearchParams(window.location.search).get("source"),
+          rosesToRedeem: isMobileCheckout ? redeemedRoses : 0,
         }),
       });
 
@@ -852,7 +917,17 @@ export default function WarenkorbPage() {
                   <small>{paymentMethod === "card" ? "Deine gespeicherte Karte oder eine neue Kredit-/Debitkarte wird in Stripe angeboten." : paymentMethod === "klarna" ? "Klarna erscheint, wenn die Bestellung die Klarna-Voraussetzungen erfüllt und Klarna in Stripe aktiviert ist." : "Du wirst im sicheren Stripe Checkout zu PayPal weitergeleitet."}</small>
                 </div>
 
-                <div className="rose-preview"><span>🌹</span><div>{signedIn ? <><strong>Du erhältst {rosenVorschau} Rosen</strong><small>Nach erfolgreicher Zahlung werden sie automatisch deinem Account gutgeschrieben.</small></> : <><strong>Für Rosen bitte anmelden</strong><small>Rosen können nur einem angemeldeten Kundenkonto sicher gutgeschrieben werden.</small></>}</div></div>
+                {isMobileCheckout && <>
+                  <div className="rose-redemption-card">
+                    <div className="rose-redemption-head"><span>🌹</span><div><strong>Rosen einlösen</strong><small>{availableRoses} Rosen verfügbar · 100 Rosen = 3,00 €</small></div></div>
+                    {!signedIn ? <p>Melde dich in der App an, um Rosen einzulösen.</p> : availableRoses < 100 ? <p>Noch {100 - availableRoses} Rosen bis zur ersten Einlösung.</p> : maxRedeemableRoses < 100 ? <p>Für diesen Warenkorb kann wegen des Mindestzahlbetrags kein 100er-Paket eingelöst werden.</p> : <div className="rose-redemption-controls">
+                      <button type="button" aria-label="100 Rosen weniger einlösen" disabled={redeemedRoses === 0} onClick={() => setRedeemedRoses((current) => Math.max(0, current - 100))}>−</button>
+                      <div><strong>{redeemedRoses} Rosen</strong><small>{redeemedRoses > 0 ? `− ${formatEuro(rosenRabatt)}` : "Noch nicht eingesetzt"}</small></div>
+                      <button type="button" aria-label="100 Rosen mehr einlösen" disabled={redeemedRoses >= maxRedeemableRoses} onClick={() => setRedeemedRoses((current) => Math.min(maxRedeemableRoses, current + 100))}>+</button>
+                    </div>}
+                  </div>
+                  <div className="rose-preview"><span>🌹</span><div>{signedIn ? <><strong>Du erhältst {rosenVorschau} neue Rosen</strong><small>Berechnet auf den tatsächlich bezahlten Betrag.</small></> : <><strong>Für Rosen bitte anmelden</strong><small>Rosen können nur einem angemeldeten Kundenkonto sicher gutgeschrieben werden.</small></>}</div></div>
+                </>}
 
                 {hinweis.trim() && (
                   <div className="review-box">
@@ -870,7 +945,8 @@ export default function WarenkorbPage() {
             <div className="summary-row"><span>Zwischensumme</span><strong>{formatEuro(gesamtpreisProdukte)}</strong></div>
             <div className="summary-row discount"><span>10% Rabatt</span><strong>-{formatEuro(rabattBetrag)}</strong></div>
             <div className="summary-row"><span>Versand</span><strong>Kostenlos</strong></div>
-            <div className="summary-row total"><span>Gesamt</span><strong>{formatEuro(gesamtpreis)}</strong></div>
+            {isMobileCheckout && redeemedRoses > 0 && <div className="summary-row rose-discount"><span>{redeemedRoses} Rosen</span><strong>-{formatEuro(rosenRabatt)}</strong></div>}
+            <div className="summary-row total"><span>{isMobileCheckout && redeemedRoses > 0 ? "Zahlbetrag" : "Gesamt"}</span><strong>{formatEuro(zahlbetrag)}</strong></div>
             <p className="stripe-note">🔒 Kartendaten werden ausschließlich von Stripe verarbeitet.</p>
 
             <div className="action-row">

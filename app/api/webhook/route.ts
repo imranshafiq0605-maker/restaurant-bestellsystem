@@ -131,12 +131,13 @@ export async function POST(req: NextRequest) {
 
     const pendingOrderRef = adminDb.collection("pendingOrders").doc(pendingOrderId);
     const pendingOrderSnap = await pendingOrderRef.get();
+    const existingOrder = await adminDb.collection("bestellungen").doc(pendingOrderId).get();
+
+    if (existingOrder.exists) {
+      return NextResponse.json({ received: true, success: true, duplicate: true, pendingOrderId });
+    }
 
     if (!pendingOrderSnap.exists) {
-      const existingOrder = await adminDb.collection("bestellungen").doc(pendingOrderId).get();
-      if (existingOrder.exists) {
-        return NextResponse.json({ received: true, success: true, duplicate: true, pendingOrderId });
-      }
       throw new Error(`pendingOrder nicht gefunden: ${pendingOrderId}`);
     }
 
@@ -192,24 +193,46 @@ export async function POST(req: NextRequest) {
     const rosenVerdient = Number.isInteger(pendingOrderData.rosenVerdient) && pendingOrderData.rosenVerdient > 0
       ? pendingOrderData.rosenVerdient
       : 0;
+    const rosenEingeloest = Number.isInteger(pendingOrderData.rosenEingeloest) && pendingOrderData.rosenEingeloest > 0
+      ? pendingOrderData.rosenEingeloest
+      : 0;
 
-    if (firebaseUid && rosenVerdient > 0) {
+    if (firebaseUid && (rosenVerdient > 0 || rosenEingeloest > 0)) {
       const kundenRef = adminDb.collection("kunden").doc(firebaseUid);
       const buchungRef = adminDb.collection("rosenBuchungen").doc(pendingOrderId);
+      const reservationRef = adminDb.collection("rosenReservierungen").doc(pendingOrderId);
+      const redemptionRef = adminDb.collection("rosenEinloesungen").doc(pendingOrderId);
       await adminDb.runTransaction(async (transaction) => {
-        const buchung = await transaction.get(buchungRef);
-        if (buchung.exists) return;
-        transaction.set(kundenRef, {
-          roses: admin.firestore.FieldValue.increment(rosenVerdient),
-          rosesUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-        transaction.set(buchungRef, {
-          uid: firebaseUid,
-          amount: rosenVerdient,
-          orderId: pendingOrderId,
-          stripeSessionId: session.id,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        const [buchung, reservation] = await Promise.all([
+          transaction.get(buchungRef),
+          transaction.get(reservationRef),
+        ]);
+        if (rosenVerdient > 0 && !buchung.exists) {
+          transaction.set(kundenRef, {
+            roses: admin.firestore.FieldValue.increment(rosenVerdient),
+            rosesUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          transaction.set(buchungRef, {
+            uid: firebaseUid,
+            amount: rosenVerdient,
+            orderId: pendingOrderId,
+            stripeSessionId: session.id,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+        if (rosenEingeloest > 0 && reservation.data()?.uid === firebaseUid && reservation.data()?.status === "reserved") {
+          transaction.set(reservationRef, {
+            status: "redeemed",
+            redeemedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          transaction.set(redemptionRef, {
+            uid: firebaseUid,
+            amount: -rosenEingeloest,
+            orderId: pendingOrderId,
+            stripeSessionId: session.id,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
       });
       console.log(`✅ ${rosenVerdient} Rosen gutgeschrieben`);
     }

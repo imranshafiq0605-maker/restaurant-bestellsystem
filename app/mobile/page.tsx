@@ -14,7 +14,7 @@ import {
   RecaptchaVerifier,
   reload,
   sendEmailVerification,
-  signInWithCredential,
+  signInWithCustomToken,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
@@ -93,6 +93,10 @@ const CART_KEY = "larosa_cart";
 const NativeMfa = registerPlugin<{
   sendEnrollmentCode(options: { phoneNumber: string }): Promise<{ verificationId: string }>;
   confirmEnrollmentCode(options: { verificationId: string; verificationCode: string }): Promise<void>;
+  startEmailSignIn(options: { email: string; password: string }): Promise<{ mfaRequired: boolean; idToken?: string; phoneHint?: string }>;
+  startProviderSignIn(options: { provider: "google" | "apple"; idToken: string; accessToken?: string; nonce?: string }): Promise<{ mfaRequired: boolean; idToken?: string; phoneHint?: string }>;
+  sendSignInCode(): Promise<{ verificationId: string }>;
+  confirmSignInCode(options: { verificationId: string; verificationCode: string }): Promise<{ mfaRequired: boolean; idToken?: string }>;
 }>("NativeMfa");
 const emptyProfile: Profile = {
   name: "",
@@ -175,6 +179,7 @@ export default function MobileAppPage() {
   const [category, setCategory] = useState("Alle");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartLoaded, setCartLoaded] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>("register");
   const [email, setEmail] = useState("");
@@ -187,6 +192,7 @@ export default function MobileAppPage() {
   const [verificationId, setVerificationId] = useState("");
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
   const [mfaMode, setMfaMode] = useState<"enroll" | "signin" | null>(null);
+  const [nativeMfaSignIn, setNativeMfaSignIn] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
@@ -240,8 +246,15 @@ export default function MobileAppPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(CART_KEY);
-      if (saved) setCart(JSON.parse(saved));
-    } catch {}
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setCart(parsed);
+      }
+    } catch {
+      // A damaged legacy cart starts empty without breaking the app.
+    } finally {
+      setCartLoaded(true);
+    }
     return onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser);
       if (!nextUser) {
@@ -288,8 +301,9 @@ export default function MobileAppPage() {
   }, []);
 
   useEffect(() => {
+    if (!cartLoaded) return;
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
-  }, [cart]);
+  }, [cart, cartLoaded]);
 
   const categories = useMemo(
     () => ["Alle", ...Array.from(new Set(produkte.map((item) => item.category)))],
@@ -415,6 +429,19 @@ export default function MobileAppPage() {
         await sendEmailVerification(result.user);
         setMessage("Account erstellt. Bitte bestätige jetzt deine E-Mail-Adresse.");
       } else {
+        if (Capacitor.isNativePlatform()) {
+          const result = await NativeMfa.startEmailSignIn({ email: email.trim(), password });
+          if (result.mfaRequired) {
+            setNativeMfaSignIn(true);
+            setMfaMode("signin");
+            setMessage(`Bitte fordere jetzt den SMS-Code für ${result.phoneHint || "dein Mobiltelefon"} an.`);
+            return;
+          }
+          if (!result.idToken) throw new Error("Die sichere iPhone-Anmeldung hat kein Token zurückgegeben.");
+          await completeNativeSignIn(result.idToken);
+          setMessage("Willkommen zurück.");
+          return;
+        }
         await signInWithEmailAndPassword(auth, email.trim(), password);
         setMessage("Willkommen zurück.");
       }
@@ -442,10 +469,20 @@ export default function MobileAppPage() {
           : await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
         const credential = result.credential;
         if (!credential?.idToken) throw new Error("Der Anbieter hat kein gültiges Anmeldetoken zurückgegeben.");
-        const firebaseCredential = providerName === "apple"
-          ? new OAuthProvider("apple.com").credential({ idToken: credential.idToken, rawNonce: credential.nonce })
-          : GoogleAuthProvider.credential(credential.idToken, credential.accessToken);
-        await signInWithCredential(auth, firebaseCredential);
+        const nativeResult = await NativeMfa.startProviderSignIn({
+          provider: providerName,
+          idToken: credential.idToken,
+          ...(credential.accessToken ? { accessToken: credential.accessToken } : {}),
+          ...(credential.nonce ? { nonce: credential.nonce } : {}),
+        });
+        if (nativeResult.mfaRequired) {
+          setNativeMfaSignIn(true);
+          setMfaMode("signin");
+          setMessage(`Bitte fordere jetzt den SMS-Code für ${nativeResult.phoneHint || "dein Mobiltelefon"} an.`);
+          return;
+        }
+        if (!nativeResult.idToken) throw new Error("Die sichere iPhone-Anmeldung hat kein Token zurückgegeben.");
+        await completeNativeSignIn(nativeResult.idToken);
         setMessage("Anmeldung erfolgreich. Willkommen bei La Rosa.");
         return;
       }
@@ -490,6 +527,18 @@ export default function MobileAppPage() {
     await FirebaseAuthentication.signInWithCustomToken({ token: data.token });
   }
 
+  async function completeNativeSignIn(nativeIdToken: string) {
+    const response = await fetch("/api/auth/native-token", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${nativeIdToken}` },
+    });
+    const data = await response.json();
+    if (!response.ok || !data.token) {
+      throw new Error(data.error || "Die sichere App-Anmeldung konnte nicht abgeschlossen werden.");
+    }
+    await signInWithCustomToken(auth, data.token);
+  }
+
   function createRecaptcha() {
     const triggerId = document.getElementById("mfa-send-button") ? "mfa-send-button" : "mobile-recaptcha";
     if (triggerId === "mobile-recaptcha") {
@@ -519,6 +568,12 @@ export default function MobileAppPage() {
         const result = await NativeMfa.sendEnrollmentCode({ phoneNumber });
         setVerificationId(result.verificationId);
         setMfaMode("enroll");
+        setMessage("Der SMS-Code wurde versendet.");
+        return;
+      }
+      if (mode === "signin" && nativeMfaSignIn && Capacitor.isNativePlatform()) {
+        const result = await NativeMfa.sendSignInCode();
+        setVerificationId(result.verificationId);
         setMessage("Der SMS-Code wurde versendet.");
         return;
       }
@@ -591,6 +646,21 @@ export default function MobileAppPage() {
     setBusy(true);
     setMessage("");
     try {
+      if (mfaMode === "signin" && nativeMfaSignIn && Capacitor.isNativePlatform()) {
+        const result = await NativeMfa.confirmSignInCode({
+          verificationId,
+          verificationCode: smsCode,
+        });
+        if (!result.idToken) throw new Error("Die SMS-Anmeldung hat kein gültiges Token zurückgegeben.");
+        await completeNativeSignIn(result.idToken);
+        setVerificationId("");
+        setSmsCode("");
+        setMfaResolver(null);
+        setMfaMode(null);
+        setNativeMfaSignIn(false);
+        setMessage("Sicher angemeldet. Willkommen bei La Rosa.");
+        return;
+      }
       if (mfaMode === "enroll" && user && Capacitor.isNativePlatform()) {
         await syncNativeFirebaseUser(user);
         await NativeMfa.confirmEnrollmentCode({
@@ -646,6 +716,13 @@ export default function MobileAppPage() {
       setMessage(error instanceof Error ? error.message : "Speichern nicht möglich.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function signOutAll() {
+    await signOut(auth);
+    if (Capacitor.isNativePlatform()) {
+      await FirebaseAuthentication.signOut().catch(() => undefined);
     }
   }
 
@@ -776,7 +853,7 @@ export default function MobileAppPage() {
                 </>}
                 {message && <p className={styles.message} aria-live="polite">{message}</p>}
               </section>
-              <button className={styles.signOut} onClick={() => signOut(auth)}>Abmelden</button>
+              <button className={styles.signOut} onClick={signOutAll}>Abmelden</button>
             </>}
           </>
         )}

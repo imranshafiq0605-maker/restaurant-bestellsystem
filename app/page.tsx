@@ -503,9 +503,11 @@ const status = specialClosed
   }
 
   function openCheckout() {
-  localStorage.setItem("larosa_cart", JSON.stringify(cart));
-  window.location.href = "/warenkorb";
-}
+    const serializedCart = JSON.stringify(cart);
+    localStorage.setItem("larosa_cart", serializedCart);
+    sessionStorage.setItem("larosa_cart", serializedCart);
+    window.location.href = "/warenkorb";
+  }
 
   function backFromCheckout() {
     if (activeCategory) {
