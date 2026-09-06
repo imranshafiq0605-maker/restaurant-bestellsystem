@@ -39,6 +39,30 @@ const indischFleischartOption: ProductOption = {
     { name: "Garnelen", price: 1.0 },
   ],
 };
+const burgerSauceNames = [
+  "La Rosa Standard-Soße",
+  "Ya’ummi Classic Samurai",
+  "Ya’ummi Creamy Jalapeño",
+  "Ya’ummi Yellow Onion",
+  "Ya’ummi White Pita",
+  "Ya’ummi Red Andalouse",
+  "Ya’ummi Sweet Hannibal",
+];
+const burgerSauceOptions: ProductOption[] = [
+  {
+    group: "Soße wählen",
+    required: true,
+    items: burgerSauceNames.map((name) => ({ name, price: 0 })),
+  },
+  {
+    group: "Soßen als Extra",
+    multiple: true,
+    items: burgerSauceNames.map((name) => ({
+      name: `${name} · 1 Portion`,
+      price: 1,
+    })),
+  },
+];
 const pizzaExtrasOption: ProductOption = {
   group: "Extras",
   multiple: true,
@@ -1246,6 +1270,7 @@ export const produkte: Product[] = [
       { name: "Menü", price: 11.5 },
       { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
+    options: burgerSauceOptions,
   },
   {
     id: 67,
@@ -1259,6 +1284,7 @@ export const produkte: Product[] = [
       { name: "Menü", price: 11.5 },
       { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
+    options: burgerSauceOptions,
   },
   {
     id: 68,
@@ -1272,6 +1298,7 @@ export const produkte: Product[] = [
       { name: "Menü", price: 11.5 },
       { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
+    options: burgerSauceOptions,
   },
   {
     id: 69,
@@ -1285,6 +1312,7 @@ export const produkte: Product[] = [
       { name: "Menü", price: 11.5 },
       { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
+    options: burgerSauceOptions,
   },
   {
     id: 70,
@@ -1298,6 +1326,7 @@ export const produkte: Product[] = [
       { name: "Menü", price: 11.5 },
       { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
+    options: burgerSauceOptions,
   },
   {
     id: 71,
@@ -1311,6 +1340,7 @@ export const produkte: Product[] = [
       { name: "Menü", price: 11.5 },
       { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
+    options: burgerSauceOptions,
   },
   {
     id: 72,
@@ -1324,6 +1354,7 @@ export const produkte: Product[] = [
       { name: "Menü", price: 12.5 },
       { name: "Menü mit Süßkartoffelpommes", price: 15 },
     ],
+    options: burgerSauceOptions,
   },
   {
     id: 73,

@@ -6,10 +6,10 @@
 .eyebrow { color:var(--muted); font-size:13px; font-weight:650; }
 .avatar,.largeAvatar { border:0; background:linear-gradient(145deg,#173f7b,#0a254f); color:white; display:grid; place-items:center; font-weight:750; box-shadow:0 8px 26px rgba(18,53,107,.2); }
 .avatar { width:46px; height:46px; border-radius:50%; overflow:hidden; background-size:cover; background-position:center; }.avatar>svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.8; }
-.hero { width:100%; min-height:250px; border:0; border-radius:30px; padding:27px; text-align:left; color:white; display:flex; flex-direction:column; align-items:flex-start; overflow:hidden; background:linear-gradient(145deg,rgba(11,31,64,.12),rgba(11,31,64,.8)),url('/images/hero-main.jpg') center/cover; box-shadow:0 20px 48px rgba(15,28,52,.19); }
+.hero { width:100%; min-height:0; aspect-ratio:9/16; border:0; border-radius:30px; padding:24px; text-align:left; color:white; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; overflow:hidden; background:linear-gradient(0deg,rgba(5,5,6,.74),rgba(5,5,6,0) 34%),url('/images/burger-saucen-mobile.jpg') center/cover; box-shadow:0 20px 48px rgba(15,28,52,.19); }
 .heroLabel { font-size:12px; font-weight:700; padding:7px 11px; background:rgba(255,255,255,.18); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.2); border-radius:999px; }
 .hero strong { font-size:30px; line-height:1.08; letter-spacing:-.8px; margin-top:auto; }
-.heroAction { display:flex; align-items:center; gap:3px; margin-top:14px; font-size:14px; font-weight:650; }
+.heroAction { min-width:210px; min-height:52px; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:14px; padding:0 22px; border:1px solid rgba(255,255,255,.76); border-radius:999px; color:#111; background:rgba(255,255,255,.94); box-shadow:0 14px 34px rgba(0,0,0,.28); backdrop-filter:blur(18px) saturate(140%); -webkit-backdrop-filter:blur(18px) saturate(140%); font-size:15px; font-weight:800; }
 .heroAction svg,.roseCard>svg,.settingsCard svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; }
 .sectionTitle { display:flex; align-items:end; justify-content:space-between; margin:28px 2px 14px; }
 .sectionTitle h2 { font-size:21px; letter-spacing:-.4px; }
@@ -125,3 +125,4 @@
 @keyframes launchCaptionIn{0%,25%{opacity:0;transform:translateY(7px)}40%,88%{opacity:1;transform:none}100%{opacity:0}}
 @keyframes launchExit{0%,88%{opacity:1}100%{opacity:0;transform:scale(1.015)}}
 @media (prefers-reduced-motion:reduce){.launchScreen{animation:launchExit .5s ease both}.launchBrand,.deliveryCar,.carWheel,.launchPizza,.launchSmoke i,.launchCaption{animation:none!important}.deliveryCar{left:50%}.launchPizza{opacity:1}.launchCaption{opacity:1}}
+.productSheet footer button:disabled{opacity:.48;box-shadow:none}

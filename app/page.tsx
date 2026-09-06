@@ -481,6 +481,13 @@ const status = specialClosed
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function openBurgerMenu() {
+    setActiveCuisine("Italienisch");
+    setActiveCategory("Burger");
+    setViewStep("products");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function backFromProducts() {
     if (activeCuisine === "Getränke") {
       setActiveCuisine(null);
@@ -633,7 +640,7 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
     const initialOptionPrices: Record<string, { name: string; price: number }[]> = {};
 
     produkt.options?.forEach((group) => {
-  if (group.required && group.items.length > 0) {
+  if (group.required && group.items.length > 0 && group.group !== "Soße wählen") {
     const firstItem = group.items[0];
     const firstPrice =
       typeof firstItem.price === "number"
@@ -872,7 +879,10 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
     if (!activeCuisine || !activeCategory) return [];
     return produkte.filter(
       (produkt) =>
-        produkt.cuisine === activeCuisine && produkt.category === activeCategory
+        produkt.cuisine === activeCuisine &&
+        (activeCategory === "Burger"
+          ? produkt.name.toLowerCase().includes("burger")
+          : produkt.category === activeCategory)
     );
   }, [activeCuisine, activeCategory]);
 
@@ -1364,32 +1374,13 @@ useEffect(() => {
   </section>
 )}
            <section className="container hero-image-section">
-    <div
-      className="hero-image-card"
-      style={{
-        backgroundImage: "url('/images/hero-main.jpg')",
-      }}
-    >
+    <div className="hero-image-card burger-promo-hero">
       <div className="hero-image-overlay" />
 
-      <div className="hero-image-content">
-        
-
-        <span className="hero-kicker">Online bestellen</span>
-        <h2 className="hero-image-title">La Rosa GmbH</h2>
-        <p className="hero-image-text">
-          Wähle deine Küche, stelle dein Gericht zusammen und bestelle bequem mit 10% Rabatt.
-        </p>
+      <div className="hero-image-content burger-promo-content">
         <div className="hero-actions">
-          <a className="hero-primary-link" href="#bestellen">
+          <button className="hero-primary-link burger-order-button" onClick={openBurgerMenu} type="button">
             Jetzt bestellen
-          </a>
-          <button
-            className="hero-secondary-link"
-            onClick={openCheckout}
-            type="button"
-          >
-            Warenkorb ansehen
           </button>
         </div>
       </div>
@@ -4996,6 +4987,82 @@ useEffect(() => {
           .cart-button-clean {
             width: 46px;
             min-width: 46px;
+          }
+        }
+
+        /* Responsive Ya'ummi burger campaign */
+        .hero-image-card.burger-promo-hero {
+          min-height: 0;
+          aspect-ratio: 16 / 9;
+          align-items: flex-end;
+          background-image: url('/images/burger-saucen-desktop.jpg');
+          background-position: center;
+          background-size: cover;
+        }
+
+        .hero-image-card.burger-promo-hero::before {
+          background-image: url('/images/burger-saucen-desktop.jpg');
+          background-position: center;
+          background-size: cover;
+          transform: none;
+          animation: none;
+        }
+
+        .burger-promo-hero .hero-image-overlay {
+          background: linear-gradient(0deg, rgba(4, 5, 7, 0.72) 0%, rgba(4, 5, 7, 0.12) 32%, transparent 58%);
+          backdrop-filter: none;
+        }
+
+        .hero-image-content.burger-promo-content {
+          width: 100%;
+          min-height: 0;
+          margin: 0;
+          padding: 0 0 34px;
+          background: transparent;
+          border: 0;
+          box-shadow: none;
+          backdrop-filter: none;
+          justify-content: flex-end;
+        }
+
+        .burger-promo-content .hero-actions {
+          justify-content: center;
+          margin: 0;
+        }
+
+        .hero-primary-link.burger-order-button {
+          min-width: 190px;
+          min-height: 54px;
+          border: 1px solid rgba(255, 255, 255, 0.72);
+          border-radius: 999px;
+          color: #111111;
+          background: rgba(255, 255, 255, 0.94);
+          box-shadow: 0 16px 38px rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(18px) saturate(1.3);
+          font: inherit;
+          font-weight: 850;
+          cursor: pointer;
+        }
+
+        @media (max-width: 760px) {
+          .hero-image-card.burger-promo-hero {
+            aspect-ratio: 9 / 16;
+            background-image: url('/images/burger-saucen-mobile.jpg');
+            border-radius: 28px;
+          }
+
+          .hero-image-card.burger-promo-hero::before {
+            background-image: url('/images/burger-saucen-mobile.jpg');
+          }
+
+          .hero-image-content.burger-promo-content {
+            margin: 0;
+            padding: 0 18px 92px;
+          }
+
+          .hero-primary-link.burger-order-button {
+            width: min(100%, 290px);
+            min-height: 52px;
           }
         }
       `}</style>

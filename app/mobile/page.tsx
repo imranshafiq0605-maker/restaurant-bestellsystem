@@ -317,7 +317,7 @@ export default function MobileAppPage() {
   }, [cart, cartLoaded]);
 
   const categories = useMemo(
-    () => ["Alle", "Indische Spezialitäten", ...Array.from(new Set(produkte.map((item) => item.category)))],
+    () => ["Alle", "Burger", "Indische Spezialitäten", ...Array.from(new Set(produkte.map((item) => item.category)))],
     []
   );
 
@@ -325,7 +325,11 @@ export default function MobileAppPage() {
     const needle = search.trim().toLowerCase();
     return produkte.filter((item) => {
       const inCategory = category === "Alle"
-        || (category === "Indische Spezialitäten" ? item.cuisine === "Indisch" : item.category === category);
+        || (category === "Burger"
+          ? item.name.toLowerCase().includes("burger")
+          : category === "Indische Spezialitäten"
+            ? item.cuisine === "Indisch"
+            : item.category === category);
       const matches = !needle || `${item.name} ${item.description}`.toLowerCase().includes(needle);
       return inCategory && matches;
     });
@@ -378,7 +382,9 @@ export default function MobileAppPage() {
     const variant = product.variants?.[0]?.name ?? "";
     const defaults: Record<string, string[]> = {};
     product.options?.forEach((group) => {
-      defaults[group.group] = group.required && group.items[0] ? [group.items[0].name] : [];
+      defaults[group.group] = group.required && group.items[0] && group.group !== "Soße wählen"
+        ? [group.items[0].name]
+        : [];
     });
     setSelectedVariant(variant);
     setSelectedOptions(defaults);
@@ -404,8 +410,12 @@ export default function MobileAppPage() {
       }, 0), 0);
   }, [selectedProduct, selectedVariant, selectedOptions]);
 
+  const hasMissingRequiredOption = selectedProduct?.options?.some(
+    (group) => group.required && !(selectedOptions[group.group]?.length)
+  ) ?? false;
+
   function confirmProduct() {
-    if (!selectedProduct) return;
+    if (!selectedProduct || hasMissingRequiredOption) return;
     const options = Object.entries(selectedOptions).flatMap(([group, items]) => items.map((item) => `${group}: ${item}`));
     addProduct(selectedProduct, selectedVariant || undefined, options, configuredPrice);
     setSelectedProduct(null);
@@ -602,10 +612,8 @@ export default function MobileAppPage() {
               <div><span className={styles.eyebrow}>Guten Appetit</span><h1>La Rosa</h1></div>
               <button className={styles.avatar} style={user?.photoURL ? { backgroundImage: `url(${user.photoURL})` } : undefined} onClick={() => setTab("account")} aria-label="Profil öffnen">{!user?.photoURL && <Icon name="account" />}</button>
             </header>
-            <button className={styles.hero} onClick={() => setTab("menu")}>
-              <span className={styles.heroLabel}>Heute empfohlen</span>
-              <strong>Dein Lieblingsessen.<br/>Frisch zubereitet.</strong>
-              <span className={styles.heroAction}>Speisekarte entdecken <Icon name="chevron" /></span>
+            <button className={styles.hero} onClick={() => { setSearch(""); setCategory("Burger"); setTab("menu"); }}>
+              <span className={styles.heroAction}>Jetzt bestellen <Icon name="chevron" /></span>
             </button>
             <div className={styles.sectionTitle}><h2>Schnell wählen</h2><button onClick={() => setTab("menu")}>Alle ansehen</button></div>
             <div className={styles.quickGrid}>
@@ -787,7 +795,7 @@ export default function MobileAppPage() {
               return <button key={item.name} className={checked ? styles.choiceActive : ""} onClick={() => toggleOption(group.group, item.name, group.multiple)}><i /> <span>{item.name}</span><strong>{price ? `+ ${euro(price)}` : "inklusive"}</strong></button>;
             })}</div>)}
           </div>
-          <footer><button onClick={confirmProduct}><span>In den Warenkorb</span><strong>{euro(configuredPrice)}</strong></button></footer>
+          <footer><button disabled={hasMissingRequiredOption} onClick={confirmProduct}><span>{hasMissingRequiredOption ? "Bitte Soße wählen" : "In den Warenkorb"}</span><strong>{euro(configuredPrice)}</strong></button></footer>
         </section>
       </div>}
 
