@@ -16,10 +16,11 @@ import {
   type User,
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { auth } from "../lib/firebase";
-import { produkte, type Product } from "../data/menu";
+import { produkte, type Product, type ProductOptionItem } from "../data/menu";
 import styles from "./mobile.module.css";
 
 type PrimaryTab = "home" | "menu" | "cart" | "account";
@@ -36,6 +37,9 @@ type AccountOrder = {
   total: number;
   earnedRoses: number;
   createdAt: string | null;
+  updatedAt: string | null;
+  confirmedAt: string | null;
+  acceptedAt: string | null;
   confirmedMinutes: number | null;
   preorder: string;
   time: string;
@@ -128,13 +132,30 @@ function orderDate(value: string | null) {
   return new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
 
-function orderStatus(status: string, paid: boolean) {
+function orderRemainingSeconds(order: AccountOrder, now: number) {
+  if (!order.confirmedMinutes) return null;
+  const startedAt = order.confirmedAt || order.acceptedAt || order.updatedAt || order.createdAt;
+  const startedAtMs = startedAt ? new Date(startedAt).getTime() : Number.NaN;
+  if (!Number.isFinite(startedAtMs)) return null;
+  return Math.max(0, Math.floor((startedAtMs + order.confirmedMinutes * 60_000 - now) / 1000));
+}
+
+function formatRemainingTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+}
+
+function orderStatus(order: AccountOrder, now: number) {
+  const { status, paid, orderType } = order;
   const normalized = status.toLowerCase();
   if (!paid) return { label: "Zahlung wird geprüft", stage: 0, tone: "waiting" };
-  if (["abgeschlossen", "fertig", "ausgeliefert", "abgeholt"].some((value) => normalized.includes(value))) return { label: "Abgeschlossen", stage: 3, tone: "done" };
+  if (normalized.includes("storniert")) return { label: "Storniert", stage: 0, tone: "cancelled" };
+  if (["geliefert", "ausgeliefert"].some((value) => normalized.includes(value))) return { label: "Geliefert", stage: 3, tone: "done" };
+  if (["abgeschlossen", "fertig", "abgeholt"].some((value) => normalized.includes(value))) return { label: orderType === "lieferung" ? "Geliefert" : "Abholbereit", stage: orderType === "lieferung" ? 3 : 2, tone: "done" };
+  if (orderRemainingSeconds(order, now) === 0) return { label: orderType === "lieferung" ? "Geliefert" : "Abholbereit", stage: orderType === "lieferung" ? 3 : 2, tone: "done" };
   if (["unterwegs", "lieferung", "abholbereit", "bereit"].some((value) => normalized.includes(value))) return { label: normalized.includes("unterwegs") ? "Unterwegs" : "Abholbereit", stage: 2, tone: "active" };
   if (["angenommen", "bestätigt", "zubereitung"].some((value) => normalized.includes(value))) return { label: "Wird zubereitet", stage: 1, tone: "active" };
-  if (normalized.includes("storniert")) return { label: "Storniert", stage: 0, tone: "cancelled" };
   return { label: "Bestellung eingegangen", stage: 0, tone: "waiting" };
 }
 
@@ -191,6 +212,7 @@ export default function MobileAppPage() {
   const [busy, setBusy] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeOptionInfo, setActiveOptionInfo] = useState<ProductOptionItem | null>(null);
   const [selectedVariant, setSelectedVariant] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
   const [addedName, setAddedName] = useState("");
@@ -201,6 +223,7 @@ export default function MobileAppPage() {
   const [ordersBusy, setOrdersBusy] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState("");
   const [returningFromPayment, setReturningFromPayment] = useState(false);
+  const [clockNow, setClockNow] = useState(() => Date.now());
 
   const loadProfile = useCallback(async (currentUser: User) => {
     const token = await currentUser.getIdToken();
@@ -245,6 +268,31 @@ export default function MobileAppPage() {
   }, [selectedOrderId]);
 
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener: PluginListenerHandle | undefined;
+    const openAppUrl = (incomingUrl: string) => {
+      try {
+        const url = new URL(incomingUrl);
+        if (url.pathname !== "/mobile") return;
+        window.location.href = `${url.pathname}${url.search}`;
+      } catch {
+        // Ungültige Fremdlinks werden ignoriert.
+      }
+    };
+    void CapacitorApp.addListener("appUrlOpen", ({ url }) => openAppUrl(url)).then((handle) => { listener = handle; });
+    void CapacitorApp.getLaunchUrl().then((result) => { if (result?.url) openAppUrl(result.url); });
+    return () => { void listener?.remove(); };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const returnedFromPayment = params.get("paid") === "true";
+    const launchAlreadySeen = sessionStorage.getItem("larosa_launch_seen") === "1";
+    if (returnedFromPayment || launchAlreadySeen) {
+      setShowLaunch(false);
+      return;
+    }
+    sessionStorage.setItem("larosa_launch_seen", "1");
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(() => setShowLaunch(false), reducedMotion ? 500 : 2350);
     return () => window.clearTimeout(timer);
@@ -257,12 +305,22 @@ export default function MobileAppPage() {
       setTab(requested);
     }
     setCategory(params.get("category") || "Alle");
+    const requestedOrderId = params.get("orderId") || "";
+    if (requestedOrderId) {
+      setTab("account");
+      setAccountView("orders");
+      setSelectedOrderId(requestedOrderId);
+    }
     if (params.get("paid") === "true") {
       setTab("account");
       setAccountView("orders");
       setReturningFromPayment(true);
-      setSelectedOrderId(params.get("orderId") || "");
+      setSelectedOrderId(requestedOrderId);
       setMessage("Zahlung erfolgreich. Deine Bestellung wird gerade bestätigt.");
+      setCart([]);
+      localStorage.removeItem(CART_KEY);
+      sessionStorage.removeItem(CART_KEY);
+      window.history.replaceState({}, "", `/mobile?tab=account${requestedOrderId ? `&orderId=${encodeURIComponent(requestedOrderId)}` : ""}`);
     }
   }, []);
 
@@ -343,6 +401,13 @@ export default function MobileAppPage() {
   const activePrimaryTab: PrimaryTab = tab === "roses" ? "home" : tab;
   const activeNavIndex = primaryTabs.indexOf(activePrimaryTab);
 
+  useEffect(() => {
+    if (!selectedOrder?.confirmedMinutes) return;
+    setClockNow(Date.now());
+    const interval = window.setInterval(() => setClockNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [selectedOrder?.id, selectedOrder?.confirmedMinutes]);
+
   function showAdded(name: string) {
     setAddedName(name);
     setCartPulse(true);
@@ -382,7 +447,8 @@ export default function MobileAppPage() {
     const variant = product.variants?.[0]?.name ?? "";
     const defaults: Record<string, string[]> = {};
     product.options?.forEach((group) => {
-      defaults[group.group] = group.required && group.items[0] && group.group !== "Soße wählen"
+      const requiresExplicitChoice = ["Soße wählen", "Ya’ummi Sorte wählen", "Klassische Soße wählen"].includes(group.group);
+      defaults[group.group] = group.required && group.items[0] && !requiresExplicitChoice
         ? [group.items[0].name]
         : [];
     });
@@ -736,7 +802,7 @@ export default function MobileAppPage() {
                   <header><div><small>DEIN BESTELLVERLAUF</small><h2>Bestellungen</h2></div><button type="button" aria-label="Bestellungen aktualisieren" disabled={ordersBusy} onClick={() => loadOrders(user)}>↻</button></header>
                   {returningFromPayment && !selectedOrder && <div className={styles.orderProcessing}><i /><div><strong>Zahlung erfolgreich</strong><small>Deine Bestellung wird gerade bestätigt und erscheint gleich hier.</small></div></div>}
                   {ordersBusy && orders.length === 0 ? <p className={styles.ordersEmpty}>Bestellungen werden geladen …</p> : orders.length === 0 && !returningFromPayment ? <p className={styles.ordersEmpty}>Noch keine Bestellungen in diesem Account.</p> : <div className={styles.orderList}>{orders.map((order) => {
-                    const status = orderStatus(order.status, order.paid);
+                    const status = orderStatus(order, clockNow);
                     return <button type="button" key={order.id} onClick={() => setSelectedOrderId(order.id)}><span className={`${styles.orderStatusDot} ${styles[status.tone]}`} /><div><strong>Bestellung #{order.orderNumber || "—"}</strong><small>{orderDate(order.createdAt)} · {order.orderType === "lieferung" ? "Lieferung" : "Abholung"}</small><b>{status.label}</b></div><span>{euro(order.total)} ›</span></button>;
                   })}</div>}
                 </section>
@@ -792,10 +858,23 @@ export default function MobileAppPage() {
             {selectedProduct.options?.map((group) => <div className={styles.optionGroup} key={group.group}><h3>{group.group} <span>{group.required ? "Erforderlich" : group.multiple ? "Mehrfachauswahl" : "Optional"}</span></h3>{group.items.map((item) => {
               const checked = (selectedOptions[group.group] ?? []).includes(item.name);
               const price = item.price ?? item.priceByVariant?.[selectedVariant] ?? 0;
-              return <button key={item.name} className={checked ? styles.choiceActive : ""} onClick={() => toggleOption(group.group, item.name, group.multiple)}><i /> <span>{item.name}</span><strong>{price ? `+ ${euro(price)}` : "inklusive"}</strong></button>;
+              return <div className={`${styles.optionChoiceRow} ${item.info ? styles.optionChoiceRowWithInfo : ""}`} key={item.name}><button className={checked ? styles.choiceActive : ""} onClick={() => toggleOption(group.group, item.name, group.multiple)}><i /> <span>{item.name}</span><strong>{price ? `+ ${euro(price)}` : "inklusive"}</strong></button>{item.info && <button type="button" className={styles.sauceInfoButton} aria-label={`Informationen zu ${item.name}`} onClick={() => setActiveOptionInfo(item)}>i</button>}</div>;
             })}</div>)}
           </div>
           <footer><button disabled={hasMissingRequiredOption} onClick={confirmProduct}><span>{hasMissingRequiredOption ? "Bitte Soße wählen" : "In den Warenkorb"}</span><strong>{euro(configuredPrice)}</strong></button></footer>
+        </section>
+      </div>}
+
+      {activeOptionInfo?.info && <div className={`${styles.sheetBackdrop} ${styles.infoBackdrop}`} onClick={() => setActiveOptionInfo(null)}>
+        <section className={styles.sauceInfoSheet} role="dialog" aria-modal="true" aria-labelledby="mobile-sauce-info-title" onClick={(event) => event.stopPropagation()}>
+          <div className={styles.sheetHandle} />
+          <button className={styles.sauceInfoClose} type="button" aria-label="Information schließen" onClick={() => setActiveOptionInfo(null)}>×</button>
+          <small>SOßEN-INFO</small>
+          <h2 id="mobile-sauce-info-title">{activeOptionInfo.name.replace(" · 1 Portion", "")}</h2>
+          <div><strong>So schmeckt sie</strong><p>{activeOptionInfo.info.taste}</p></div>
+          <div><strong>Zutaten</strong><p>{activeOptionInfo.info.ingredients}</p></div>
+          <div><strong>Allergene</strong><p>{activeOptionInfo.info.allergens}</p></div>
+          <p className={styles.sauceInfoNote}>Produktangaben laut recherchierter Kennzeichnung. Rezepturen können sich ändern; maßgeblich ist immer die aktuelle Angabe auf der Flasche.</p>
         </section>
       </div>}
 
@@ -806,12 +885,16 @@ export default function MobileAppPage() {
       </section></div>}
 
       {selectedOrder && (() => {
-        const status = orderStatus(selectedOrder.status, selectedOrder.paid);
+        const status = orderStatus(selectedOrder, clockNow);
+        const remainingSeconds = orderRemainingSeconds(selectedOrder, clockNow);
+        const totalSeconds = (selectedOrder.confirmedMinutes || 0) * 60;
+        const timerProgress = totalSeconds > 0 && remainingSeconds !== null ? Math.min(100, Math.max(0, ((totalSeconds - remainingSeconds) / totalSeconds) * 100)) : 0;
         const steps = ["Eingegangen", "Zubereitung", selectedOrder.orderType === "lieferung" ? "Unterwegs" : "Abholbereit", "Abgeschlossen"];
         return <div className={styles.sheetBackdrop} onClick={() => setSelectedOrderId("")}><section className={`${styles.productSheet} ${styles.orderSheet}`} onClick={(event) => event.stopPropagation()}>
           <div className={styles.sheetHandle} /><header><div><small>BESTELLUNG #{selectedOrder.orderNumber || "—"}</small><h2>{status.label}</h2><p>{orderDate(selectedOrder.createdAt)} · {selectedOrder.orderType === "lieferung" ? "Lieferung" : "Abholung"}</p></div><button onClick={() => setSelectedOrderId("")}>×</button></header>
           <div className={styles.orderSheetScroll}>
             <section className={styles.orderLiveCard}><span className={`${styles.orderStatusDot} ${styles[status.tone]}`} /><div><small>AKTUELLER STATUS</small><strong>{status.label}</strong>{selectedOrder.confirmedMinutes && <p>Bestätigte Zeit: ungefähr {selectedOrder.confirmedMinutes} Minuten</p>}</div><b>{euro(selectedOrder.total)}</b></section>
+            {remainingSeconds !== null && <section className={`${styles.orderTimerCard} ${remainingSeconds === 0 ? styles.orderTimerDone : ""}`}><small>{remainingSeconds > 0 ? "NOCH UNGEFÄHR" : "BESTELLUNG BEREIT"}</small><strong>{remainingSeconds > 0 ? formatRemainingTime(remainingSeconds) : status.label}</strong><p>{remainingSeconds > 0 ? (selectedOrder.orderType === "lieferung" ? "Danach wird deine Bestellung als geliefert angezeigt." : "Danach ist deine Bestellung abholbereit.") : (selectedOrder.orderType === "lieferung" ? "Deine Bestellung wurde geliefert." : "Du kannst deine Bestellung jetzt abholen.")}</p><span><i style={{ width: `${timerProgress}%` }} /></span></section>}
             <div className={styles.orderTimeline}>{steps.map((step, index) => <div key={step} className={index <= status.stage ? styles.timelineActive : ""}><i>{index < status.stage ? "✓" : index + 1}</i><span>{step}</span></div>)}</div>
             <section className={styles.orderItems}><h3>Deine Bestellung</h3>{selectedOrder.items.map((item, index) => <article key={`${item.name}-${index}`}><span>{item.quantity}×</span><div><strong>{item.name}</strong>{item.variantName && <small>{item.variantName}</small>}{item.selectedOptions.map((option) => <small key={option}>{option}</small>)}</div><b>{euro(item.price * item.quantity)}</b></article>)}</section>
             {selectedOrder.earnedRoses > 0 && <div className={styles.orderRoseEarned}>🌹 <strong>+{selectedOrder.earnedRoses} Rosen</strong><span>für diese Bestellung</span></div>}

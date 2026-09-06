@@ -22,6 +22,25 @@ function timestampToIso(value: unknown) {
   return typeof value === "string" ? value : null;
 }
 
+function timestampToMillis(value: unknown) {
+  if (value && typeof value === "object" && "toMillis" in value && typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+  const parsed = typeof value === "string" || typeof value === "number" ? new Date(value).getTime() : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function automaticFinalStatus(order: OrderRecord) {
+  if (!order.bezahlt) return null;
+  const minutes = Number(order.annahmeZeitMinuten ?? order.confirmedMinutes ?? order.lieferzeitMinuten ?? order.estimatedMinutes);
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  const start = timestampToMillis(order.confirmedAt ?? order.acceptedAt ?? order.updatedAt ?? order.createdAt);
+  if (start === null || Date.now() < start + minutes * 60_000) return null;
+  const current = String(order.status || "").toLowerCase();
+  if (["storniert", "geliefert", "ausgeliefert", "abgeholt", "abgeschlossen"].some((status) => current.includes(status))) return null;
+  return String(order.bestellart || "abholung").toLowerCase() === "lieferung" ? "geliefert" : "abholbereit";
+}
+
 function serializeOrder(id: string, data: OrderRecord) {
   return {
     id,
@@ -37,6 +56,7 @@ function serializeOrder(id: string, data: OrderRecord) {
     createdAt: timestampToIso(data.createdAt),
     updatedAt: timestampToIso(data.updatedAt),
     confirmedAt: timestampToIso(data.confirmedAt),
+    acceptedAt: timestampToIso(data.acceptedAt),
     confirmedMinutes: Number(data.annahmeZeitMinuten ?? data.confirmedMinutes ?? data.lieferzeitMinuten ?? data.estimatedMinutes) || null,
     preorder: data.vorbestellung ?? "sofort",
     time: data.uhrzeit ?? "sofort",
@@ -184,6 +204,14 @@ export async function GET(req: NextRequest) {
       if (!order.firebaseUid && account.emailVerified) {
         await document.ref.set({ firebaseUid: account.localId }, { merge: true });
         order.firebaseUid = account.localId;
+      }
+      const finalStatus = automaticFinalStatus(order);
+      if (finalStatus) {
+        await document.ref.set({
+          status: finalStatus,
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        order.status = finalStatus;
       }
       await reconcileRoses(account.localId, account.email, document.id, order);
       if (order.bezahlt && typeof order.rosenVerdient === "number") {

@@ -608,6 +608,7 @@ export default function WarenkorbPage() {
         versandKostenlos: true,
         gesamtpreis,
         paymentMethod,
+        source: isMobileCheckout ? "mobile" : "web",
         status: "pending_payment",
         createdAt: serverTimestamp(),
       };

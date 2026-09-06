@@ -9,6 +9,11 @@ export type ProductOptionItem = {
   name: string;
   price?: number;
   priceByVariant?: Record<string, number>;
+  info?: {
+    taste: string;
+    ingredients: string;
+    allergens: string;
+  };
 };
 
 export type ProductOption = {
@@ -39,26 +44,77 @@ const indischFleischartOption: ProductOption = {
     { name: "Garnelen", price: 1.0 },
   ],
 };
-const burgerSauceNames = [
-  "La Rosa Standard-Soße",
-  "Ya’ummi Classic Samurai",
-  "Ya’ummi Creamy Jalapeño",
-  "Ya’ummi Yellow Onion",
-  "Ya’ummi White Pita",
-  "Ya’ummi Red Andalouse",
-  "Ya’ummi Sweet Hannibal",
+const yaummiSauces: ProductOptionItem[] = [
+  {
+    name: "Ya’ummi Classic Samurai",
+    info: {
+      taste: "Feurig, cremig und intensiv – mit deutlicher Chili-Paprika-Schärfe.",
+      ingredients: "Rapsöl (61,6 %), Wasser, Traubenessig, Eigelb, Salz, Senf (Wasser, Senfsaaten, Traubenessig, Salz, Gewürze), Gewürzextrakt, Chilipaprika (1,7 %), Paprikaaroma, Paprikaextrakt, modifizierte Maisstärke, Citronensäure und Calcium-Dinatrium-EDTA.",
+      allergens: "Enthält Ei und Senf.",
+    },
+  },
+  {
+    name: "Ya’ummi Creamy Jalapeño",
+    info: {
+      taste: "Cremig und pikant mit grüner Jalapeño; spürbar scharf, aber ausgewogen.",
+      ingredients: "Rapsöl (73,6 %), Wasser, grüne Chilischoten (4 %; Jalapeño-Paprika, Wasser, Salz, Calciumchlorid, Kaliummetabisulfit), Senf, Traubenessig, Eigelb, Salz, Paprika- und Kurkumaextrakt, Mungobohneneiweiß, Zucker, Paprikagranulat, Citronensäure, Paprikaextrakt, Beta-Carotin, Xanthan und Calcium-Dinatrium-EDTA.",
+      allergens: "Enthält Ei, Senf und Sulfite.",
+    },
+  },
+  {
+    name: "Ya’ummi Yellow Onion",
+    info: {
+      taste: "Mild, weich und zwiebelig mit einer warmen Curry-Note.",
+      ingredients: "Rapsöl (48,5 %), Zucker, Wasser, Traubenessig, Zwiebelgranulat (5,1 %), Senf, Curry (1,1 %; enthält Sellerie), Zitronensaft, Aroma, Paprikaextrakt, Beta-Carotin, Steviolglycoside (0,01 %), Mungobohneneiweiß, Salz, Tomatenkonzentrat, Eigelb, Citronensäure und Calcium-Dinatrium-EDTA.",
+      allergens: "Enthält Ei, Senf und Sellerie.",
+    },
+  },
+  {
+    name: "Ya’ummi White Pita",
+    info: {
+      taste: "Cremig, frisch und mediterran mit Knoblauch, Petersilie und Joghurtaroma.",
+      ingredients: "Rapsöl (60 %), Wasser, Traubenessig, Eigelb, Extrakte (Petersilie, Knoblauch 1 %, Pfeffer), Joghurtaroma, Salz, modifizierte Stärke, Zucker, Xanthan und Calcium-Dinatrium-EDTA.",
+      allergens: "Enthält Ei.",
+    },
+  },
+  {
+    name: "Ya’ummi Red Andalouse",
+    info: {
+      taste: "Süßlich-würzig, warm und leicht pikant mit Tomate und Paprika.",
+      ingredients: "Rapsöl (41,3 %), Wasser, Essig, Senf, Tomatenkonzentrat, Zwiebel- und Paprikapulver, Zucker, Zwiebelgranulat, modifizierte Stärke, Salz, Kapern, Mungobohnenprotein, Gewürzextrakt (Sellerie), Eigelb, Citronensäure, Beta-Carotin, Kerbel, Xanthan und Calcium-Dinatrium-EDTA.",
+      allergens: "Enthält Ei, Senf und Sellerie.",
+    },
+  },
+  {
+    name: "Ya’ummi Sweet Hannibal",
+    info: {
+      taste: "Süß, rund und harmonisch mit Tomate und einer Röstzwiebel-Note.",
+      ingredients: "Rapsöl (50 %), Wasser, Essig, Zucker (6,6 %), Tomatenkonzentrat, Eigelb, Senf, Zwiebelpulver, Extrakte, modifizierte Stärke, Salz, Citronensäure, Beta-Carotin, Paprikaextrakt, Steviolglycoside, Aroma (gebratene Zwiebel), Xanthan und Calcium-Dinatrium-EDTA.",
+      allergens: "Enthält Ei und Senf.",
+    },
+  },
 ];
+const laRosaSauce: ProductOptionItem = {
+  name: "La Rosa Standard-Soße",
+  info: {
+    taste: "Unsere cremige, milde und ausgewogene Haussoße.",
+    ingredients: "Hausrezept. Bitte frag unser Team vor der Bestellung nach der aktuellen Zutatenliste.",
+    allergens: "Die aktuelle Allergeninformation erhältst du direkt bei unserem Team.",
+  },
+};
+const burgerSauces = [laRosaSauce, ...yaummiSauces];
 const burgerSauceOptions: ProductOption[] = [
   {
     group: "Soße wählen",
     required: true,
-    items: burgerSauceNames.map((name) => ({ name, price: 0 })),
+    items: burgerSauces.map((item) => ({ ...item, price: 0 })),
   },
   {
     group: "Soßen als Extra",
     multiple: true,
-    items: burgerSauceNames.map((name) => ({
-      name: `${name} · 1 Portion`,
+    items: burgerSauces.map((item) => ({
+      ...item,
+      name: `${item.name} · 1 Portion`,
       price: 1,
     })),
   },
@@ -461,6 +517,7 @@ export const kategorienMap: Record<Cuisine, string[]> = {
     "Schnitzel",
     "Fisch Spezialitäten",
     "Fast Food Menus",
+    "Extras",
     "Desserts",
   ],
   Indisch: [
@@ -1393,6 +1450,46 @@ export const produkte: Product[] = [
       { name: "Menü mit Süßkartoffelpommes", price: 14 },
     ],
   },
+
+  // Italienisch — Extras
+  {
+    id: 401,
+    name: "Ya’ummi Soße",
+    description: "1 Portion – wähle deine Lieblingssorte",
+    price: 1,
+    category: "Extras",
+    cuisine: "Italienisch",
+    options: [{
+      group: "Ya’ummi Sorte wählen",
+      required: true,
+      items: yaummiSauces.map((item) => ({ ...item, price: 0 })),
+    }],
+  },
+  {
+    id: 402,
+    name: "La Rosa Standard-Soße",
+    description: "1 Portion unserer Haussoße",
+    price: 1,
+    category: "Extras",
+    cuisine: "Italienisch",
+  },
+  {
+    id: 403,
+    name: "Ketchup oder Mayonnaise",
+    description: "1 Portion",
+    price: 0.5,
+    category: "Extras",
+    cuisine: "Italienisch",
+    options: [{
+      group: "Klassische Soße wählen",
+      required: true,
+      items: [{ name: "Ketchup", price: 0 }, { name: "Mayonnaise", price: 0 }],
+    }],
+  },
+  { id: 404, name: "Pommes klein", description: "Kleine Portion Pommes frites", price: 3, category: "Extras", cuisine: "Italienisch" },
+  { id: 405, name: "Pommes groß", description: "Große Portion Pommes frites", price: 4.5, category: "Extras", cuisine: "Italienisch" },
+  { id: 406, name: "Kroketten", description: "Portion Kroketten", price: 3, category: "Extras", cuisine: "Italienisch" },
+  { id: 407, name: "Süßkartoffelpommes", description: "Portion Süßkartoffelpommes", price: 5.5, category: "Extras", cuisine: "Italienisch" },
 
   // Italienisch — Desserts
   {

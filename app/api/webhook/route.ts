@@ -246,7 +246,9 @@ export async function POST(req: NextRequest) {
       req.headers.get("origin") ||
       "https://restaurant-bestellsystem.vercel.app";
 
-    const statusUrl = `${siteUrl}/order-status?id=${pendingOrderId}`;
+    const statusUrl = pendingOrderData?.source === "mobile"
+      ? `${siteUrl}/mobile?tab=account&orderId=${pendingOrderId}`
+      : `${siteUrl}/order-status?id=${pendingOrderId}`;
 
     if (kundenEmail) {
       try {
@@ -255,6 +257,9 @@ export async function POST(req: NextRequest) {
           name: kunde.name || "",
           orderNumber: neueBestellnummer,
           statusUrl,
+          items: Array.isArray(pendingOrderData?.artikel) ? pendingOrderData.artikel : [],
+          total: Number(pendingOrderData?.zahlbetrag ?? pendingOrderData?.gesamtpreis) || 0,
+          orderType: pendingOrderData?.bestellart || "abholung",
         });
         console.log("✅ Bestellmail gesendet an:", kundenEmail);
       } catch (mailError: unknown) {

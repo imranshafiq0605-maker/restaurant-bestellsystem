@@ -266,11 +266,11 @@ function OrderStatusContent() {
 
     if (bestellart === "lieferung") {
       return {
-        badge: "Fast da",
-        title: "Fast da",
-        subtitle: "Deine Bestellung sollte jeden Moment ankommen.",
-        tone: "#1d4ed8",
-        soft: "#eff6ff",
+        badge: "Geliefert",
+        title: "Geliefert",
+        subtitle: "Die bestätigte Lieferzeit ist abgelaufen. Deine Bestellung wurde als geliefert markiert.",
+        tone: "#166534",
+        soft: "#f0fdf4",
       };
     }
 

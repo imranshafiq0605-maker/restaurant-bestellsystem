@@ -13,6 +13,7 @@ import {
   produkte,
   type Cuisine,
   type Product,
+  type ProductOptionItem,
 } from "./data/menu";
 import { db } from "./lib/firebase";
 
@@ -428,6 +429,7 @@ const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
   const [addedProductName, setAddedProductName] = useState("");
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeOptionInfo, setActiveOptionInfo] = useState<ProductOptionItem | null>(null);
   const [selectedVariantName, setSelectedVariantName] = useState("");
   const [selectedVariantPrice, setSelectedVariantPrice] = useState(0);
   const [selectedOptionsMap, setSelectedOptionsMap] = useState<
@@ -530,6 +532,7 @@ const status = specialClosed
 
   function resetModal() {
     setSelectedProduct(null);
+    setActiveOptionInfo(null);
     setSelectedVariantName("");
     setSelectedVariantPrice(0);
     setSelectedOptionsMap({});
@@ -640,7 +643,8 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
     const initialOptionPrices: Record<string, { name: string; price: number }[]> = {};
 
     produkt.options?.forEach((group) => {
-  if (group.required && group.items.length > 0 && group.group !== "Soße wählen") {
+  const requiresExplicitChoice = ["Soße wählen", "Ya’ummi Sorte wählen", "Klassische Soße wählen"].includes(group.group);
+  if (group.required && group.items.length > 0 && !requiresExplicitChoice) {
     const firstItem = group.items[0];
     const firstPrice =
       typeof firstItem.price === "number"
@@ -1741,28 +1745,30 @@ useEffect(() => {
             : item.priceByVariant?.[selectedVariantName] ?? 0;
 
         return (
-          <button
-            key={item.name}
-            type="button"
-            className={`modal-choice ${checked ? "active" : ""}`}
-            onClick={() =>
-              handleOptionChange(
-                optionGroup.group,
-                item.name,
-                calculatedPrice,
-                optionGroup.multiple
-              )
-            }
-          >
-            <span>{item.name}</span>
-            <strong>
+          <div className={`modal-choice-row ${item.info ? "with-info" : ""}`} key={item.name}>
+            <button
+              type="button"
+              className={`modal-choice ${checked ? "active" : ""}`}
+              onClick={() =>
+                handleOptionChange(
+                  optionGroup.group,
+                  item.name,
+                  calculatedPrice,
+                  optionGroup.multiple
+                )
+              }
+            >
+              <span>{item.name}</span>
+              <strong>
   {selectedProduct.id === 39 && optionGroup.group === "Extras Partypizza"
     ? "1 frei / danach +4,00 €"
     : calculatedPrice > 0
     ? `+${calculatedPrice.toFixed(2)} €`
     : "inkl."}
 </strong>
-          </button>
+            </button>
+            {item.info && <button className="option-info-button" type="button" aria-label={`Informationen zu ${item.name}`} onClick={() => setActiveOptionInfo(item)}>i</button>}
+          </div>
         );
       })}
     </div>
@@ -1786,6 +1792,20 @@ useEffect(() => {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeOptionInfo?.info && (
+          <div className="option-info-backdrop" onClick={() => setActiveOptionInfo(null)}>
+            <section className="option-info-card" role="dialog" aria-modal="true" aria-labelledby="sauce-info-title" onClick={(event) => event.stopPropagation()}>
+              <button className="option-info-close" type="button" aria-label="Information schließen" onClick={() => setActiveOptionInfo(null)}>×</button>
+              <span>SOßEN-INFO</span>
+              <h3 id="sauce-info-title">{activeOptionInfo.name.replace(" · 1 Portion", "")}</h3>
+              <div><strong>So schmeckt sie</strong><p>{activeOptionInfo.info.taste}</p></div>
+              <div><strong>Zutaten</strong><p>{activeOptionInfo.info.ingredients}</p></div>
+              <div><strong>Allergene</strong><p>{activeOptionInfo.info.allergens}</p></div>
+              <small>Produktangaben laut recherchierter Kennzeichnung. Rezepturen können sich ändern; maßgeblich ist immer die aktuelle Angabe auf der Flasche.</small>
+            </section>
           </div>
         )}
         {activeOffer && (

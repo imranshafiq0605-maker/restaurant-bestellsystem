@@ -1,0 +1,24 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["885SQL23MQ.com.larosa.bestellsystem"],
+        "components": [
+          {
+            "/": "/mobile",
+            "?": { "paid": "true" },
+            "comment": "Stripe payment success opens the installed La Rosa app"
+          },
+          {
+            "/": "/mobile",
+            "?": { "orderId": "*" },
+            "comment": "Order links in confirmation emails open the installed La Rosa app"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["885SQL23MQ.com.larosa.bestellsystem"]
+  }
+}
