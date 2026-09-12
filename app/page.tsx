@@ -16,6 +16,11 @@ import {
   type ProductOptionItem,
 } from "./data/menu";
 import { db } from "./lib/firebase";
+import {
+  WEBSITE_NOTICE_ENABLED,
+  WEBSITE_NOTICE_TEXT,
+  WEBSITE_ORDERING_ENABLED,
+} from "./config/website-ordering";
 
 type Bestellart = "abholung" | "lieferung";
 type ViewStep = "kitchens" | "categories" | "products" | "checkout";
@@ -394,9 +399,6 @@ function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
 }
 
 export default function HomePage() {
-  const MANUAL_NOTICE_ACTIVE = false;
-const MANUAL_NOTICE_TEXT = "( Heute öffnen wir erst ab 17 Uhr )";
-const MANUAL_CHECKOUT_BLOCKED = false;
   const [cart, setCart] = useState<CartItem[]>([]);
 const [cartLoaded, setCartLoaded] = useState(false);
   const [bestellart, setBestellart] = useState<Bestellart>("abholung");
@@ -512,6 +514,7 @@ const status = specialClosed
   }
 
   function openCheckout() {
+    if (!WEBSITE_ORDERING_ENABLED) return;
     const serializedCart = JSON.stringify(cart);
     localStorage.setItem("larosa_cart", serializedCart);
     sessionStorage.setItem("larosa_cart", serializedCart);
@@ -1045,8 +1048,8 @@ useEffect(() => {
 }
     setFehlermeldung("");
     setErfolgsmeldung("");
-    if (MANUAL_CHECKOUT_BLOCKED) {
-  setFehlermeldung(MANUAL_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
+    if (!WEBSITE_ORDERING_ENABLED) {
+  setFehlermeldung(WEBSITE_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
   return;
 }
 
@@ -1336,7 +1339,9 @@ useEffect(() => {
   className={`cart-button compact cart-button-clean ${cartPulse ? "pulse" : ""}`}
   onClick={openCheckout}
   type="button"
-  aria-label="Warenkorb öffnen"
+  disabled={!WEBSITE_ORDERING_ENABLED}
+  aria-label={WEBSITE_ORDERING_ENABLED ? "Warenkorb öffnen" : "Warenkorb aktuell geschlossen"}
+  title={!WEBSITE_ORDERING_ENABLED ? WEBSITE_NOTICE_TEXT : undefined}
 >
   <span className="cart-icon" aria-hidden="true">Bag</span>
 
@@ -1349,9 +1354,9 @@ useEffect(() => {
             </div>
           </div>
         </header>
-        {MANUAL_NOTICE_ACTIVE && (
-  <div className="manual-notice-bar">
-    {MANUAL_NOTICE_TEXT}
+        {WEBSITE_NOTICE_ENABLED && (
+  <div className="manual-notice-bar" role="status">
+    {WEBSITE_NOTICE_TEXT}
   </div>
 )}
 
@@ -1864,7 +1869,7 @@ useEffect(() => {
 )}
 
         {gesamtAnzahl > 0 && (
-          <button className="mobile-cart-dock" onClick={openCheckout} type="button">
+          <button className="mobile-cart-dock" onClick={openCheckout} type="button" disabled={!WEBSITE_ORDERING_ENABLED} title={!WEBSITE_ORDERING_ENABLED ? WEBSITE_NOTICE_TEXT : undefined}>
             <span>{gesamtAnzahl} Artikel</span>
             <strong>{formatEuro(gesamtpreis)}</strong>
             <em>Zum Warenkorb</em>

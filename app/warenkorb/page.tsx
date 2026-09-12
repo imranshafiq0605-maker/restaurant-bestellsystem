@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import { WEBSITE_NOTICE_TEXT, WEBSITE_ORDERING_ENABLED } from "../config/website-ordering";
 
 type Bestellart = "abholung" | "lieferung";
 type Vorbestellung = "sofort" | "spaeter";
@@ -29,9 +30,6 @@ type LiefergebietConfig = {
 };
 
 const CART_STORAGE_KEY = "larosa_cart";
-
-const MANUAL_NOTICE_TEXT = "( Heute öffnen wir erst ab 17 Uhr )";
-const MANUAL_CHECKOUT_BLOCKED = false;
 
 const liefergebiete: Record<string, LiefergebietConfig> = {
   "64546": { city: "Mörfelden-Walldorf", minOrder: 12 },
@@ -281,6 +279,7 @@ export default function WarenkorbPage() {
   const [isMobileCheckout, setIsMobileCheckout] = useState(false);
   const [availableRoses, setAvailableRoses] = useState(0);
   const [redeemedRoses, setRedeemedRoses] = useState(0);
+  const websiteCheckoutBlocked = !isMobileCheckout && !WEBSITE_ORDERING_ENABLED;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -466,8 +465,8 @@ export default function WarenkorbPage() {
   function nextFromCart() {
   setFehlermeldung("");
 
-  if (MANUAL_CHECKOUT_BLOCKED) {
-    setFehlermeldung(MANUAL_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
+  if (websiteCheckoutBlocked) {
+    setFehlermeldung(WEBSITE_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
     return;
   }
 
@@ -555,8 +554,8 @@ export default function WarenkorbPage() {
   async function handleStripeCheckout() {
     setFehlermeldung("");
 
-    if (MANUAL_CHECKOUT_BLOCKED) {
-      setFehlermeldung(MANUAL_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
+    if (websiteCheckoutBlocked) {
+      setFehlermeldung(WEBSITE_NOTICE_TEXT || "Bestellungen sind aktuell nicht möglich.");
       return;
     }
 
@@ -840,7 +839,7 @@ export default function WarenkorbPage() {
                     className={`choice ${vorbestellung === "sofort" ? "active" : ""}`}
                     onClick={() => setVorbestellung("sofort")}
                     type="button"
-                    disabled={!status.isOpen || MANUAL_CHECKOUT_BLOCKED}
+                    disabled={!status.isOpen || websiteCheckoutBlocked}
                   >
                     <strong>Sofort</strong>
                     <span>{status.isOpen ? "So schnell wie möglich" : "Aktuell geschlossen"}</span>
@@ -850,7 +849,7 @@ export default function WarenkorbPage() {
                     className={`choice ${vorbestellung === "spaeter" ? "active" : ""}`}
                     onClick={() => setVorbestellung("spaeter")}
                     type="button"
-                    disabled={MANUAL_CHECKOUT_BLOCKED}
+                    disabled={websiteCheckoutBlocked}
                   >
                     <strong>Vorbestellung</strong>
                     <span>Datum und Uhrzeit auswählen</span>
@@ -992,15 +991,15 @@ export default function WarenkorbPage() {
     className="primary-button"
     onClick={nextFromCart}
     type="button"
-    disabled={MANUAL_CHECKOUT_BLOCKED}
+    disabled={websiteCheckoutBlocked}
   >
-    {MANUAL_CHECKOUT_BLOCKED ? "Aktuell geschlossen" : "Weiter"}
+    {websiteCheckoutBlocked ? "Aktuell geschlossen" : "Weiter"}
   </button>
 )}
               {step === "daten" && <button className="primary-button" onClick={nextFromDaten} type="button">Weiter</button>}
               {step === "zeit" && <button className="primary-button" onClick={nextFromZeit} type="button">Zur Zahlung</button>}
               {step === "checkout" && (
-                <button className="primary-button" onClick={handleStripeCheckout} type="button" disabled={isSubmitting || MANUAL_CHECKOUT_BLOCKED}>
+                <button className="primary-button" onClick={handleStripeCheckout} type="button" disabled={isSubmitting || websiteCheckoutBlocked}>
                   {isSubmitting ? "Wird gesendet..." : "Jetzt sicher bezahlen"}
                 </button>
               )}
