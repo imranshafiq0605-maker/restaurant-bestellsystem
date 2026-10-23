@@ -16,6 +16,7 @@
     "prestart": "npm run check:node",
     "start": "next start",
     "lint": "eslint",
+    "test:security": "node --test scripts/security/*.test.mjs",
     "ios:sync": "cap sync ios",
     "ios:local": "CAPACITOR_SERVER_URL=http://localhost:3000 cap sync ios",
     "ios:device": "CAPACITOR_SERVER_URL=http://192.168.178.105:3000 cap sync ios",
@@ -38,6 +39,7 @@
     "stripe": "^21.0.1"
   },
   "devDependencies": {
+    "@larosa/next-eslint-glob": "file:tools/next-eslint-glob",
     "@capacitor/cli": "^8.5.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -49,6 +51,9 @@
     "typescript": "^5"
   },
   "overrides": {
+    "@next/eslint-plugin-next": {
+      "fast-glob": "$@larosa/next-eslint-glob"
+    },
     "@grpc/grpc-js": "^1.14.6",
     "google-gax": {
       "uuid": "^11.1.1"
