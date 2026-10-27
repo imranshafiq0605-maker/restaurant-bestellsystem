@@ -16,6 +16,7 @@ import {
   type ProductOptionItem,
 } from "./data/menu";
 import { db } from "./lib/firebase";
+import RoseAccountChip from "./components/rose-account-chip";
 import {
   WEBSITE_NOTICE_ENABLED,
   WEBSITE_NOTICE_TEXT,
@@ -1334,6 +1335,8 @@ useEffect(() => {
                 <img src="/images/halal.png" alt="" className="header-halal-badge" />
                 <span>Halal</span>
               </div>
+
+              <RoseAccountChip />
 
               <button
   className={`cart-button compact cart-button-clean ${cartPulse ? "pulse" : ""}`}
@@ -5012,6 +5015,79 @@ useEffect(() => {
           .cart-button-clean {
             width: 46px;
             min-width: 46px;
+          }
+        }
+
+        /* Kundenkonto & Rosen im Header */
+        .rose-account-chip {
+          position: relative;
+        }
+
+        .rose-account-icon {
+          background: linear-gradient(180deg, #b32031, #8f1424);
+          box-shadow: 0 10px 22px rgba(179, 32, 49, 0.24);
+        }
+
+        .rose-account-badge {
+          display: none;
+        }
+
+        @media (max-width: 760px) {
+          .rose-account-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            border: 2px solid #ffffff;
+            background: #b32031;
+            color: #ffffff;
+            font-size: 0.62rem;
+            font-weight: 900;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .nav-inner {
+            grid-template-columns: minmax(0, 1fr) auto;
+          }
+
+          .brand-box {
+            padding: 6px;
+            gap: 6px;
+          }
+
+          .brand-logo-shell {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+          }
+
+          .logo-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 11px;
+          }
+
+          .brand-title {
+            font-size: 0.86rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .nav-right {
+            gap: 4px;
+          }
+
+          .call-button,
+          .halal-chip,
+          .cart-button-clean {
+            width: 42px;
+            min-width: 42px;
           }
         }
 

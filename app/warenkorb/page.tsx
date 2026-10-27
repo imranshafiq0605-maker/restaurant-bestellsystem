@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { WEBSITE_NOTICE_TEXT, WEBSITE_ORDERING_ENABLED } from "../config/website-ordering";
 
@@ -317,7 +317,7 @@ export default function WarenkorbPage() {
     try {
       const params = new URLSearchParams(window.location.search);
       const cancelledOrderId = params.get("cancelledOrderId");
-      if (params.get("source") === "mobile" && cancelledOrderId) {
+      if (cancelledOrderId) {
         await fetch("/api/account/release-roses", {
           method: "POST",
           headers: {
@@ -340,21 +340,13 @@ export default function WarenkorbPage() {
       // The checkout remains usable without reward redemption.
     }
     try {
-      const mobileSource = new URLSearchParams(window.location.search).get("source") === "mobile";
-      let data: Record<string, unknown>;
-      if (mobileSource) {
-        const profileResponse = await fetch("/api/account/profile", {
-          headers: { Authorization: `Bearer ${idToken}` },
-          cache: "no-store",
-        });
-        if (!profileResponse.ok) return;
-        const result = await profileResponse.json();
-        data = result.profile ?? {};
-      } else {
-        const snapshot = await getDoc(doc(db, "kunden", currentUser.uid));
-        if (!snapshot.exists()) return;
-        data = snapshot.data();
-      }
+      const profileResponse = await fetch("/api/account/profile", {
+        headers: { Authorization: `Bearer ${idToken}` },
+        cache: "no-store",
+      });
+      if (!profileResponse.ok) return;
+      const result = await profileResponse.json();
+      const data: Record<string, unknown> = result.profile ?? {};
       setName((current) => current || (typeof data.name === "string" ? data.name : ""));
       setTelefon((current) => current || (typeof data.phone === "string" ? data.phone : ""));
       setStrasse((current) => current || (typeof data.street === "string" ? data.street : ""));
@@ -390,7 +382,7 @@ export default function WarenkorbPage() {
     const payableBlocks = Math.max(0, Math.floor((gesamtpreis - 0.5) / 3));
     return Math.min(availableBlocks, payableBlocks) * 100;
   }, [availableRoses, gesamtpreis]);
-  const rosenRabatt = isMobileCheckout ? redeemedRoses * 0.03 : 0;
+  const rosenRabatt = redeemedRoses * 0.03;
   const zahlbetrag = Math.max(gesamtpreis - rosenRabatt, 0);
   const rosenVorschau = signedIn ? Math.floor(zahlbetrag) : 0;
 
@@ -629,7 +621,7 @@ export default function WarenkorbPage() {
           gesamtpreis,
           paymentMethod,
           source: new URLSearchParams(window.location.search).get("source"),
-          rosesToRedeem: isMobileCheckout ? redeemedRoses : 0,
+          rosesToRedeem: redeemedRoses,
         }),
       });
 
@@ -707,6 +699,16 @@ export default function WarenkorbPage() {
                   </div>
                 ) : (
                   <div className="item-list">
+                    {!isMobileCheckout && (
+                      <div className="rose-cart-banner">
+                        <span>🌹</span>
+                        {signedIn ? (
+                          <div><strong>+{rosenVorschau} Rosen mit dieser Bestellung</strong><small>{availableRoses} Rosen auf deinem Konto · ab 100 Rosen im letzten Schritt einlösbar</small></div>
+                        ) : (
+                          <div><strong>Rosen sammeln mit deinem La-Rosa-Konto</strong><small>1 € = 1 Rose · 100 Rosen = 3 € Rabatt. <a className="rose-login-link" href="/konto?next=/warenkorb">Anmelden oder registrieren</a></small></div>
+                        )}
+                      </div>
+                    )}
                     {cart.map((item) => (
                       <article className="cart-item" key={item.uniqueKey}>
                         <div className="item-top">
@@ -939,17 +941,17 @@ export default function WarenkorbPage() {
                   <small>{paymentMethod === "card" ? "Deine gespeicherte Karte oder eine neue Kredit-/Debitkarte wird in Stripe angeboten." : paymentMethod === "klarna" ? "Klarna erscheint, wenn die Bestellung die Klarna-Voraussetzungen erfüllt und Klarna in Stripe aktiviert ist." : "Du wirst im sicheren Stripe Checkout zu PayPal weitergeleitet."}</small>
                 </div>
 
-                {isMobileCheckout && <>
+                <>
                   <div className="rose-redemption-card">
                     <div className="rose-redemption-head"><span>🌹</span><div><strong>Rosen einlösen</strong><small>{availableRoses} Rosen verfügbar · 100 Rosen = 3,00 €</small></div></div>
-                    {!signedIn ? <p>Melde dich in der App an, um Rosen einzulösen.</p> : availableRoses < 100 ? <p>Noch {100 - availableRoses} Rosen bis zur ersten Einlösung.</p> : maxRedeemableRoses < 100 ? <p>Für diesen Warenkorb kann wegen des Mindestzahlbetrags kein 100er-Paket eingelöst werden.</p> : <div className="rose-redemption-controls">
+                    {!signedIn ? (isMobileCheckout ? <p>Melde dich in der App an, um Rosen einzulösen.</p> : <p><a className="rose-login-link" href="/konto?mode=login&next=/warenkorb">Anmelden</a>, um Rosen einzulösen.</p>) : availableRoses < 100 ? <p>Noch {100 - availableRoses} Rosen bis zur ersten Einlösung.</p> : maxRedeemableRoses < 100 ? <p>Für diesen Warenkorb kann wegen des Mindestzahlbetrags kein 100er-Paket eingelöst werden.</p> : <div className="rose-redemption-controls">
                       <button type="button" aria-label="100 Rosen weniger einlösen" disabled={redeemedRoses === 0} onClick={() => setRedeemedRoses((current) => Math.max(0, current - 100))}>−</button>
                       <div><strong>{redeemedRoses} Rosen</strong><small>{redeemedRoses > 0 ? `− ${formatEuro(rosenRabatt)}` : "Noch nicht eingesetzt"}</small></div>
                       <button type="button" aria-label="100 Rosen mehr einlösen" disabled={redeemedRoses >= maxRedeemableRoses} onClick={() => setRedeemedRoses((current) => Math.min(maxRedeemableRoses, current + 100))}>+</button>
                     </div>}
                   </div>
-                  <div className="rose-preview"><span>🌹</span><div>{signedIn ? <><strong>Du erhältst {rosenVorschau} neue Rosen</strong><small>Berechnet auf den tatsächlich bezahlten Betrag.</small></> : <><strong>Für Rosen bitte anmelden</strong><small>Rosen können nur einem angemeldeten Kundenkonto sicher gutgeschrieben werden.</small></>}</div></div>
-                </>}
+                  <div className="rose-preview"><span>🌹</span><div>{signedIn ? <><strong>Du erhältst {rosenVorschau} neue Rosen</strong><small>Berechnet auf den tatsächlich bezahlten Betrag.</small></> : <><strong>Für Rosen bitte anmelden</strong><small>{isMobileCheckout ? "Rosen können nur einem angemeldeten Kundenkonto sicher gutgeschrieben werden." : <>Mit Konto bekommst du {Math.floor(zahlbetrag)} Rosen für diese Bestellung. <a className="rose-login-link" href="/konto?next=/warenkorb">Konto erstellen oder anmelden</a></>}</small></>}</div></div>
+                </>
 
                 {hinweis.trim() && (
                   <div className="review-box">
@@ -967,8 +969,8 @@ export default function WarenkorbPage() {
             <div className="summary-row"><span>Zwischensumme</span><strong>{formatEuro(gesamtpreisProdukte)}</strong></div>
             <div className="summary-row discount"><span>10% Rabatt</span><strong>-{formatEuro(rabattBetrag)}</strong></div>
             <div className="summary-row"><span>Versand</span><strong>Kostenlos</strong></div>
-            {isMobileCheckout && redeemedRoses > 0 && <div className="summary-row rose-discount"><span>{redeemedRoses} Rosen</span><strong>-{formatEuro(rosenRabatt)}</strong></div>}
-            <div className="summary-row total"><span>{isMobileCheckout && redeemedRoses > 0 ? "Zahlbetrag" : "Gesamt"}</span><strong>{formatEuro(zahlbetrag)}</strong></div>
+            {redeemedRoses > 0 && <div className="summary-row rose-discount"><span>{redeemedRoses} Rosen</span><strong>-{formatEuro(rosenRabatt)}</strong></div>}
+            <div className="summary-row total"><span>{redeemedRoses > 0 ? "Zahlbetrag" : "Gesamt"}</span><strong>{formatEuro(zahlbetrag)}</strong></div>
             <p className="stripe-note">🔒 Kartendaten werden ausschließlich von Stripe verarbeitet.</p>
 
             <div className="action-row">
@@ -1082,6 +1084,10 @@ export default function WarenkorbPage() {
         .payment-method-grid button i { width:20px; height:20px; display:grid; place-items:center; border-radius:50%; background:#e5e7eb; color:transparent; font-style:normal; font-size:12px; }
         .payment-method-grid button.selected { border-color:#12356b; background:#f0f5fb; box-shadow:0 0 0 2px rgba(18,53,107,.08); }
         .payment-method-grid button.selected i { background:#12356b; color:white; }
+        .rose-cart-banner { display:flex; gap:12px; align-items:center; padding:14px; border-radius:17px; background:linear-gradient(135deg,#fff5f6,#f8eef1); }
+        .rose-cart-banner>span { width:40px; height:40px; flex:none; display:grid; place-items:center; border-radius:13px; background:white; font-size:21px; }
+        .rose-cart-banner>div { display:flex; flex-direction:column; gap:3px; }.rose-cart-banner strong{font-size:14px}.rose-cart-banner small{color:#6b7280;line-height:1.35}
+        .rose-login-link { color:#b32031; font-weight:800; text-decoration:underline; }
         .rose-preview { display:flex; gap:12px; align-items:center; margin-top:14px; padding:14px; border-radius:17px; background:linear-gradient(135deg,#fff5f6,#f8eef1); }
         .rose-preview>span { width:40px; height:40px; display:grid; place-items:center; border-radius:13px; background:white; font-size:21px; }
         .rose-preview>div { display:flex; flex-direction:column; gap:3px; }.rose-preview strong{font-size:14px}.rose-preview small{color:#6b7280;line-height:1.35}

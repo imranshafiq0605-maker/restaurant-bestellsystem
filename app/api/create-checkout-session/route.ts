@@ -121,11 +121,8 @@ export async function POST(req: NextRequest) {
     if (!Number.isInteger(requestedRoses) || requestedRoses < 0 || requestedRoses % 100 !== 0) {
       return NextResponse.json({ error: "Rosen können nur in 100er-Schritten eingelöst werden." }, { status: 400 });
     }
-    if (requestedRoses > 0 && source !== "mobile") {
-      return NextResponse.json({ error: "Rosen können derzeit ausschließlich in der App eingelöst werden." }, { status: 400 });
-    }
     if (requestedRoses > 0 && !firebaseUid) {
-      return NextResponse.json({ error: "Bitte melde dich in der App an, um Rosen einzulösen." }, { status: 401 });
+      return NextResponse.json({ error: "Bitte melde dich an, um Rosen einzulösen." }, { status: 401 });
     }
 
     const rosenRabattBetrag = requestedRoses * 0.03;
@@ -243,7 +240,9 @@ export async function POST(req: NextRequest) {
           : `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}`,
         cancel_url: source === "mobile"
           ? `${origin}/warenkorb?source=mobile&cancelledOrderId=${pendingOrderId}`
-          : `${origin}`,
+          : requestedRoses > 0
+            ? `${origin}/warenkorb?cancelledOrderId=${pendingOrderId}`
+            : `${origin}`,
       });
     } catch (error) {
       if (requestedRoses > 0 && firebaseUid) await releaseRoseReservation(pendingOrderId, firebaseUid);
