@@ -1,7 +1,8 @@
 import { Resend } from "resend";
 
 type OrderEmailItem = { name: string; quantity: number; price: number; variantName?: string | null; selectedOptions?: string[] };
-type SendOrderEmailArgs = { to: string; name?: string; orderNumber?: number; statusUrl: string; items?: OrderEmailItem[]; total?: number; orderType?: string };
+type OrderEmailBelege = { invoiceNumber: string; invoicePdf?: Uint8Array | null; invoiceUrl: string; bewirtungsbelegUrl: string };
+type SendOrderEmailArgs = { to: string; name?: string; orderNumber?: number; statusUrl: string; items?: OrderEmailItem[]; total?: number; orderType?: string; belege?: OrderEmailBelege };
 
 function escapeHtml(value: unknown) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -11,7 +12,7 @@ function euro(value: number) {
   return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
 }
 
-export async function sendOrderEmail({ to, name, orderNumber, statusUrl, items = [], total, orderType }: SendOrderEmailArgs) {
+export async function sendOrderEmail({ to, name, orderNumber, statusUrl, items = [], total, orderType, belege }: SendOrderEmailArgs) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("E-Mail-Versand ist auf diesem Server nicht konfiguriert.");
   const resend = new Resend(apiKey);
@@ -20,6 +21,7 @@ export async function sendOrderEmail({ to, name, orderNumber, statusUrl, items =
     const details = [item.variantName, ...(item.selectedOptions || [])].filter(Boolean).map(escapeHtml).join(" · ");
     return `<tr><td style="padding:14px 0;border-bottom:1px solid #e8ebef;vertical-align:top;color:#17233d;font-size:14px;line-height:1.4"><strong>${Math.max(1, Number(item.quantity) || 1)}× ${escapeHtml(item.name)}</strong>${details ? `<div style="margin-top:3px;color:#778094;font-size:11px">${details}</div>` : ""}</td><td style="padding:14px 0 14px 12px;border-bottom:1px solid #e8ebef;text-align:right;vertical-align:top;color:#17233d;font-size:14px;font-weight:700;white-space:nowrap">${escapeHtml(euro((Number(item.price) || 0) * (Number(item.quantity) || 1)))}</td></tr>`;
   }).join("");
+  const belegeBlock = belege ? `<tr><td style="padding:22px 28px 0"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:18px;border:1px solid #e3e7ee"><tr><td style="padding:18px 18px 6px"><div style="color:#778094;font-size:10px;letter-spacing:.8px">RECHNUNG &amp; BELEGE</div><strong style="display:block;margin-top:4px;font-size:15px">Rechnung ${escapeHtml(belege.invoiceNumber)}</strong><p style="margin:5px 0 0;color:#657084;font-size:13px;line-height:1.5">${belege.invoicePdf ? "Deine Rechnung hängt als PDF an dieser E-Mail." : "Deine Rechnung kannst du hier als PDF herunterladen."} Für Geschäftsessen kannst du dir zusätzlich einen Bewirtungsbeleg erstellen.</p></td></tr><tr><td style="padding:12px 18px 18px"><a href="${escapeHtml(belege.invoiceUrl)}" style="display:block;padding:13px 16px;border-radius:14px;background:#f3f6fa;color:#12356b;text-decoration:none;font-size:14px;font-weight:800;text-align:center">Rechnung als PDF öffnen</a><a href="${escapeHtml(belege.bewirtungsbelegUrl)}" style="display:block;margin-top:8px;padding:13px 16px;border-radius:14px;border:1.5px solid #12356b;color:#12356b;text-decoration:none;font-size:14px;font-weight:800;text-align:center">Bewirtungsbeleg herunterladen</a></td></tr></table></td></tr>` : "";
 
   return resend.emails.send({
     from: "La Rosa GmbH <bestellung@pizzerialarosagmbh.de>",
@@ -31,7 +33,11 @@ export async function sendOrderEmail({ to, name, orderNumber, statusUrl, items =
       <tr><td style="padding:12px 28px 4px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:18px;background:#f3f6fa"><tr><td style="padding:16px"><div style="color:#778094;font-size:10px;letter-spacing:.8px">BESTELLNUMMER</div><strong style="display:block;margin-top:4px;font-size:18px">${orderNumber ? `#${orderNumber}` : "Wird erstellt"}</strong></td><td style="padding:16px;text-align:right"><div style="color:#778094;font-size:10px;letter-spacing:.8px">BESTELLART</div><strong style="display:block;margin-top:4px;font-size:15px">${String(orderType).toLowerCase() === "lieferung" ? "Lieferung" : "Abholung"}</strong></td></tr></table></td></tr>
       ${itemRows ? `<tr><td style="padding:16px 28px 0"><h2 style="margin:0 0 3px;font-size:17px">Deine Auswahl</h2><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${itemRows}</table></td></tr>` : ""}
       ${typeof total === "number" ? `<tr><td style="padding:19px 28px 4px"><table role="presentation" width="100%"><tr><td style="font-size:16px;font-weight:700">Gesamt</td><td style="text-align:right;color:#b32031;font-size:20px;font-weight:800">${escapeHtml(euro(total))}</td></tr></table></td></tr>` : ""}
+      ${belegeBlock}
       <tr><td style="padding:24px 28px 30px;text-align:center"><a href="${escapeHtml(statusUrl)}" style="display:block;padding:15px 20px;border-radius:16px;background:#12356b;color:#fff;text-decoration:none;font-size:15px;font-weight:800">Bestellung in der App ansehen</a><p style="margin:14px 0 0;color:#8991a0;font-size:10px;line-height:1.5">In der App siehst du den aktuellen Status und die verbleibende Zeit.</p></td></tr>
     </table><p style="margin:16px auto 0;max-width:560px;color:#9299a5;font-size:10px;line-height:1.5">La Rosa GmbH · Diese E-Mail wurde automatisch zu deiner Bestellung versendet.</p></td></tr></table></body></html>`,
+    ...(belege?.invoicePdf
+      ? { attachments: [{ filename: `Rechnung-${belege.invoiceNumber}.pdf`, content: Buffer.from(belege.invoicePdf).toString("base64"), contentType: "application/pdf" }] }
+      : {}),
   });
 }
