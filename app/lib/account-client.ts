@@ -133,6 +133,13 @@ export async function verifyEmailCode(user: User, code: string) {
   await user.getIdToken(true);
 }
 
+// E-Mail/Passwort-Konten bestätigen ihre Adresse per Code. Apple und Google liefern bereits bestätigte Adressen.
+// Geprüft wird bewusst "nicht Apple/Google", weil die App per Custom Token anmeldet.
+export function needsEmailCode(user: User | null) {
+  if (!user || user.emailVerified || !user.email) return false;
+  return !user.providerData.some((provider) => provider.providerId === "google.com" || provider.providerId === "apple.com");
+}
+
 export function euro(value: number) {
   return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
 }
