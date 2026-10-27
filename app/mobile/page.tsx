@@ -7,7 +7,6 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   onAuthStateChanged,
-  sendEmailVerification,
   signInWithCustomToken,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -20,6 +19,8 @@ import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { auth } from "../lib/firebase";
+import { needsEmailCode } from "../lib/account-client";
+import EmailCodeStep from "../components/email-code-step";
 import { produkte, type Product, type ProductOptionItem } from "../data/menu";
 import styles from "./mobile.module.css";
 
@@ -203,6 +204,7 @@ export default function MobileAppPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartLoaded, setCartLoaded] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [codePending, setCodePending] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("register");
   const [accountView, setAccountView] = useState<AccountView>("overview");
   const [email, setEmail] = useState("");
@@ -338,6 +340,7 @@ export default function MobileAppPage() {
     }
     return onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser);
+      setCodePending(needsEmailCode(nextUser));
       if (!nextUser) {
         setProfile(emptyProfile);
         return;
@@ -517,19 +520,17 @@ export default function MobileAppPage() {
     setMessage("");
     try {
       if (Capacitor.isNativePlatform()) {
+        // Den 6-stelligen Bestätigungscode verschickt danach die Code-Eingabe im Account-Tab.
         if (authMode === "register") {
           await FirebaseAuthentication.createUserWithEmailAndPassword({ email: email.trim(), password });
-          await FirebaseAuthentication.sendEmailVerification();
         } else {
           await FirebaseAuthentication.signInWithEmailAndPassword({ email: email.trim(), password });
         }
         const { token } = await FirebaseAuthentication.getIdToken({ forceRefresh: true });
         await completeNativeSignIn(token);
-        setMessage(authMode === "register" ? "Account erstellt. Bitte bestätige jetzt deine E-Mail-Adresse." : "Willkommen zurück.");
+        if (authMode === "login") setMessage("Willkommen zurück.");
       } else if (authMode === "register") {
-        const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        await sendEmailVerification(result.user);
-        setMessage("Account erstellt. Bitte bestätige jetzt deine E-Mail-Adresse.");
+        await createUserWithEmailAndPassword(auth, email.trim(), password);
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password);
         setMessage("Willkommen zurück.");
@@ -610,6 +611,14 @@ export default function MobileAppPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function finishEmailCode() {
+    if (!user) return;
+    setCodePending(false);
+    setMessage("E-Mail bestätigt. Willkommen bei La Rosa.");
+    void loadProfile(user).catch(() => undefined);
+    void loadOrders(user);
   }
 
   async function signOutAll() {
@@ -781,7 +790,7 @@ export default function MobileAppPage() {
               <label>Passwort<input type="password" minLength={8} autoComplete={authMode === "register" ? "new-password" : "current-password"} required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
               <button className={styles.primaryButton} disabled={busy}>{busy ? "Bitte warten …" : authMode === "register" ? "Account erstellen" : "Anmelden"}</button>
               {message && <p className={styles.message}>{message}</p>}
-            </form> : <>
+            </form> : codePending ? <EmailCodeStep className={`${styles.formCard} ${styles.codeCard}`} user={user} onVerified={finishEmailCode} onCancel={() => void signOutAll()} /> : <>
               {accountView === "overview" && <>
                 <div className={styles.accountHero}><div className={styles.largeAvatar}>{profile.name[0] || user.email?.[0]?.toUpperCase()}</div><div><h2>{profile.name || "Dein Account"}</h2><p>{user.email}</p><span className={user.emailVerified ? styles.verified : styles.unverified}>{user.emailVerified ? "✓ E-Mail bestätigt" : "E-Mail noch bestätigen"}</span></div></div>
                 <section className={styles.roseWallet}><div className={styles.roseIcon}><Icon name="rose" /></div><div><small>DEIN ROSENKONTO</small><strong>{profile.roses} Rosen</strong><span>Wert: {euro(profile.roses * 0.03)} · 1 € Umsatz = 1 Rose</span></div></section>

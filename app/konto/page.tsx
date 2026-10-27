@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import {
 } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { auth } from "../lib/firebase";
+import EmailCodeStep from "../components/email-code-step";
 import {
   authErrorMessage,
   deleteAccount,
@@ -30,9 +31,8 @@ import {
   orderStatusTone,
   ROSE_REDEEM_STEP,
   ROSE_VALUE_EUR,
+  needsEmailCode,
   saveProfile,
-  sendEmailCode,
-  verifyEmailCode,
   type AccountOrder,
   type AccountProfile,
 } from "../lib/account-client";
@@ -54,19 +54,13 @@ function safeNextPath(value: string | null) {
   return value;
 }
 
-// E-Mail/Passwort-Konten müssen ihre Adresse per Code bestätigen. Apple und Google liefern bereits bestätigte Adressen.
-function needsEmailCode(user: User | null) {
-  return Boolean(user && !user.emailVerified && user.providerData.some((provider) => provider.providerId === "password"));
-}
-
-type IconName = "rose" | "bag" | "user" | "mail" | "chevron" | "logout" | "pin" | "clock";
+type IconName = "rose" | "bag" | "user" | "chevron" | "logout" | "pin" | "clock";
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, React.ReactNode> = {
     rose: <><path d="M12 21c0-5 0-9 1-12" /><path d="M13 9c-5-1-6-7-1-7 4 0 7 4 3 8-2 2-5 1-6-1" /><path d="M12 15c-4-3-7-1-7-1 2 4 5 4 7 3M13 13c3-3 6-2 6-2-1 4-4 5-6 4" /></>,
     bag: <><path d="M5 8h14l-1 12H6L5 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>,
     user: <><circle cx="12" cy="8" r="4" /><path d="M4.5 21a7.5 7.5 0 0 1 15 0" /></>,
-    mail: <><rect x="3" y="5" width="18" height="14" rx="3" /><path d="m4 7 8 6 8-6" /></>,
     chevron: <path d="m9 18 6-6-6-6" />,
     logout: <><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9" /></>,
     pin: <><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z" /><circle cx="12" cy="9" r="2.5" /></>,
@@ -123,110 +117,6 @@ function OrderCard({ order }: { order: AccountOrder }) {
         <a className={styles.orderLink} href={`/order-status?id=${encodeURIComponent(order.id)}`}>Details<Icon name="chevron" /></a>
       </footer>
     </article>
-  );
-}
-
-function CodeStep({ user, onVerified, onCancel }: { user: User; onVerified: () => void; onCancel: () => void }) {
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [retryAfter, setRetryAfter] = useState(0);
-  const [focused, setFocused] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const autoSent = useRef(false);
-
-  const requestCode = useCallback(async (auto: boolean) => {
-    setError("");
-    try {
-      const result = await sendEmailCode(user, auto);
-      if (result.verified) {
-        await user.reload();
-        onVerified();
-        return;
-      }
-      setRetryAfter(result.retryAfter);
-      if (result.sent && !auto) setMessage("Wir haben dir einen neuen Code geschickt.");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Der Code konnte nicht gesendet werden.");
-    }
-  }, [user, onVerified]);
-
-  useEffect(() => {
-    if (autoSent.current) return;
-    autoSent.current = true;
-    void requestCode(true);
-  }, [requestCode]);
-
-  useEffect(() => {
-    if (retryAfter <= 0) return;
-    const timer = window.setTimeout(() => setRetryAfter((current) => Math.max(0, current - 1)), 1000);
-    return () => window.clearTimeout(timer);
-  }, [retryAfter]);
-
-  async function submit(value = code) {
-    if (value.length !== 6 || busy) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      await verifyEmailCode(user, value);
-      onVerified();
-    } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : "Der Code konnte nicht geprüft werden.");
-      setCode("");
-      window.setTimeout(() => inputRef.current?.focus(), 0);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function changeCode(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 6);
-    setCode(digits);
-    if (digits.length === 6) void submit(digits);
-  }
-
-  return (
-    <section className={`${styles.card} ${styles.authCard}`}>
-      <div className={styles.stepIcon}><Icon name="mail" /></div>
-      <h1 className={styles.authTitle}>E-Mail bestätigen</h1>
-      <p className={styles.muted}>Wir haben einen 6-stelligen Code an <strong>{user.email}</strong> geschickt. Gib ihn hier ein, um dein Konto zu aktivieren.</p>
-
-      <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-        <div className={styles.codeField} onClick={() => inputRef.current?.focus()}>
-          {Array.from({ length: 6 }, (_, index) => (
-            <span key={index} className={`${styles.codeBox} ${focused && index === Math.min(code.length, 5) ? styles.codeBoxActive : ""} ${code[index] ? styles.codeBoxFilled : ""}`}>{code[index] ?? ""}</span>
-          ))}
-          <input
-            ref={inputRef}
-            className={styles.codeInput}
-            value={code}
-            onChange={(event) => changeCode(event.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            pattern="[0-9]*"
-            maxLength={6}
-            autoFocus
-            aria-label="6-stelliger Bestätigungscode"
-          />
-        </div>
-        <button className={styles.primaryButton} disabled={busy || code.length !== 6}>{busy ? "Wird geprüft …" : "Bestätigen"}</button>
-      </form>
-
-      {error && <p className={`${styles.message} ${styles.messageError}`} role="alert">{error}</p>}
-      {message && !error && <p className={styles.message} role="status">{message}</p>}
-
-      <div className={styles.codeActions}>
-        <button type="button" className={styles.textButton} disabled={retryAfter > 0} onClick={() => void requestCode(false)}>
-          {retryAfter > 0 ? `Code erneut senden in ${retryAfter} s` : "Code erneut senden"}
-        </button>
-        <button type="button" className={styles.textButtonMuted} onClick={onCancel}>Andere E-Mail verwenden</button>
-      </div>
-      <p className={styles.smallHint}>Keine E-Mail bekommen? Schau bitte auch im Spam-Ordner nach.</p>
-    </section>
   );
 }
 
@@ -508,7 +398,7 @@ function KontoContent() {
           </div>
         ) : !verified ? (
           <div className={styles.guestLayout}>
-            <CodeStep user={user} onVerified={() => enterAccount(user)} onCancel={() => void signOut(auth)} />
+            <EmailCodeStep className={`${styles.card} ${styles.authCard}`} user={user} onVerified={() => enterAccount(user)} onCancel={() => void signOut(auth)} />
           </div>
         ) : (
           <div className={styles.accountLayout}>

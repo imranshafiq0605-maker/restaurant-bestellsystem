@@ -1,0 +1,189 @@
+/* Gemeinsame Code-Eingabe für Website und App. Alle Regeln hängen an .root,
+   damit sie die Formular-Stile der jeweiligen Seite (z. B. ".formCard input") überschreiben.
+   --code-accent kann von der Seite gesetzt werden (Farbe des Bestätigen-Buttons). */
+.root {
+  --code-ink: #0f172a;
+  --code-muted: #64748b;
+  --code-faint: #94a3b8;
+  --code-line: #e8ebf0;
+  --code-soft: #f4f6f9;
+  --code-link: #12356b;
+  color: var(--code-ink);
+}
+
+.root .icon {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--code-soft);
+  color: var(--code-ink);
+}
+
+.root .icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.root .title {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.root .text {
+  margin: 0 0 18px;
+  color: var(--code-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.root .text strong {
+  color: var(--code-ink);
+  overflow-wrap: anywhere;
+}
+
+.root .field {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin: 6px 0 18px;
+}
+
+.root .box {
+  height: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid var(--code-line);
+  background: #fbfcfd;
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.root .boxFilled {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.root .boxActive {
+  border-color: var(--code-ink);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+}
+
+.root .input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0;
+  font-size: 16px;
+  caret-color: transparent;
+  cursor: pointer;
+}
+
+.root .button {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 15px;
+  color: #ffffff;
+  background: var(--code-accent, var(--code-ink));
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.root .button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.root .message {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: #334155;
+  background: var(--code-soft);
+  font-weight: 650;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.root .error {
+  color: #9f1d2c;
+  background: #fdf1f2;
+}
+
+.root .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+
+.root .link,
+.root .linkMuted {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.root .link {
+  color: var(--code-link);
+}
+
+.root .link:disabled {
+  color: var(--code-faint);
+  cursor: default;
+}
+
+.root .linkMuted {
+  color: var(--code-muted);
+}
+
+.root .hint {
+  margin: 14px 0 0;
+  color: var(--code-faint);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .root .field {
+    gap: 6px;
+  }
+
+  .root .box {
+    height: 54px;
+    font-size: 1.4rem;
+  }
+}
