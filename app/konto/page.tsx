@@ -17,6 +17,7 @@ import {
   signOut,
   type User,
 } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 import { auth } from "../lib/firebase";
 import {
   authErrorMessage,
@@ -103,8 +104,11 @@ function KontoContent() {
   const loadAccount = useCallback(async (currentUser: User, silent = false) => {
     if (!silent) setOrdersLoading(true);
     try {
-      const [nextProfile, orderData] = await Promise.all([fetchProfile(currentUser), fetchOrders(currentUser)]);
-      setProfile({ ...nextProfile, roses: orderData.roses });
+      // Die stille Aktualisierung lädt nur Rosen und Bestellungen, damit laufende Eingaben im Formular bleiben.
+      const [nextProfile, orderData] = await Promise.all([silent ? null : fetchProfile(currentUser), fetchOrders(currentUser)]);
+      setProfile((current) => nextProfile
+        ? { ...nextProfile, name: nextProfile.name || currentUser.displayName || "", roses: orderData.roses }
+        : { ...current, roses: orderData.roses });
       setOrders(orderData.orders);
     } catch (error) {
       if (!silent) setMessage(error instanceof Error ? error.message : "Kontodaten konnten nicht geladen werden.");
@@ -161,17 +165,23 @@ function KontoContent() {
     setMessage("");
     try {
       const provider = providerName === "google" ? new GoogleAuthProvider() : new OAuthProvider("apple.com");
-      if (provider instanceof OAuthProvider) {
+      if (providerName === "apple") {
         provider.addScope("email");
         provider.addScope("name");
       } else {
         provider.setCustomParameters({ prompt: "select_account" });
       }
-      if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        await signInWithRedirect(auth, provider);
-        return;
+      // Popup auch auf dem iPhone: Safari blockiert den Speicher der Firebase-Domain,
+      // dadurch geht eine Redirect-Anmeldung dort verloren. Redirect nur, wenn das Popup blockiert wird.
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        if (error instanceof FirebaseError && error.code === "auth/popup-blocked") {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw error;
       }
-      await signInWithPopup(auth, provider);
     } catch (error) {
       setMessage(authErrorMessage(error));
     } finally {
