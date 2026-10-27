@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -9,7 +9,6 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   onAuthStateChanged,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -28,22 +27,25 @@ import {
   fetchProfile,
   formatOrderDate,
   orderStatusLabel,
+  orderStatusTone,
   ROSE_REDEEM_STEP,
   ROSE_VALUE_EUR,
   saveProfile,
+  sendEmailCode,
+  verifyEmailCode,
   type AccountOrder,
   type AccountProfile,
 } from "../lib/account-client";
 import styles from "./konto.module.css";
 
 type AuthMode = "register" | "login";
-type View = "uebersicht" | "rosen" | "bestellungen" | "daten";
+type View = "uebersicht" | "bestellungen" | "rosen" | "daten";
 
 const views: Array<{ id: View; label: string }> = [
   { id: "uebersicht", label: "Übersicht" },
-  { id: "rosen", label: "Rosen" },
   { id: "bestellungen", label: "Bestellungen" },
-  { id: "daten", label: "Meine Daten" },
+  { id: "rosen", label: "Rosen" },
+  { id: "daten", label: "Daten" },
 ];
 
 // Nur interne Pfade als Weiterleitung nach dem Login zulassen.
@@ -52,14 +54,25 @@ function safeNextPath(value: string | null) {
   return value;
 }
 
-function RoseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 21c0-5 0-9 1-12" />
-      <path d="M13 9c-5-1-6-7-1-7 4 0 7 4 3 8-2 2-5 1-6-1" />
-      <path d="M12 15c-4-3-7-1-7-1 2 4 5 4 7 3M13 13c3-3 6-2 6-2-1 4-4 5-6 4" />
-    </svg>
-  );
+// E-Mail/Passwort-Konten müssen ihre Adresse per Code bestätigen. Apple und Google liefern bereits bestätigte Adressen.
+function needsEmailCode(user: User | null) {
+  return Boolean(user && !user.emailVerified && user.providerData.some((provider) => provider.providerId === "password"));
+}
+
+type IconName = "rose" | "bag" | "user" | "mail" | "chevron" | "logout" | "pin" | "clock";
+
+function Icon({ name }: { name: IconName }) {
+  const paths: Record<IconName, React.ReactNode> = {
+    rose: <><path d="M12 21c0-5 0-9 1-12" /><path d="M13 9c-5-1-6-7-1-7 4 0 7 4 3 8-2 2-5 1-6-1" /><path d="M12 15c-4-3-7-1-7-1 2 4 5 4 7 3M13 13c3-3 6-2 6-2-1 4-4 5-6 4" /></>,
+    bag: <><path d="M5 8h14l-1 12H6L5 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>,
+    user: <><circle cx="12" cy="8" r="4" /><path d="M4.5 21a7.5 7.5 0 0 1 15 0" /></>,
+    mail: <><rect x="3" y="5" width="18" height="14" rx="3" /><path d="m4 7 8 6 8-6" /></>,
+    chevron: <path d="m9 18 6-6-6-6" />,
+    logout: <><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9" /></>,
+    pin: <><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z" /><circle cx="12" cy="9" r="2.5" /></>,
+    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  };
+  return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
 
 function AppleLogo() {
@@ -68,6 +81,153 @@ function AppleLogo() {
 
 function GoogleLogo() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.3c1.9-1.8 2.9-4.4 2.9-7.4Z" /><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.5c-.9.6-2.1 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6A10 10 0 0 0 12 22Z" /><path fill="#FBBC05" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3a10 10 0 0 0 0 9.1L6.4 14Z" /><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.9 1.5l2.9-2.9A9.7 9.7 0 0 0 3 7.5l3.4 2.6C7.2 7.8 9.4 6 12 6Z" /></svg>;
+}
+
+function OrderCard({ order }: { order: AccountOrder }) {
+  const tone = orderStatusTone(order);
+  const visibleItems = order.items.slice(0, 4);
+  const hiddenCount = order.items.length - visibleItems.length;
+  return (
+    <article className={styles.orderCard}>
+      <header className={styles.orderHead}>
+        <div>
+          <strong>Bestellung #{order.orderNumber ?? "—"}</strong>
+          <small>{formatOrderDate(order.createdAt)} · {order.orderType === "lieferung" ? "Lieferung" : "Abholung"}</small>
+        </div>
+        <span className={`${styles.statusPill} ${styles[`tone_${tone}`]}`}>{orderStatusLabel(order)}</span>
+      </header>
+      {visibleItems.length > 0 && (
+        <ul className={styles.orderItems}>
+          {visibleItems.map((item, index) => (
+            <li key={`${item.name}-${index}`}>
+              <span className={styles.qty}>{item.quantity}×</span>
+              <span className={styles.itemName}>
+                {item.name}
+                {(item.variantName || item.selectedOptions.length > 0) && <small>{[item.variantName, ...item.selectedOptions].filter(Boolean).join(" · ")}</small>}
+              </span>
+              <span className={styles.itemPrice}>{euro(item.price * item.quantity)}</span>
+            </li>
+          ))}
+          {hiddenCount > 0 && <li className={styles.moreItems}>+ {hiddenCount} weitere Artikel</li>}
+        </ul>
+      )}
+      <footer className={styles.orderFoot}>
+        <div className={styles.orderTotal}>
+          <small>Gesamt</small>
+          <strong>{euro(order.total)}</strong>
+        </div>
+        <div className={styles.orderRoses}>
+          {order.earnedRoses > 0 && <span><Icon name="rose" />+{order.earnedRoses} Rosen</span>}
+          {order.redeemedRoses > 0 && <span className={styles.redeemed}>−{order.redeemedRoses} eingelöst</span>}
+        </div>
+        <a className={styles.orderLink} href={`/order-status?id=${encodeURIComponent(order.id)}`}>Details<Icon name="chevron" /></a>
+      </footer>
+    </article>
+  );
+}
+
+function CodeStep({ user, onVerified, onCancel }: { user: User; onVerified: () => void; onCancel: () => void }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [retryAfter, setRetryAfter] = useState(0);
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autoSent = useRef(false);
+
+  const requestCode = useCallback(async (auto: boolean) => {
+    setError("");
+    try {
+      const result = await sendEmailCode(user, auto);
+      if (result.verified) {
+        await user.reload();
+        onVerified();
+        return;
+      }
+      setRetryAfter(result.retryAfter);
+      if (result.sent && !auto) setMessage("Wir haben dir einen neuen Code geschickt.");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Der Code konnte nicht gesendet werden.");
+    }
+  }, [user, onVerified]);
+
+  useEffect(() => {
+    if (autoSent.current) return;
+    autoSent.current = true;
+    void requestCode(true);
+  }, [requestCode]);
+
+  useEffect(() => {
+    if (retryAfter <= 0) return;
+    const timer = window.setTimeout(() => setRetryAfter((current) => Math.max(0, current - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [retryAfter]);
+
+  async function submit(value = code) {
+    if (value.length !== 6 || busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await verifyEmailCode(user, value);
+      onVerified();
+    } catch (verifyError) {
+      setError(verifyError instanceof Error ? verifyError.message : "Der Code konnte nicht geprüft werden.");
+      setCode("");
+      window.setTimeout(() => inputRef.current?.focus(), 0);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function changeCode(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 6);
+    setCode(digits);
+    if (digits.length === 6) void submit(digits);
+  }
+
+  return (
+    <section className={`${styles.card} ${styles.authCard}`}>
+      <div className={styles.stepIcon}><Icon name="mail" /></div>
+      <h1 className={styles.authTitle}>E-Mail bestätigen</h1>
+      <p className={styles.muted}>Wir haben einen 6-stelligen Code an <strong>{user.email}</strong> geschickt. Gib ihn hier ein, um dein Konto zu aktivieren.</p>
+
+      <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+        <div className={styles.codeField} onClick={() => inputRef.current?.focus()}>
+          {Array.from({ length: 6 }, (_, index) => (
+            <span key={index} className={`${styles.codeBox} ${focused && index === Math.min(code.length, 5) ? styles.codeBoxActive : ""} ${code[index] ? styles.codeBoxFilled : ""}`}>{code[index] ?? ""}</span>
+          ))}
+          <input
+            ref={inputRef}
+            className={styles.codeInput}
+            value={code}
+            onChange={(event) => changeCode(event.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]*"
+            maxLength={6}
+            autoFocus
+            aria-label="6-stelliger Bestätigungscode"
+          />
+        </div>
+        <button className={styles.primaryButton} disabled={busy || code.length !== 6}>{busy ? "Wird geprüft …" : "Bestätigen"}</button>
+      </form>
+
+      {error && <p className={`${styles.message} ${styles.messageError}`} role="alert">{error}</p>}
+      {message && !error && <p className={styles.message} role="status">{message}</p>}
+
+      <div className={styles.codeActions}>
+        <button type="button" className={styles.textButton} disabled={retryAfter > 0} onClick={() => void requestCode(false)}>
+          {retryAfter > 0 ? `Code erneut senden in ${retryAfter} s` : "Code erneut senden"}
+        </button>
+        <button type="button" className={styles.textButtonMuted} onClick={onCancel}>Andere E-Mail verwenden</button>
+      </div>
+      <p className={styles.smallHint}>Keine E-Mail bekommen? Schau bitte auch im Spam-Ordner nach.</p>
+    </section>
+  );
 }
 
 export default function KontoPage() {
@@ -82,6 +242,7 @@ function KontoContent() {
   const searchParams = useSearchParams();
   const nextPath = safeNextPath(searchParams.get("next"));
   const [user, setUser] = useState<User | null>(null);
+  const [verified, setVerified] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>(() => (searchParams.get("mode") === "login" ? "login" : "register"));
   const [view, setView] = useState<View>(() => {
@@ -117,27 +278,38 @@ function KontoContent() {
     }
   }, []);
 
+  // Wird nach dem Login und nach der Code-Bestätigung aufgerufen.
+  const enterAccount = useCallback((currentUser: User) => {
+    setVerified(true);
+    if (nextPath) {
+      window.location.href = nextPath;
+      return;
+    }
+    void loadAccount(currentUser);
+  }, [loadAccount, nextPath]);
+
   useEffect(() => onAuthStateChanged(auth, (nextUser) => {
     setUser(nextUser);
     setAuthReady(true);
     if (!nextUser) {
+      setVerified(false);
       setProfile(emptyProfile);
       setOrders([]);
       return;
     }
     setEmail(nextUser.email ?? "");
-    if (nextPath) {
-      window.location.href = nextPath;
+    if (needsEmailCode(nextUser)) {
+      setVerified(false);
       return;
     }
-    void loadAccount(nextUser);
-  }), [loadAccount, nextPath]);
+    enterAccount(nextUser);
+  }), [enterAccount]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !verified) return;
     const interval = window.setInterval(() => void loadAccount(user, true), 30000);
     return () => window.clearInterval(interval);
-  }, [user, loadAccount]);
+  }, [user, verified, loadAccount]);
 
   async function submitAuth(event: FormEvent) {
     event.preventDefault();
@@ -145,12 +317,9 @@ function KontoContent() {
     setMessage("");
     try {
       if (authMode === "register") {
-        const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        await sendEmailVerification(result.user);
-        setMessage("Konto erstellt. Bitte bestätige deine E-Mail-Adresse über den Link in deinem Postfach.");
+        await createUserWithEmailAndPassword(auth, email.trim(), password);
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password);
-        setMessage("Willkommen zurück.");
       }
       setPassword("");
     } catch (error) {
@@ -205,19 +374,6 @@ function KontoContent() {
     }
   }
 
-  async function resendVerification() {
-    if (!user) return;
-    setBusy(true);
-    try {
-      await sendEmailVerification(user);
-      setMessage("Bestätigungslink wurde erneut gesendet.");
-    } catch (error) {
-      setMessage(authErrorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function submitProfile(event: FormEvent) {
     event.preventDefault();
     if (!user) return;
@@ -257,18 +413,47 @@ function KontoContent() {
     setMessage("Du wurdest abgemeldet.");
   }
 
+  function openView(next: View) {
+    setView(next);
+    setMessage("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   const roseOrders = orders.filter((order) => order.earnedRoses > 0 || order.redeemedRoses > 0);
   const earnedTotal = orders.reduce((sum, order) => sum + order.earnedRoses, 0);
   const redeemedTotal = orders.reduce((sum, order) => sum + order.redeemedRoses, 0);
   const progressToNext = profile.roses % ROSE_REDEEM_STEP;
   const redeemableRoses = Math.floor(profile.roses / ROSE_REDEEM_STEP) * ROSE_REDEEM_STEP;
+  const firstName = profile.name.trim().split(" ")[0];
+  const hasAddress = Boolean(profile.street && profile.city);
 
-  const roseRules = (
-    <ul className={styles.ruleList}>
-      <li><b>1 €</b><span><strong>1 Rose pro Euro</strong>Für jeden bezahlten Euro bekommst du eine Rose gutgeschrieben.</span></li>
-      <li><b>3 ct</b><span><strong>Jede Rose ist 3 Cent wert</strong>100 Rosen = 3,00 € Rabatt auf deine nächste Bestellung.</span></li>
-      <li><b>100</b><span><strong>Ab 100 Rosen einlösen</strong>Im Warenkorb auf der Website oder in der La Rosa App.</span></li>
+  const benefits = (
+    <ul className={styles.benefits}>
+      <li><span><Icon name="rose" /></span><div><strong>1 € = 1 Rose</strong><small>Bei jeder Bestellung, automatisch gutgeschrieben</small></div></li>
+      <li><span>3 €</span><div><strong>100 Rosen = 3 € Rabatt</strong><small>Im Warenkorb einlösen, auf der Website und in der App</small></div></li>
+      <li><span><Icon name="pin" /></span><div><strong>Adresse speichern</strong><small>Beim nächsten Mal schneller bestellen</small></div></li>
     </ul>
+  );
+
+  const balanceCard = (
+    <section className={styles.balanceCard}>
+      <div className={styles.balanceTop}>
+        <span className={styles.balanceIcon}><Icon name="rose" /></span>
+        <div>
+          <small>Rosenguthaben</small>
+          <strong>{profile.roses} <span>Rosen</span></strong>
+        </div>
+        <em>{euro(profile.roses * ROSE_VALUE_EUR)}</em>
+      </div>
+      <div className={styles.progress} aria-label={`${progressToNext} von ${ROSE_REDEEM_STEP} Rosen`}>
+        <div style={{ width: `${progressToNext}%` }} />
+      </div>
+      <p>
+        {redeemableRoses >= ROSE_REDEEM_STEP
+          ? `${redeemableRoses} Rosen (${euro(redeemableRoses * ROSE_VALUE_EUR)}) kannst du bei deiner nächsten Bestellung einlösen. Noch ${ROSE_REDEEM_STEP - progressToNext} bis zu weiteren 3 €.`
+          : `Noch ${ROSE_REDEEM_STEP - progressToNext} Rosen bis zu deinem ersten 3-€-Rabatt.`}
+      </p>
+    </section>
   );
 
   return (
@@ -280,7 +465,7 @@ function KontoContent() {
             <img src="/images/logo.jpg" alt="" />
             <span><small>Restaurant & Lieferservice</small><strong>La Rosa GmbH</strong></span>
           </Link>
-          <Link className={styles.backLink} href="/">← Zur Speisekarte</Link>
+          <Link className={styles.backLink} href="/">Speisekarte</Link>
         </div>
       </header>
 
@@ -288,22 +473,15 @@ function KontoContent() {
         {!authReady ? (
           <p className={styles.loading}>Konto wird geladen …</p>
         ) : !user ? (
-          <div className={styles.guestGrid}>
-            <section className={styles.promo}>
-              <span className={styles.eyebrow}>La Rosa Treueprogramm</span>
-              <h1>Bestellen, Rosen sammeln, sparen.</h1>
-              <p>Mit deinem kostenlosen La-Rosa-Konto bekommst du für jede Bestellung Rosen gutgeschrieben. Dasselbe Konto funktioniert auf der Website und in der La Rosa App.</p>
-              {roseRules}
-              <p className={styles.hint}>Schon ohne Konto bestellt? Registriere dich mit derselben E-Mail-Adresse und bestätige sie. Dann werden dir die Rosen deiner bisherigen Bestellungen nachträglich gutgeschrieben.</p>
-            </section>
+          <div className={styles.guestLayout}>
+            <section className={`${styles.card} ${styles.authCard}`}>
+              <h1 className={styles.authTitle}>{authMode === "register" ? "Konto erstellen" : "Willkommen zurück"}</h1>
+              <p className={styles.muted}>{nextPath === "/warenkorb" ? "Danach geht es direkt zurück zu deinem Warenkorb." : "Bestellungen verfolgen, Adresse speichern und Rosen sammeln."}</p>
 
-            <section className={styles.card}>
               <div className={styles.segmented}>
-                <button type="button" className={authMode === "register" ? styles.segmentActive : ""} onClick={() => setAuthMode("register")}>Registrieren</button>
-                <button type="button" className={authMode === "login" ? styles.segmentActive : ""} onClick={() => setAuthMode("login")}>Anmelden</button>
+                <button type="button" className={authMode === "register" ? styles.segmentActive : ""} onClick={() => { setAuthMode("register"); setMessage(""); }}>Registrieren</button>
+                <button type="button" className={authMode === "login" ? styles.segmentActive : ""} onClick={() => { setAuthMode("login"); setMessage(""); }}>Anmelden</button>
               </div>
-              <h2>{authMode === "register" ? "Konto erstellen" : "Willkommen zurück"}</h2>
-              <p className={styles.muted}>{nextPath === "/warenkorb" ? "Nach der Anmeldung geht es direkt zurück zu deinem Warenkorb." : "Adressen speichern, Bestellungen verfolgen und Rosen sammeln."}</p>
 
               <div className={styles.socialButtons}>
                 <button type="button" disabled={busy} onClick={() => socialSignIn("apple")}><span><AppleLogo /></span>Mit Apple fortfahren</button>
@@ -312,148 +490,153 @@ function KontoContent() {
               <div className={styles.divider}>oder mit E-Mail</div>
 
               <form onSubmit={submitAuth}>
-                <label>E-Mail<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-                <label>Passwort<input type="password" minLength={8} required autoComplete={authMode === "register" ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-                <button className={styles.primaryButton} disabled={busy}>{busy ? "Bitte warten …" : authMode === "register" ? "Konto erstellen" : "Anmelden"}</button>
+                <label>E-Mail<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@beispiel.de" /></label>
+                <label>Passwort<input type="password" minLength={8} required autoComplete={authMode === "register" ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={authMode === "register" ? "Mindestens 8 Zeichen" : ""} /></label>
+                <button className={styles.primaryButton} disabled={busy}>{busy ? "Bitte warten …" : authMode === "register" ? "Weiter" : "Anmelden"}</button>
               </form>
+              {authMode === "register" && <p className={styles.smallHint}>Wir schicken dir einen 6-stelligen Code, um deine E-Mail-Adresse zu bestätigen.</p>}
               {authMode === "login" && <button type="button" className={styles.textButton} disabled={busy} onClick={resetPassword}>Passwort vergessen?</button>}
               {message && <p className={styles.message} role="status">{message}</p>}
             </section>
+
+            <section className={styles.benefitsCard}>
+              <span className={styles.eyebrow}>La Rosa Treueprogramm</span>
+              <h2>Mit jeder Bestellung Rosen sammeln</h2>
+              {benefits}
+              <p className={styles.smallHint}>Schon ohne Konto bestellt? Registriere dich mit derselben E-Mail-Adresse, dann werden dir die Rosen dieser Bestellungen nachträglich gutgeschrieben.</p>
+            </section>
+          </div>
+        ) : !verified ? (
+          <div className={styles.guestLayout}>
+            <CodeStep user={user} onVerified={() => enterAccount(user)} onCancel={() => void signOut(auth)} />
           </div>
         ) : (
-          <>
-            <section className={styles.accountHero}>
+          <div className={styles.accountLayout}>
+            <section className={styles.profileHead}>
               <div className={styles.avatar}>{(profile.name[0] || user.email?.[0] || "L").toUpperCase()}</div>
-              <div className={styles.heroText}>
-                <span className={styles.eyebrow}>Mein Konto</span>
-                <h1>{profile.name ? `Hallo ${profile.name.split(" ")[0]}` : "Dein La-Rosa-Konto"}</h1>
-                <p>{user.email}</p>
-                {user.emailVerified ? (
-                  <span className={styles.verified}>✓ E-Mail bestätigt</span>
-                ) : (
-                  <span className={styles.unverified}>E-Mail noch nicht bestätigt · <button type="button" disabled={busy} onClick={resendVerification}>Link erneut senden</button></span>
-                )}
+              <div className={styles.profileText}>
+                <h1>{firstName ? `Hallo ${firstName}` : "Mein Konto"}</h1>
+                <p>{user.email}{user.emailVerified && <span className={styles.verified}>Bestätigt</span>}</p>
               </div>
-              <div className={styles.heroWallet}>
-                <span className={styles.walletIcon}><RoseIcon /></span>
-                <div><small>Dein Rosenguthaben</small><strong>{profile.roses} Rosen</strong><span>Wert {euro(profile.roses * ROSE_VALUE_EUR)}</span></div>
-              </div>
+              <button type="button" className={styles.iconButton} onClick={logout} aria-label="Abmelden" title="Abmelden"><Icon name="logout" /></button>
             </section>
 
             <nav className={styles.tabs} aria-label="Kontobereiche">
               {views.map((item) => (
-                <button key={item.id} type="button" className={view === item.id ? styles.tabActive : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => { setView(item.id); setMessage(""); }}>{item.label}</button>
+                <button key={item.id} type="button" className={view === item.id ? styles.tabActive : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => openView(item.id)}>{item.label}</button>
               ))}
             </nav>
 
             {message && <p className={styles.message} role="status">{message}</p>}
 
             {view === "uebersicht" && (
-              <div className={styles.dashboard}>
-                <section className={styles.roseCard}>
-                  <span className={styles.eyebrowLight}>Rosenkonto</span>
-                  <strong>{profile.roses} Rosen</strong>
-                  <p>{redeemableRoses >= ROSE_REDEEM_STEP ? `Du kannst jetzt ${redeemableRoses} Rosen (${euro(redeemableRoses * ROSE_VALUE_EUR)}) im Warenkorb einlösen.` : `Noch ${ROSE_REDEEM_STEP - progressToNext} Rosen bis zu deinem ersten 3-€-Rabatt.`}</p>
-                  <div className={styles.progress} aria-label={`${progressToNext} von ${ROSE_REDEEM_STEP} Rosen`}><div style={{ width: `${redeemableRoses >= ROSE_REDEEM_STEP ? 100 : progressToNext}%` }} /></div>
-                  <Link className={styles.lightButton} href="/">Jetzt bestellen und sammeln</Link>
-                </section>
+              <div className={styles.overviewGrid}>
+                {balanceCard}
+
                 <section className={styles.card}>
-                  <h2>So funktioniert&apos;s</h2>
-                  {roseRules}
+                  <div className={styles.cardHead}>
+                    <h2>Letzte Bestellung</h2>
+                    {orders.length > 1 && <button type="button" onClick={() => openView("bestellungen")}>Alle {orders.length}</button>}
+                  </div>
+                  {ordersLoading && orders.length === 0 ? <p className={styles.muted}>Wird geladen …</p> : orders.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <span><Icon name="bag" /></span>
+                      <p>Noch keine Bestellungen. Deine erste Bestellung erscheint hier.</p>
+                      <Link className={styles.secondaryButton} href="/">Zur Speisekarte</Link>
+                    </div>
+                  ) : <OrderCard order={orders[0]} />}
                 </section>
+
+                <section className={`${styles.card} ${styles.menuCard}`}>
+                  <button type="button" onClick={() => openView("bestellungen")}>
+                    <span className={styles.menuIcon}><Icon name="bag" /></span>
+                    <span><strong>Bestellungen</strong><small>{orders.length ? `${orders.length} ${orders.length === 1 ? "Bestellung" : "Bestellungen"}` : "Verlauf und Status"}</small></span>
+                    <Icon name="chevron" />
+                  </button>
+                  <button type="button" onClick={() => openView("rosen")}>
+                    <span className={styles.menuIcon}><Icon name="rose" /></span>
+                    <span><strong>Rosenverlauf</strong><small>{earnedTotal} gesammelt · {redeemedTotal} eingelöst</small></span>
+                    <Icon name="chevron" />
+                  </button>
+                  <button type="button" onClick={() => openView("daten")}>
+                    <span className={styles.menuIcon}><Icon name="user" /></span>
+                    <span><strong>Kontakt- & Lieferdaten</strong><small>{hasAddress ? `${profile.street} ${profile.houseNumber}, ${profile.city}` : "Noch keine Adresse gespeichert"}</small></span>
+                    <Icon name="chevron" />
+                  </button>
+                </section>
+              </div>
+            )}
+
+            {view === "bestellungen" && (
+              <section className={styles.stack}>
+                <h2 className={styles.sectionTitle}>Deine Bestellungen</h2>
+                {ordersLoading && orders.length === 0 ? <p className={styles.muted}>Bestellungen werden geladen …</p> : orders.length === 0 ? (
+                  <div className={`${styles.card} ${styles.emptyState}`}>
+                    <span><Icon name="bag" /></span>
+                    <p>Noch keine Bestellungen in diesem Konto.</p>
+                    <Link className={styles.secondaryButton} href="/">Jetzt bestellen</Link>
+                  </div>
+                ) : orders.map((order) => <OrderCard key={order.id} order={order} />)}
+              </section>
+            )}
+
+            {view === "rosen" && (
+              <section className={styles.stack}>
+                {balanceCard}
+                <div className={styles.statRow}>
+                  <div><small>Gesammelt</small><strong>{earnedTotal}</strong></div>
+                  <div><small>Eingelöst</small><strong>{redeemedTotal}</strong></div>
+                  <div><small>Wert jetzt</small><strong>{euro(profile.roses * ROSE_VALUE_EUR)}</strong></div>
+                </div>
                 <section className={styles.card}>
-                  <div className={styles.cardHead}><h2>Letzte Bestellungen</h2><button type="button" onClick={() => setView("bestellungen")}>Alle ansehen</button></div>
-                  {ordersLoading && orders.length === 0 ? <p className={styles.muted}>Wird geladen …</p> : orders.length === 0 ? <p className={styles.muted}>Noch keine Bestellungen in diesem Konto.</p> : (
-                    <ul className={styles.orderList}>
-                      {orders.slice(0, 3).map((order) => (
+                  <h2>Verlauf</h2>
+                  {ordersLoading && orders.length === 0 ? <p className={styles.muted}>Wird geladen …</p> : roseOrders.length === 0 ? <p className={styles.muted}>Noch keine Rosen. Nach deiner ersten bezahlten Bestellung erscheint die Gutschrift hier.</p> : (
+                    <ul className={styles.historyList}>
+                      {roseOrders.map((order) => (
                         <li key={order.id}>
-                          <a href={`/order-status?id=${encodeURIComponent(order.id)}`}>
-                            <span><strong>Bestellung #{order.orderNumber ?? "—"}</strong><small>{formatOrderDate(order.createdAt)} · {orderStatusLabel(order)}</small></span>
-                            <span className={styles.orderMeta}><strong>{euro(order.total)}</strong>{order.earnedRoses > 0 && <small>+{order.earnedRoses} Rosen</small>}</span>
-                          </a>
+                          <span><strong>Bestellung #{order.orderNumber ?? "—"}</strong><small>{formatOrderDate(order.createdAt)} · {euro(order.total)}</small></span>
+                          <span className={styles.historyAmount}>
+                            {order.earnedRoses > 0 && <b className={styles.plus}>+{order.earnedRoses}</b>}
+                            {order.redeemedRoses > 0 && <b className={styles.minus}>−{order.redeemedRoses}</b>}
+                          </span>
                         </li>
                       ))}
                     </ul>
                   )}
                 </section>
                 <section className={styles.card}>
-                  <h2>Konto</h2>
-                  <div className={styles.actions}>
-                    <button type="button" onClick={() => setView("daten")}>Kontakt- & Lieferdaten bearbeiten</button>
-                    <button type="button" onClick={logout}>Abmelden</button>
-                    <button type="button" className={styles.danger} onClick={() => setDeleteOpen(true)}>Konto löschen</button>
-                  </div>
+                  <h2>So funktioniert&apos;s</h2>
+                  {benefits}
                 </section>
-              </div>
-            )}
-
-            {view === "rosen" && (
-              <section className={styles.card}>
-                <div className={styles.statRow}>
-                  <div><small>Aktuell</small><strong>{profile.roses}</strong></div>
-                  <div><small>Gesammelt</small><strong>{earnedTotal}</strong></div>
-                  <div><small>Eingelöst</small><strong>{redeemedTotal}</strong></div>
-                </div>
-                <h2>Rosenverlauf</h2>
-                {ordersLoading && orders.length === 0 ? <p className={styles.muted}>Rosenverlauf wird geladen …</p> : roseOrders.length === 0 ? <p className={styles.muted}>Noch keine Rosen erhalten. Nach deiner ersten bezahlten Bestellung erscheint die Gutschrift hier.</p> : (
-                  <ul className={styles.historyList}>
-                    {roseOrders.map((order) => (
-                      <li key={order.id}>
-                        <span className={styles.historyIcon}><RoseIcon /></span>
-                        <span><strong>Bestellung #{order.orderNumber ?? "—"}</strong><small>{formatOrderDate(order.createdAt)} · {euro(order.total)} bezahlt</small></span>
-                        <span className={styles.historyAmount}>
-                          {order.earnedRoses > 0 && <b className={styles.plus}>+{order.earnedRoses}</b>}
-                          {order.redeemedRoses > 0 && <b className={styles.minus}>−{order.redeemedRoses}</b>}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            )}
-
-            {view === "bestellungen" && (
-              <section className={styles.card}>
-                <h2>Deine Bestellungen</h2>
-                {ordersLoading && orders.length === 0 ? <p className={styles.muted}>Bestellungen werden geladen …</p> : orders.length === 0 ? <p className={styles.muted}>Noch keine Bestellungen in diesem Konto.</p> : (
-                  <ul className={styles.orderList}>
-                    {orders.map((order) => (
-                      <li key={order.id}>
-                        <a href={`/order-status?id=${encodeURIComponent(order.id)}`}>
-                          <span>
-                            <strong>Bestellung #{order.orderNumber ?? "—"} · {order.orderType === "lieferung" ? "Lieferung" : "Abholung"}</strong>
-                            <small>{formatOrderDate(order.createdAt)} · {orderStatusLabel(order)}</small>
-                            <small className={styles.items}>{order.items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}</small>
-                          </span>
-                          <span className={styles.orderMeta}>
-                            <strong>{euro(order.total)}</strong>
-                            {order.earnedRoses > 0 && <small>+{order.earnedRoses} Rosen</small>}
-                            {order.redeemedRoses > 0 && <small>−{order.redeemedRoses} Rosen eingelöst</small>}
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </section>
             )}
 
             {view === "daten" && (
-              <section className={styles.card}>
-                <h2>Kontakt- & Lieferdaten</h2>
-                <p className={styles.muted}>Diese Angaben werden beim Bestellen auf der Website und in der App automatisch eingetragen.</p>
-                <form onSubmit={submitProfile} className={styles.formGrid}>
-                  <label className={styles.full}>Name<input required autoComplete="name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /></label>
-                  <label className={styles.full}>Telefon<input type="tel" autoComplete="tel" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></label>
-                  <label>Straße<input autoComplete="address-line1" value={profile.street} onChange={(event) => setProfile({ ...profile, street: event.target.value })} /></label>
-                  <label>Hausnr.<input value={profile.houseNumber} onChange={(event) => setProfile({ ...profile, houseNumber: event.target.value })} /></label>
-                  <label>PLZ<input inputMode="numeric" autoComplete="postal-code" value={profile.postalCode} onChange={(event) => setProfile({ ...profile, postalCode: event.target.value })} /></label>
-                  <label>Ort<input autoComplete="address-level2" value={profile.city} onChange={(event) => setProfile({ ...profile, city: event.target.value })} /></label>
-                  <button className={`${styles.primaryButton} ${styles.full}`} disabled={busy}>{busy ? "Wird gespeichert …" : "Speichern"}</button>
-                </form>
+              <section className={styles.stack}>
+                <section className={styles.card}>
+                  <h2>Kontakt- & Lieferdaten</h2>
+                  <p className={styles.muted}>Wird beim Bestellen auf der Website und in der App automatisch eingetragen.</p>
+                  <form onSubmit={submitProfile} className={styles.formGrid}>
+                    <label className={styles.full}>Name<input required autoComplete="name" value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} /></label>
+                    <label className={styles.full}>Telefon<input type="tel" autoComplete="tel" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></label>
+                    <label>Straße<input autoComplete="address-line1" value={profile.street} onChange={(event) => setProfile({ ...profile, street: event.target.value })} /></label>
+                    <label>Hausnr.<input value={profile.houseNumber} onChange={(event) => setProfile({ ...profile, houseNumber: event.target.value })} /></label>
+                    <label>PLZ<input inputMode="numeric" autoComplete="postal-code" value={profile.postalCode} onChange={(event) => setProfile({ ...profile, postalCode: event.target.value })} /></label>
+                    <label>Ort<input autoComplete="address-level2" value={profile.city} onChange={(event) => setProfile({ ...profile, city: event.target.value })} /></label>
+                    <button className={`${styles.primaryButton} ${styles.full}`} disabled={busy}>{busy ? "Wird gespeichert …" : "Speichern"}</button>
+                  </form>
+                </section>
+                <section className={`${styles.card} ${styles.menuCard}`}>
+                  <button type="button" onClick={logout}>
+                    <span className={styles.menuIcon}><Icon name="logout" /></span>
+                    <span><strong>Abmelden</strong><small>{user.email}</small></span>
+                    <Icon name="chevron" />
+                  </button>
+                </section>
+                <button type="button" className={styles.deleteLink} onClick={() => setDeleteOpen(true)}>Konto löschen</button>
               </section>
             )}
-          </>
+          </div>
         )}
       </div>
 

@@ -108,6 +108,31 @@ export async function releaseRoses(user: User, orderId: string) {
   });
 }
 
+// Schickt den 6-stelligen Bestätigungscode. auto = nur senden, wenn noch kein gültiger Code unterwegs ist.
+export async function sendEmailCode(user: User, auto = false) {
+  const data = await authorizedFetch(user, "/api/account/email-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ auto }),
+  });
+  return {
+    sent: Boolean(data.sent),
+    verified: Boolean(data.verified),
+    retryAfter: Math.max(0, Number(data.retryAfter) || 0),
+  };
+}
+
+export async function verifyEmailCode(user: User, code: string) {
+  await authorizedFetch(user, "/api/account/email-code/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  // Firebase-Status und Token neu laden, damit emailVerified sofort überall stimmt.
+  await user.reload();
+  await user.getIdToken(true);
+}
+
 export function euro(value: number) {
   return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
 }
@@ -135,6 +160,16 @@ export function orderStatusLabel(order: AccountOrder) {
   if (["abholbereit", "bereit"].some((value) => status.includes(value))) return "Abholbereit";
   if (["angenommen", "bestätigt", "zubereitung"].some((value) => status.includes(value))) return "Wird zubereitet";
   return "Bestellung eingegangen";
+}
+
+export type OrderTone = "waiting" | "active" | "done" | "cancelled";
+
+export function orderStatusTone(order: AccountOrder): OrderTone {
+  const label = orderStatusLabel(order);
+  if (label === "Storniert") return "cancelled";
+  if (["Geliefert", "Abgeholt", "Abholbereit"].includes(label)) return "done";
+  if (["Wird zubereitet", "Unterwegs"].includes(label)) return "active";
+  return "waiting";
 }
 
 export function authErrorMessage(error: unknown) {

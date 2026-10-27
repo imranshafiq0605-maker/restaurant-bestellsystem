@@ -117,6 +117,7 @@ export async function DELETE(request: NextRequest) {
     await deleteWhere("rosenBuchungen", "uid", uid);
     await deleteWhere("rosenEinloesungen", "uid", uid);
     await deleteWhere("rosenReservierungen", "uid", uid);
+    await db.collection("emailCodes").doc(uid).delete();
     await db.collection("kunden").doc(uid).delete();
     await getAdminAuth().deleteUser(uid);
 
