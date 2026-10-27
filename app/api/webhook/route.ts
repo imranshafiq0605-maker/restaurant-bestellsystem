@@ -3,6 +3,8 @@ import Stripe from "stripe";
 import admin from "firebase-admin";
 import { getAdminDb } from "../../lib/firebase-admin";
 import { sendOrderEmail } from "../../lib/send-order-email";
+import { buildInvoiceData, createBelegToken, invoiceNumberFor } from "../../lib/belege/invoice-data";
+import { createInvoicePdf } from "../../lib/belege/pdf";
 
 function getBerlinDateParts(date: Date) {
   const formatter = new Intl.DateTimeFormat("en-GB", {
@@ -184,6 +186,9 @@ export async function POST(req: NextRequest) {
       releaseAt: admin.firestore.Timestamp.fromDate(releaseDate),
       acceptedAt: null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      rechnungsnummer: invoiceNumberFor(neueBestellnummer),
+      rechnungsdatum: admin.firestore.Timestamp.fromDate(jetzt),
+      belegToken: createBelegToken(),
     };
 
     await adminDb.collection("bestellungen").doc(pendingOrderId).set(finaleBestellung);
@@ -251,6 +256,14 @@ export async function POST(req: NextRequest) {
       : `${siteUrl}/order-status?id=${pendingOrderId}`;
 
     if (kundenEmail) {
+      let invoicePdf: Uint8Array | null = null;
+      try {
+        invoicePdf = await createInvoicePdf(buildInvoiceData(finaleBestellung));
+      } catch (pdfError: unknown) {
+        console.error("❌ Rechnung-PDF konnte nicht erstellt werden:", pdfError);
+      }
+      const belegQuery = `id=${encodeURIComponent(pendingOrderId)}&t=${encodeURIComponent(finaleBestellung.belegToken)}`;
+
       try {
         await sendOrderEmail({
           to: kundenEmail,
@@ -260,6 +273,12 @@ export async function POST(req: NextRequest) {
           items: Array.isArray(pendingOrderData?.artikel) ? pendingOrderData.artikel : [],
           total: Number(pendingOrderData?.zahlbetrag ?? pendingOrderData?.gesamtpreis) || 0,
           orderType: pendingOrderData?.bestellart || "abholung",
+          belege: {
+            invoiceNumber: finaleBestellung.rechnungsnummer,
+            invoicePdf,
+            invoiceUrl: `${siteUrl}/api/rechnung?${belegQuery}`,
+            bewirtungsbelegUrl: `${siteUrl}/bewirtungsbeleg?${belegQuery}`,
+          },
         });
         console.log("✅ Bestellmail gesendet an:", kundenEmail);
       } catch (mailError: unknown) {
