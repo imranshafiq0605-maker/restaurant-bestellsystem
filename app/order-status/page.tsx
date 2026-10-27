@@ -23,6 +23,10 @@ type OrderData = {
   };
   artikel?: OrderItem[];
   gesamtpreis?: number;
+  zahlbetrag?: number;
+  firebaseUid?: string | null;
+  rosenVerdient?: number;
+  rosenEingeloest?: number;
   bestellart?: "abholung" | "lieferung";
   status?: string;
   bezahlt?: boolean;
@@ -401,7 +405,7 @@ function OrderStatusContent() {
                       fontWeight: 800,
                     }}
                   >
-                    {formatEuro(order.gesamtpreis)}
+                    {formatEuro(order.zahlbetrag ?? order.gesamtpreis)}
                   </div>
                 </div>
               </div>
@@ -439,6 +443,31 @@ function OrderStatusContent() {
               >
                 #{order.orderNumber || "—"}
               </div>
+            </div>
+
+            <div style={styles.roseCard}>
+              <div style={styles.roseLabel}>🌹 La Rosa Rosen</div>
+              {order.firebaseUid ? (
+                <>
+                  <div style={styles.roseValue}>
+                    +{Math.max(0, Math.floor(Number(order.rosenVerdient) || 0))} Rosen
+                  </div>
+                  <div style={styles.roseText}>
+                    {Number(order.rosenEingeloest) > 0
+                      ? `${order.rosenEingeloest} Rosen wurden für diese Bestellung eingelöst. `
+                      : ""}
+                    Die Gutschrift erscheint in deinem Konto.
+                  </div>
+                  <a href="/konto?view=rosen" style={styles.roseLink}>Rosenkonto ansehen</a>
+                </>
+              ) : (
+                <>
+                  <div style={styles.roseText}>
+                    Erstelle ein kostenloses Konto mit der E-Mail-Adresse dieser Bestellung und bestätige sie. Dann bekommst du die Rosen für diese Bestellung nachträglich gutgeschrieben.
+                  </div>
+                  <a href="/konto" style={styles.roseLink}>Konto erstellen</a>
+                </>
+              )}
             </div>
 
             <div style={styles.sideCard}>
@@ -703,6 +732,43 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 24,
     boxShadow: "0 14px 40px rgba(15, 23, 42, 0.06)",
     border: "1px solid rgba(15,23,42,0.05)",
+  },
+  roseCard: {
+    background: "linear-gradient(140deg, #8f1424, #b32031 60%, #12356b)",
+    color: "#ffffff",
+    borderRadius: 30,
+    padding: 24,
+    boxShadow: "0 14px 40px rgba(143, 20, 36, 0.18)",
+    display: "grid",
+    gap: 10,
+  },
+  roseLabel: {
+    fontSize: 13,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    fontWeight: 700,
+    opacity: 0.8,
+  },
+  roseValue: {
+    fontSize: 30,
+    fontWeight: 800,
+    letterSpacing: "-0.03em",
+  },
+  roseText: {
+    fontSize: 14,
+    lineHeight: 1.5,
+    opacity: 0.9,
+  },
+  roseLink: {
+    justifySelf: "start",
+    marginTop: 4,
+    padding: "10px 16px",
+    borderRadius: 999,
+    background: "#ffffff",
+    color: "#111111",
+    fontWeight: 800,
+    fontSize: 14,
+    textDecoration: "none",
   },
   smallCardLabel: {
     fontSize: 13,
