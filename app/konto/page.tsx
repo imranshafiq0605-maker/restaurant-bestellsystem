@@ -20,6 +20,7 @@ import { FirebaseError } from "firebase/app";
 import { auth } from "../lib/firebase";
 import EmailCodeStep from "../components/email-code-step";
 import {
+  applyPendingNewsletterOptIn,
   authErrorMessage,
   deleteAccount,
   emptyProfile,
@@ -32,7 +33,9 @@ import {
   ROSE_REDEEM_STEP,
   ROSE_VALUE_EUR,
   needsEmailCode,
+  rememberNewsletterOptIn,
   saveProfile,
+  setNewsletter,
   type AccountOrder,
   type AccountProfile,
 } from "../lib/account-client";
@@ -147,6 +150,7 @@ function KontoContent() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
 
   useEffect(() => {
     getRedirectResult(auth).catch((error: unknown) => setMessage(authErrorMessage(error)));
@@ -175,7 +179,8 @@ function KontoContent() {
       window.location.href = nextPath;
       return;
     }
-    void loadAccount(currentUser);
+    // Newsletter-Häkchen aus der Registrierung zuerst speichern, damit das Profil den richtigen Stand zeigt.
+    void applyPendingNewsletterOptIn(currentUser).finally(() => loadAccount(currentUser));
   }, [loadAccount, nextPath]);
 
   useEffect(() => onAuthStateChanged(auth, (nextUser) => {
@@ -190,6 +195,7 @@ function KontoContent() {
     setEmail(nextUser.email ?? "");
     if (needsEmailCode(nextUser)) {
       setVerified(false);
+      void applyPendingNewsletterOptIn(nextUser);
       return;
     }
     enterAccount(nextUser);
@@ -207,6 +213,7 @@ function KontoContent() {
     setMessage("");
     try {
       if (authMode === "register") {
+        rememberNewsletterOptIn(newsletterOptIn);
         await createUserWithEmailAndPassword(auth, email.trim(), password);
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -223,6 +230,7 @@ function KontoContent() {
     setBusy(true);
     setMessage("");
     try {
+      if (authMode === "register") rememberNewsletterOptIn(newsletterOptIn);
       const provider = providerName === "google" ? new GoogleAuthProvider() : new OAuthProvider("apple.com");
       if (providerName === "apple") {
         provider.addScope("email");
@@ -243,6 +251,21 @@ function KontoContent() {
       }
     } catch (error) {
       setMessage(authErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleNewsletter(subscribed: boolean) {
+    if (!user) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const next = await setNewsletter(user, subscribed);
+      setProfile((current) => ({ ...current, newsletter: next }));
+      setMessage(next ? "Du bekommst jetzt unseren Newsletter." : "Newsletter abbestellt.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Die Einstellung konnte nicht gespeichert werden.");
     } finally {
       setBusy(false);
     }
@@ -373,6 +396,13 @@ function KontoContent() {
                 <button type="button" className={authMode === "login" ? styles.segmentActive : ""} onClick={() => { setAuthMode("login"); setMessage(""); }}>Anmelden</button>
               </div>
 
+              {authMode === "register" && (
+                <label className={styles.checkRow}>
+                  <input type="checkbox" checked={newsletterOptIn} onChange={(event) => setNewsletterOptIn(event.target.checked)} />
+                  <span><strong>Newsletter abonnieren</strong><small>Angebote und Rosen-Aktionen per E-Mail. Jederzeit abbestellbar.</small></span>
+                </label>
+              )}
+
               <div className={styles.socialButtons}>
                 <button type="button" disabled={busy} onClick={() => socialSignIn("apple")}><span><AppleLogo /></span>Mit Apple fortfahren</button>
                 <button type="button" disabled={busy} onClick={() => socialSignIn("google")}><span><GoogleLogo /></span>Mit Google fortfahren</button>
@@ -407,6 +437,7 @@ function KontoContent() {
               <div className={styles.profileText}>
                 <h1>{firstName ? `Hallo ${firstName}` : "Mein Konto"}</h1>
                 <p>{user.email}{user.emailVerified && <span className={styles.verified}>Bestätigt</span>}</p>
+                {profile.customerNumber ? <p className={styles.customerNumber}>Kundennummer {profile.customerNumber}</p> : null}
               </div>
               <button type="button" className={styles.iconButton} onClick={logout} aria-label="Abmelden" title="Abmelden"><Icon name="logout" /></button>
             </section>
@@ -515,6 +546,12 @@ function KontoContent() {
                     <label>Ort<input autoComplete="address-level2" value={profile.city} onChange={(event) => setProfile({ ...profile, city: event.target.value })} /></label>
                     <button className={`${styles.primaryButton} ${styles.full}`} disabled={busy}>{busy ? "Wird gespeichert …" : "Speichern"}</button>
                   </form>
+                </section>
+                <section className={styles.card}>
+                  <label className={styles.checkRow}>
+                    <input type="checkbox" checked={Boolean(profile.newsletter)} disabled={busy} onChange={(event) => void toggleNewsletter(event.target.checked)} />
+                    <span><strong>Newsletter</strong><small>Angebote und Rosen-Aktionen per E-Mail an {user.email}</small></span>
+                  </label>
                 </section>
                 <section className={`${styles.card} ${styles.menuCard}`}>
                   <button type="button" onClick={logout}>

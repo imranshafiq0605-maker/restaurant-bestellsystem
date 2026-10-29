@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getAdminAuth, getAdminDb } from "../../../lib/firebase-admin";
 import { stripeMetadataQuery, verifyFirebaseIdToken } from "../../../lib/firebase-rest-auth";
+import { ensureCustomerNumber } from "../../../lib/customers-server";
 
 const profileFields = ["name", "phone", "street", "houseNumber", "postalCode", "city"] as const;
 type ProfileField = (typeof profileFields)[number];
@@ -42,6 +43,8 @@ function profileResponse(data: FirebaseFirestore.DocumentData | undefined) {
     postalCode: typeof data?.postalCode === "string" ? data.postalCode : "",
     city: typeof data?.city === "string" ? data.city : "",
     roses: Math.max(0, Number(data?.roses) || 0),
+    customerNumber: Number(data?.kundennummer) || null,
+    newsletter: data?.newsletter?.subscribed === true,
   };
 }
 
@@ -59,6 +62,8 @@ async function deleteWhere(collectionName: string, field: string, value: string)
 export async function GET(request: NextRequest) {
   try {
     const account = await verifyFirebaseIdToken(request.headers.get("authorization"));
+    // Neue Konten bekommen hier ihre feste Kundennummer.
+    await ensureCustomerNumber(account.localId, account.email).catch((error) => console.error("Kundennummer konnte nicht vergeben werden:", error));
     const customer = await getAdminDb().collection("kunden").doc(account.localId).get();
     return NextResponse.json({ profile: profileResponse(customer.data()) });
   } catch (error) {

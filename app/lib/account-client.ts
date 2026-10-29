@@ -17,6 +17,8 @@ export type AccountProfile = {
   postalCode: string;
   city: string;
   roses: number;
+  customerNumber?: number | null;
+  newsletter?: boolean;
 };
 
 export type AccountOrder = {
@@ -71,6 +73,8 @@ function toProfile(data: Record<string, unknown> | undefined): AccountProfile {
     postalCode: typeof data?.postalCode === "string" ? data.postalCode : "",
     city: typeof data?.city === "string" ? data.city : "",
     roses: Math.max(0, Number(data?.roses) || 0),
+    customerNumber: Number(data?.customerNumber) || null,
+    newsletter: data?.newsletter === true,
   };
 }
 
@@ -94,6 +98,38 @@ export async function fetchOrders(user: User) {
     orders: Array.isArray(data.orders) ? (data.orders as AccountOrder[]) : [],
     roses: Math.max(0, Number(data.roses) || 0),
   };
+}
+
+// Newsletter-Anmeldung. Bei der Registrierung gemerkt (sessionStorage), damit sie auch nach Apple-/Google-Login
+// oder einer Weiterleitung ankommt; gesendet wird, sobald das Konto angemeldet ist.
+export const NEWSLETTER_OPT_IN_KEY = "larosa_newsletter_optin";
+
+export function rememberNewsletterOptIn(subscribe: boolean) {
+  try {
+    if (subscribe) sessionStorage.setItem(NEWSLETTER_OPT_IN_KEY, "1");
+    else sessionStorage.removeItem(NEWSLETTER_OPT_IN_KEY);
+  } catch {
+    // Speicher nicht verfügbar (privater Modus) – dann eben keine Anmeldung.
+  }
+}
+
+export async function applyPendingNewsletterOptIn(user: User) {
+  try {
+    if (sessionStorage.getItem(NEWSLETTER_OPT_IN_KEY) !== "1") return;
+    sessionStorage.removeItem(NEWSLETTER_OPT_IN_KEY);
+  } catch {
+    return;
+  }
+  await setNewsletter(user, true).catch(() => undefined);
+}
+
+export async function setNewsletter(user: User, subscribed: boolean) {
+  const data = await authorizedFetch(user, "/api/account/newsletter", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscribed }),
+  });
+  return Boolean(data.subscribed);
 }
 
 export async function deleteAccount(user: User) {

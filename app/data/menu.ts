@@ -33,6 +33,8 @@ export type Product = {
   price?: number;
   variants?: ProductVariant[];
   options?: ProductOption[];
+  /** Im Admin-Panel ausgeblendet: erscheint nicht auf Website und App. */
+  hidden?: boolean;
 };
 const indischFleischartOption: ProductOption = {
   group: "Fleischart",

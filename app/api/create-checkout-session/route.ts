@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import admin from "firebase-admin";
 import { stripeMetadataQuery, verifyFirebaseIdToken } from "../../lib/firebase-rest-auth";
 import { getAdminDb } from "../../lib/firebase-admin";
+import { loadOpeningSettings } from "../../lib/site-config-server";
 
 function validiereEmail(email: string) {
   const emailBereinigt = email.trim();
@@ -84,6 +85,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Gesamtpreis fehlt oder ist ungültig" },
         { status: 400 }
+      );
+    }
+
+    // Schalter „Geschlossen“ aus dem Admin-Panel: dann werden keine Bestellungen angenommen.
+    const opening = await loadOpeningSettings();
+    if (opening.closure.active) {
+      return NextResponse.json(
+        { error: opening.closure.reason ? `Wir haben gerade geschlossen: ${opening.closure.reason}` : "Wir nehmen gerade keine Bestellungen an." },
+        { status: 409 }
       );
     }
 

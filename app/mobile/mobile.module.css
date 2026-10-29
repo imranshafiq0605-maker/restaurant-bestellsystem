@@ -133,3 +133,8 @@
 @media (prefers-reduced-motion:reduce){.launchScreen{animation:launchExit .5s ease both}.launchBrand,.deliveryCar,.carWheel,.launchPizza,.launchSmoke i,.launchCaption{animation:none!important}.deliveryCar{left:50%}.launchPizza{opacity:1}.launchCaption{opacity:1}}
 .productSheet footer button:disabled{opacity:.48;box-shadow:none}
 .codeCard{--code-accent:var(--blue);padding:24px 19px}
+.formCard label.newsletterCheck { flex-direction:row; align-items:flex-start; gap:11px; margin:0 0 15px; padding:13px; border-radius:15px; background:#f3f4f7; cursor:pointer; }
+.formCard .newsletterCheck input { flex:none; width:20px; height:20px; margin:1px 0 0; padding:0; border:0; accent-color:var(--blue); }
+.newsletterCheck span { display:flex; flex-direction:column; gap:3px; }
+.newsletterCheck strong { color:var(--ink); font-size:14px; }
+.newsletterCheck small { color:var(--muted); font-size:12px; font-weight:500; line-height:1.4; }
