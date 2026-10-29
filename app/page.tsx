@@ -19,7 +19,10 @@ import {
   closedReasonForDate,
   getPreorderWindow,
   getServiceStatus,
+  getTodayNotice,
+  hoursForDate,
   summarizeWeek,
+  upcomingSpecialDays,
   type OpeningSettings,
 } from "./lib/site-settings";
 import RoseAccountChip from "./components/rose-account-chip";
@@ -410,6 +413,8 @@ const [cartLoaded, setCartLoaded] = useState(false);
   const closedReason = closedReasonForDate(opening, new Date());
   const specialClosed = closedReason !== null;
   const specialClosedReason = closedReason || "";
+  const todayNotice = getTodayNotice(opening);
+  const specialDaysAhead = upcomingSpecialDays(opening).slice(0, 6);
 
   const [viewStep, setViewStep] = useState<ViewStep>("kitchens");
   const [activeCuisine, setActiveCuisine] = useState<Cuisine | null>(null);
@@ -1367,15 +1372,24 @@ useEffect(() => {
 
         {viewStep === "kitchens" && (
           <>
-          {specialClosed && (
-  <section className="container section-spacing">
-    <div className="special-closure-banner">
-      <span className="special-closure-label">Heute geschlossen</span>
-      <h3>Heute nehmen wir keine Bestellungen an</h3>
-      {specialClosedReason ? (
-        <p>Grund: {specialClosedReason}</p>
+          {todayNotice && (
+  <section className="container today-notice-section">
+    <div className={`today-notice ${todayNotice.kind}`}>
+      <span className="today-notice-label">{todayNotice.kind === "closed" ? "Geschlossen" : "Heute"}</span>
+      <h3>{todayNotice.title}</h3>
+      {todayNotice.kind === "closed" ? (
+        <p>
+          {todayNotice.reason || "Heute nehmen wir keine Bestellungen an."}
+          {todayNotice.until && todayNotice.title.indexOf(todayNotice.until) === -1 ? ` Geschlossen ${todayNotice.until}.` : ""}
+        </p>
       ) : (
-        <p>Heute ist eine besondere Schließzeit eingetragen.</p>
+        <>
+          {todayNotice.reason && <p>{todayNotice.reason}</p>}
+          <div className="today-notice-hours">
+            <div><span>Abholung</span><strong>{todayNotice.abholung}</strong></div>
+            <div><span>Lieferung</span><strong>{todayNotice.lieferung}</strong></div>
+          </div>
+        </>
       )}
     </div>
   </section>
@@ -1553,6 +1567,38 @@ useEffect(() => {
       </div>
     </div>
   </div>
+  {specialDaysAhead.length > 0 && (
+    <div className="special-days-card">
+      <h4>Besondere Öffnungszeiten</h4>
+      <div className="special-days-rows">
+        {specialDaysAhead.map((entry) => {
+          const first = new Date(`${entry.from}T12:00:00`);
+          const fmt = (date: Date) => date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+          const label = entry.to === entry.from ? fmt(first) : `${fmt(first)} – ${fmt(new Date(`${entry.to}T12:00:00`))}`;
+          const abholung = hoursForDate(opening, "abholung", first);
+          const lieferung = hoursForDate(opening, "lieferung", first);
+          const bothClosed = !abholung.open && !lieferung.open;
+          return (
+            <div className="special-days-row" key={entry.id}>
+              <div>
+                <strong>{label}</strong>
+                {entry.reason && <span>{entry.reason}</span>}
+              </div>
+              {bothClosed ? (
+                <em className="closed">Geschlossen</em>
+              ) : (
+                <em>
+                  Abholung {abholung.open ? `${abholung.from} – ${abholung.to}` : "geschlossen"}
+                  <br />
+                  Lieferung {lieferung.open ? `${lieferung.from} – ${lieferung.to}` : "geschlossen"}
+                </em>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
 </section>
             <footer className="site-footer">
               <div className="container footer-inner">
@@ -3322,6 +3368,143 @@ useEffect(() => {
         .offers-track {
           gap: 12px;
           padding: 2px 2px 12px;
+        }
+
+        .today-notice-section {
+          padding-top: 14px;
+          padding-bottom: 4px;
+        }
+
+        .today-notice {
+          border-radius: 14px;
+          padding: 18px 20px;
+          border: 1px solid #fde68a;
+          background: #fffbeb;
+          color: #1f2937;
+        }
+
+        .today-notice.closed {
+          border-color: #fecdd3;
+          background: #fff1f2;
+        }
+
+        .today-notice-label {
+          display: inline-block;
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-size: 0.74rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          background: #f59e0b;
+          color: #ffffff;
+        }
+
+        .today-notice.closed .today-notice-label {
+          background: #e11d48;
+        }
+
+        .today-notice h3 {
+          margin: 10px 0 4px;
+          font-size: 1.25rem;
+          line-height: 1.25;
+        }
+
+        .today-notice p {
+          margin: 0;
+          color: #4b5563;
+        }
+
+        .today-notice-hours {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .today-notice-hours div {
+          border-radius: 10px;
+          background: #ffffff;
+          border: 1px solid #fde68a;
+          padding: 10px 12px;
+          display: grid;
+          gap: 2px;
+        }
+
+        .today-notice-hours span {
+          font-size: 0.78rem;
+          color: #6b7280;
+          font-weight: 700;
+        }
+
+        .today-notice-hours strong {
+          font-size: 1rem;
+        }
+
+        .special-days-card {
+          margin-top: 16px;
+          border-radius: 8px;
+          border: 1px solid #dde3ea;
+          background: #ffffff;
+          padding: 18px 20px;
+        }
+
+        .special-days-card h4 {
+          margin: 0 0 10px;
+        }
+
+        .special-days-rows {
+          display: grid;
+        }
+
+        .special-days-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 14px;
+          padding: 10px 0;
+          border-top: 1px solid #eef1f4;
+        }
+
+        .special-days-row:first-child {
+          border-top: 0;
+        }
+
+        .special-days-row div {
+          display: grid;
+          gap: 2px;
+        }
+
+        .special-days-row span {
+          color: #6b7280;
+          font-size: 0.88rem;
+        }
+
+        .special-days-row em {
+          font-style: normal;
+          font-weight: 700;
+          text-align: right;
+          font-size: 0.92rem;
+          line-height: 1.45;
+        }
+
+        .special-days-row em.closed {
+          color: #e11d48;
+        }
+
+        @media (max-width: 560px) {
+          .today-notice {
+            padding: 16px;
+          }
+
+          .special-days-row {
+            flex-direction: column;
+            gap: 4px;
+          }
+
+          .special-days-row em {
+            text-align: left;
+          }
         }
 
         .offer-card,

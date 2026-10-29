@@ -14,12 +14,12 @@ import Newsletter from "./newsletter";
 
 type Section = "uebersicht" | "zeiten" | "speisekarte" | "kunden" | "newsletter";
 
-const sections: Array<{ id: Section; label: string; icon: IconName }> = [
-  { id: "uebersicht", label: "Übersicht", icon: "home" },
-  { id: "zeiten", label: "Öffnungszeiten", icon: "clock" },
-  { id: "speisekarte", label: "Speisekarte", icon: "menu" },
-  { id: "kunden", label: "Kunden", icon: "users" },
-  { id: "newsletter", label: "Newsletter", icon: "mail" },
+const sections: Array<{ id: Section; label: string; short: string; icon: IconName }> = [
+  { id: "uebersicht", label: "Übersicht", short: "Übersicht", icon: "home" },
+  { id: "zeiten", label: "Öffnungszeiten", short: "Zeiten", icon: "clock" },
+  { id: "speisekarte", label: "Speisekarte", short: "Karte", icon: "menu" },
+  { id: "kunden", label: "Kunden", short: "Kunden", icon: "users" },
+  { id: "newsletter", label: "Newsletter", short: "Newsletter", icon: "mail" },
 ];
 
 export type CustomerData = { customers: AdminCustomer[]; stats: CustomerStats };
@@ -240,11 +240,6 @@ function Dashboard({ email, onSignedOut }: { email: string; onSignedOut: () => v
               <Brand />
               <button type="button" className={styles.iconButton} onClick={logout} aria-label="Abmelden" title="Abmelden"><Icon name="logout" /></button>
             </div>
-            <nav className={styles.mobileNav} aria-label="Admin-Bereiche">
-              {sections.map((item) => (
-                <button key={item.id} type="button" className={section === item.id ? styles.navActive : ""} onClick={() => open(item.id)}>{item.label}</button>
-              ))}
-            </nav>
           </div>
 
           <div className={styles.main}>
@@ -256,6 +251,16 @@ function Dashboard({ email, onSignedOut }: { email: string; onSignedOut: () => v
           </div>
         </div>
       </div>
+
+      {/* Auf dem Handy: Navigation unten wie in einer App */}
+      <nav className={styles.tabBar} aria-label="Admin-Bereiche">
+        {sections.map((item) => (
+          <button key={item.id} type="button" className={section === item.id ? styles.tabActive : ""} aria-current={section === item.id ? "page" : undefined} onClick={() => open(item.id)}>
+            <Icon name={item.icon} />
+            <span>{item.short}</span>
+          </button>
+        ))}
+      </nav>
     </main>
   );
 }

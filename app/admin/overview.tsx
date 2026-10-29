@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { getServiceStatus, summarizeWeek, type OpeningSettings } from "../lib/site-settings";
+import { getServiceStatus, hoursForDate, summarizeWeek, type OpeningSettings } from "../lib/site-settings";
 import styles from "./admin.module.css";
-import { adminFetch, euro, Icon, number, PageHead, Switch, type AdminCustomer } from "./ui";
+import ClosureCard from "./closure";
+import { euro, Icon, number, PageHead, type AdminCustomer } from "./ui";
 import type { CustomerData } from "./page";
 
 type Props = {
@@ -36,36 +36,20 @@ function Ranking({ title, customers, value }: { title: string; customers: AdminC
 }
 
 export default function Overview({ data, error, opening, onOpen, onReload, onOpeningChange, onError }: Props) {
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
   const stats = data?.stats;
   const accounts = data?.customers.filter((customer) => customer.type === "konto") ?? [];
   const topRoses = [...accounts].filter((customer) => customer.roses > 0).sort((a, b) => b.roses - a.roses).slice(0, 5);
   const topOrders = [...(data?.customers ?? [])].filter((customer) => customer.orders > 0).sort((a, b) => b.orders - a.orders || b.revenue - a.revenue).slice(0, 5);
 
-  async function toggleClosure(active: boolean) {
-    if (!opening) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      const next = { ...opening, closure: { ...opening.closure, active } };
-      const result = await adminFetch<{ opening: OpeningSettings }>("/api/admin/settings", { method: "PUT", body: JSON.stringify({ opening: next }) });
-      onOpeningChange(result.opening);
-    } catch (toggleError) {
-      setMessage(onError(toggleError));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const statusBox = (label: string, service: "abholung" | "lieferung") => {
     const open = opening ? getServiceStatus(opening, service).isOpen : false;
-    const today = opening ? opening[service][(new Date().getDay() + 6) % 7] : null;
+    const today = opening ? hoursForDate(opening, service, new Date()) : null;
+    const todayText = today ? (today.open ? `Heute ${today.from} – ${today.to}` : today.special ? "Heute geschlossen" : "Heute Ruhetag") : "…";
     return (
       <div className={styles.statusBox}>
         <div>
           <strong>{label}</strong>
-          <small>{today ? (today.open ? `Heute ${today.from} – ${today.to}` : "Heute Ruhetag") : "…"}</small>
+          <small>{todayText}{today?.special ? " · besonderer Tag" : ""}</small>
         </div>
         <span className={`${styles.pill} ${open ? styles.pillOpen : styles.pillClosed}`}>{open ? "Geöffnet" : "Geschlossen"}</span>
       </div>
@@ -78,14 +62,7 @@ export default function Overview({ data, error, opening, onOpen, onReload, onOpe
         <button type="button" className={styles.secondary} onClick={() => void onReload()}><Icon name="refresh" />Aktualisieren</button>
       </PageHead>
 
-      <section className={`${styles.card} ${styles.closureCard} ${opening?.closure.active ? styles.closureActive : ""}`} style={{ marginBottom: 16 }}>
-        <div>
-          <h2>{opening?.closure.active ? "Bestellungen sind pausiert" : "Bestellungen sind aktiv"}</h2>
-          <p>{opening?.closure.active ? `Website und App nehmen keine Bestellungen an${opening.closure.reason ? ` · Grund: ${opening.closure.reason}` : ""}.` : "Schalter umlegen, um sofort zu schließen (z. B. bei Krankheit oder zu viel Andrang)."}</p>
-        </div>
-        <Switch on={Boolean(opening?.closure.active)} onChange={toggleClosure} label="Sofort schließen" danger disabled={!opening || busy} />
-      </section>
-      {message && <p className={styles.error}>{message}</p>}
+      <ClosureCard opening={opening} onSaved={onOpeningChange} onError={onError} />
 
       <div className={styles.statusRow}>
         {statusBox("Abholung", "abholung")}

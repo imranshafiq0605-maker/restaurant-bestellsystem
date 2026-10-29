@@ -6,7 +6,7 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { WEBSITE_NOTICE_TEXT, WEBSITE_ORDERING_ENABLED } from "../config/website-ordering";
 import { useSiteSettings } from "../lib/use-site-settings";
-import { closedReasonForDate, getPreorderWindow, getServiceStatus, type OpeningSettings } from "../lib/site-settings";
+import { closedReasonForDate, getPreorderWindow, getServiceStatus, isClosureActive, type OpeningSettings } from "../lib/site-settings";
 
 type Bestellart = "abholung" | "lieferung";
 type Vorbestellung = "sofort" | "spaeter";
@@ -505,7 +505,7 @@ export default function WarenkorbPage() {
   function nextFromZeit() {
     setFehlermeldung("");
 
-    if (opening.closure.active) {
+    if (isClosureActive(opening)) {
       setFehlermeldung(closedReason ? `Wir haben gerade geschlossen: ${closedReason}` : "Wir nehmen gerade keine Bestellungen an.");
       return;
     }
