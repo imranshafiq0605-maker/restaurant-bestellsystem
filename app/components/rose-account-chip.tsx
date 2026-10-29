@@ -5,13 +5,15 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { fetchProfile } from "../lib/account-client";
 
-// Kopfzeilen-Button der Website: führt zum Kundenkonto und zeigt das Rosenguthaben.
-// Nutzt die globalen Header-Klassen (call-button, call-icon, call-text) aus app/page.tsx.
+// Konto-Knopf in der Kopfleiste der Website: führt zum Kundenkonto (/konto) und zeigt das Rosenguthaben.
+// Ohne Anmeldung landet man auf /konto bei Anmeldung bzw. Registrierung. Styles: .lr-konto in app/page.tsx.
 export default function RoseAccountChip() {
+  const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [roses, setRoses] = useState<number | null>(null);
 
   useEffect(() => onAuthStateChanged(auth, (nextUser) => {
+    setReady(true);
     setUser(nextUser);
     setRoses(null);
     if (!nextUser) return;
@@ -20,22 +22,32 @@ export default function RoseAccountChip() {
       .catch(() => setRoses(null));
   }), []);
 
-  const label = user
-    ? roses === null ? "Mein Konto" : `${roses} Rosen`
-    : "Anmelden";
+  const label = !ready ? "Mein Konto" : user ? "Mein Konto" : "Anmelden / Registrieren";
 
   return (
     <a
-      className="call-button rose-account-chip"
+      className="lr-konto"
       href="/konto"
-      aria-label={user ? `Mein Konto${roses !== null ? `, ${roses} Rosen` : ""}` : "Anmelden und Rosen sammeln"}
+      aria-label={user ? `Mein Konto${roses !== null ? `, ${roses} Rosen` : ""}` : "Anmelden oder registrieren und Rosen sammeln"}
     >
-      <span className="call-icon rose-account-icon" aria-hidden="true">🌹</span>
-      <span className="call-text">
-        <small>{user ? "Mein Konto" : "Rosen sammeln"}</small>
-        <strong>{label}</strong>
+      <span className="lr-konto-main">
+        <svg className="lr-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+        <span className="lr-konto-label">{label}</span>
       </span>
-      {user && roses !== null && <span className="rose-account-badge" aria-hidden="true">{roses > 999 ? "999+" : roses}</span>}
+      <span className="lr-konto-roses">
+        {user && roses !== null && (
+          <>
+            <img src="/images/rose-navy.png" alt="" />
+            <span>{roses} Rosen</span>
+          </>
+        )}
+        <svg className="lr-icon lr-chevron" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      </span>
     </a>
   );
 }
