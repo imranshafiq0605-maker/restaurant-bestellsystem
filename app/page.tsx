@@ -1252,18 +1252,15 @@ useEffect(() => {
   return (
     <>
       <main className="page-shell">
-        <header className="premium-header">
-          <div className="container nav-inner">
-           <div className="brand-box">
-  <div className="brand-logo-shell">
-    <img src="/images/logo.jpg" alt="La Rosa Logo" className="logo-img" />
-  </div>
-
-  <div className="brand-text">
-    <span className="brand-kicker">Restaurant & Lieferservice</span>
-    <h1 className="brand-title">La Rosa GmbH</h1>
-  </div>
-</div>
+        <header className="lr-header">
+          <div className="container lr-header-inner">
+            <div className="lr-brand">
+              <img src="/images/rose-white.png" alt="" className="lr-brand-rose" />
+              <div className="lr-brand-text">
+                <h1 className="lr-brand-title">La Rosa</h1>
+                <span className="lr-brand-kicker">Pizzeria · seit 1993</span>
+              </div>
+            </div>
 
             <div className="header-search-wrap">
               <div className="header-search-glow" />
@@ -1322,39 +1319,35 @@ useEffect(() => {
               )}
             </div>
 
-            <div className="nav-right">
-              <a className="call-button" href="tel:06105297883" aria-label="La Rosa anrufen">
-                <span className="call-icon" aria-hidden="true">📞</span>
-                <span className="call-text">
-                  <small>Anrufen</small>
-                  <strong>06105 297883</strong>
-                </span>
-              </a>
-
-              <div className="halal-chip" aria-label="Halal">
-                <img src="/images/halal.png" alt="" className="header-halal-badge" />
-                <span>Halal</span>
-              </div>
-
-              <RoseAccountChip />
-
-              <button
-  className={`cart-button compact cart-button-clean ${cartPulse ? "pulse" : ""}`}
-  onClick={openCheckout}
-  type="button"
-  disabled={!WEBSITE_ORDERING_ENABLED}
-  aria-label={WEBSITE_ORDERING_ENABLED ? "Warenkorb öffnen" : "Warenkorb aktuell geschlossen"}
-  title={!WEBSITE_ORDERING_ENABLED ? WEBSITE_NOTICE_TEXT : undefined}
->
-  <span className="cart-icon" aria-hidden="true">Bag</span>
-
-  <span className="cart-button-text">
-    Warenkorb
-  </span>
-
-  <span className="cart-count cart-count-clean">{gesamtAnzahl}</span>
-</button>
+            <div className="lr-halal" aria-label="Halal">
+              <img src="/images/halal-white.png" alt="" />
+              <span>Halal</span>
             </div>
+
+            <RoseAccountChip />
+
+            <a className="lr-call" href="tel:06105297883" aria-label="La Rosa anrufen: 06105 297883">
+              <svg className="lr-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" />
+              </svg>
+              <span className="lr-call-number">06105 297883</span>
+            </a>
+
+            <button
+              className={`lr-cart ${cartPulse ? "pulse" : ""}`}
+              onClick={openCheckout}
+              type="button"
+              disabled={!WEBSITE_ORDERING_ENABLED}
+              aria-label={WEBSITE_ORDERING_ENABLED ? `Warenkorb öffnen, ${gesamtAnzahl} Artikel` : "Warenkorb aktuell geschlossen"}
+              title={!WEBSITE_ORDERING_ENABLED ? WEBSITE_NOTICE_TEXT : undefined}
+            >
+              <svg className="lr-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 7h12l1 14H5L6 7z" />
+                <path d="M9 7a3 3 0 0 1 6 0" />
+              </svg>
+              <span className="lr-cart-text">Warenkorb</span>
+              <span className="lr-cart-count">{gesamtAnzahl}</span>
+            </button>
           </div>
         </header>
         {WEBSITE_NOTICE_ENABLED && (
@@ -5262,6 +5255,331 @@ useEffect(() => {
           .cart-button-clean {
             width: 42px;
             min-width: 42px;
+          }
+        }
+
+        /* Kopfleiste (Navy-Leiste): Logo, Suche, Halal, Konto mit Rosen, Anrufen, Warenkorb */
+        .lr-header {
+          position: sticky;
+          top: 0;
+          z-index: 80;
+          padding: calc(env(safe-area-inset-top, 0px) + 12px) 0 14px;
+          background: #172b5e;
+          color: #ffffff;
+          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+        }
+
+        .lr-header-inner {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
+          grid-template-areas: "brand search halal konto call cart";
+          align-items: center;
+          gap: 10px;
+        }
+
+        .lr-icon {
+          width: 20px;
+          height: 20px;
+          flex: 0 0 auto;
+          fill: none;
+          stroke: currentColor;
+          stroke-width: 2;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+
+        .lr-brand {
+          grid-area: brand;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+          padding-right: 8px;
+        }
+
+        .lr-brand-rose {
+          width: 34px;
+          height: auto;
+          flex: 0 0 auto;
+        }
+
+        .lr-brand-text {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .lr-brand-title {
+          margin: 0;
+          font-family: var(--font-brand), Georgia, "Times New Roman", serif;
+          font-size: 1.55rem;
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: #ffffff;
+          white-space: nowrap;
+        }
+
+        .lr-brand-kicker {
+          font-size: 0.66rem;
+          font-weight: 600;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.72);
+          white-space: nowrap;
+        }
+
+        .lr-header .header-search-wrap {
+          grid-area: search;
+          width: auto;
+          max-width: none;
+          min-width: 0;
+          order: 0;
+        }
+
+        .lr-header .header-search {
+          min-height: 48px;
+          border-radius: 14px;
+          border: 1px solid transparent;
+          background: #ffffff;
+          box-shadow: none;
+          backdrop-filter: none;
+        }
+
+        .lr-header .header-search-glow {
+          display: none;
+        }
+
+        .lr-halal,
+        .lr-call,
+        .lr-konto,
+        .lr-cart {
+          min-height: 46px;
+          border-radius: 13px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font: inherit;
+          font-size: 0.9rem;
+          font-weight: 700;
+          text-decoration: none;
+          white-space: nowrap;
+          transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .lr-halal {
+          grid-area: halal;
+          padding: 0 14px 0 10px;
+          background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+        }
+
+        .lr-halal img {
+          width: 26px;
+          height: auto;
+        }
+
+        .lr-konto {
+          grid-area: konto;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 0 12px 0 14px;
+          background: #ffffff;
+          color: #172b5e;
+        }
+
+        .lr-konto:hover,
+        .lr-cart:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+        }
+
+        .lr-konto-main,
+        .lr-konto-roses {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .lr-konto-label {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .lr-konto-roses {
+          gap: 5px;
+          color: #64748b;
+          font-weight: 700;
+        }
+
+        .lr-konto-roses img {
+          width: 16px;
+          height: auto;
+        }
+
+        .lr-chevron {
+          width: 16px;
+          height: 16px;
+        }
+
+        .lr-call {
+          grid-area: call;
+          padding: 0 14px 0 12px;
+          background: rgba(255, 255, 255, 0.12);
+          color: #ffffff;
+        }
+
+        .lr-call:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lr-cart {
+          grid-area: cart;
+          position: relative;
+          padding: 0 10px 0 14px;
+          border: 0;
+          background: #ffffff;
+          color: #172b5e;
+          cursor: pointer;
+        }
+
+        .lr-cart:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .lr-cart.pulse {
+          animation: cartPulseAnim 0.7s ease;
+        }
+
+        .lr-cart-count {
+          min-width: 26px;
+          height: 26px;
+          padding: 0 7px;
+          display: inline-grid;
+          place-items: center;
+          border-radius: 999px;
+          background: #172b5e;
+          color: #ffffff;
+          font-size: 0.78rem;
+          font-weight: 800;
+        }
+
+        @media (max-width: 1280px) {
+          .lr-call {
+            width: 46px;
+            padding: 0;
+            justify-content: center;
+          }
+
+          .lr-call-number {
+            display: none;
+          }
+        }
+
+        @media (max-width: 1100px) {
+          .lr-cart-text {
+            display: none;
+          }
+
+          .lr-header-inner {
+            grid-template-areas:
+              "brand . halal konto call cart"
+              "search search search search search search";
+            row-gap: 12px;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .lr-header {
+            padding: calc(env(safe-area-inset-top, 0px) + 10px) 0 12px;
+          }
+
+          .lr-header-inner {
+            grid-template-columns: auto minmax(0, 1fr) auto auto;
+            grid-template-areas:
+              "brand brand call cart"
+              "halal konto konto konto"
+              "search search search search";
+            gap: 10px 8px;
+          }
+
+          .lr-brand-rose {
+            width: 30px;
+          }
+
+          .lr-brand-title {
+            font-size: 1.38rem;
+          }
+
+          .lr-brand-kicker {
+            font-size: 0.6rem;
+          }
+
+          .lr-call,
+          .lr-cart {
+            width: 44px;
+            min-height: 44px;
+            padding: 0;
+            justify-content: center;
+          }
+
+          .lr-call-number,
+          .lr-cart-text {
+            display: none;
+          }
+
+          .lr-cart-count {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border: 2px solid #172b5e;
+            background: #ffffff;
+            color: #172b5e;
+            font-size: 0.68rem;
+          }
+
+          .lr-halal,
+          .lr-konto {
+            min-height: 42px;
+            border-radius: 12px;
+          }
+
+          .lr-halal {
+            padding: 0 12px 0 9px;
+          }
+
+          .lr-halal img {
+            width: 24px;
+          }
+
+          .lr-konto {
+            min-width: 0;
+            padding: 0 10px 0 12px;
+            font-size: 0.88rem;
+          }
+
+          .lr-header .header-search {
+            min-height: 46px;
+          }
+
+          .lr-header .search-results-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            max-height: calc(100vh - 230px);
+          }
+        }
+
+        @media (max-width: 360px) {
+          .lr-halal span {
+            display: none;
           }
         }
 
