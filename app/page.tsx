@@ -9,13 +9,19 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import {
-  kategorienMap,
-  produkte,
   type Cuisine,
   type Product,
   type ProductOptionItem,
 } from "./data/menu";
 import { db } from "./lib/firebase";
+import { useSiteSettings } from "./lib/use-site-settings";
+import {
+  closedReasonForDate,
+  getPreorderWindow,
+  getServiceStatus,
+  summarizeWeek,
+  type OpeningSettings,
+} from "./lib/site-settings";
 import RoseAccountChip from "./components/rose-account-chip";
 import {
   WEBSITE_NOTICE_ENABLED,
@@ -167,20 +173,6 @@ function roundUpToNextFiveMinutes(date: Date) {
   return rounded;
 }
 
-function getServiceStatus(bestellart: Bestellart) {
-  const jetzt = new Date();
-  const tag = jetzt.getDay();
-  const minuten = jetzt.getHours() * 60 + jetzt.getMinutes();
-  const istWochenende = tag === 0 || tag === 6;
-
-  const offenAb = istWochenende ? 14 * 60 : 11 * 60;
-  const offenBis = bestellart === "abholung" ? 23 * 60 : 22 * 60 + 30;
-
-  return {
-    isOpen: minuten >= offenAb && minuten <= offenBis,
-  };
-}
-
 function validiereTelefonnummer(telefon: string) {
   const erlaubt = /^[\d\s()+/-]+$/;
 
@@ -312,34 +304,24 @@ function getProductBasePrice(produkt: Product): number {
   return 0;
 }
 
-function getPreorderWindowForDate(dateString: string) {
-  const date = new Date(`${dateString}T12:00:00`);
-  const day = date.getDay();
-  const isWeekend = day === 0 || day === 6;
-
-  return {
-    startHour: isWeekend ? 15 : 12,
-    endHour: 22,
-    isWeekend,
-  };
-}
-
 function getAvailablePreorderDates() {
   return [formatDateInput(new Date())];
 }
 
-function getAvailableTimeSlots(dateString: string) {
+function getAvailableTimeSlots(
+  dateString: string,
+  opening: OpeningSettings,
+  bestellart: Bestellart
+) {
   if (!dateString) return [];
 
-  const { startHour, endHour } = getPreorderWindowForDate(dateString);
   const selectedDate = new Date(`${dateString}T00:00:00`);
+  const window = getPreorderWindow(opening, bestellart, selectedDate);
+  if (!window) return [];
   const nowPlusOneHour = new Date(Date.now() + 60 * 60 * 1000);
 
-  const slotStart = new Date(selectedDate);
-  slotStart.setHours(startHour, 0, 0, 0);
-
-  const slotEnd = new Date(selectedDate);
-  slotEnd.setHours(endHour, 0, 0, 0);
+  const slotStart = new Date(`${dateString}T${window.start}:00`);
+  const slotEnd = new Date(`${dateString}T${window.end}:00`);
 
   const effectiveStart =
     selectedDate.toDateString() === new Date().toDateString()
@@ -366,7 +348,12 @@ function getAvailableTimeSlots(dateString: string) {
   return slots;
 }
 
-function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
+function istGueltigeVorbestellung(
+  datum: string,
+  uhrzeit: string,
+  opening: OpeningSettings,
+  bestellart: Bestellart
+) {
   if (!datum || !uhrzeit) {
     return {
       ok: false,
@@ -374,7 +361,7 @@ function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
     };
   }
 
-  const slots = getAvailableTimeSlots(datum);
+  const slots = getAvailableTimeSlots(datum, opening, bestellart);
   if (!slots.includes(uhrzeit)) {
     return {
       ok: false,
@@ -419,9 +406,10 @@ const [cartLoaded, setCartLoaded] = useState(false);
   const [fehlermeldung, setFehlermeldung] = useState("");
   const [erfolgsmeldung, setErfolgsmeldung] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [specialClosed, setSpecialClosed] = useState(false);
-const [specialClosedReason, setSpecialClosedReason] = useState("");
-const [specialClosedLoading, setSpecialClosedLoading] = useState(true);
+  const { opening, kategorienMap, produkte } = useSiteSettings();
+  const closedReason = closedReasonForDate(opening, new Date());
+  const specialClosed = closedReason !== null;
+  const specialClosedReason = closedReason || "";
 
   const [viewStep, setViewStep] = useState<ViewStep>("kitchens");
   const [activeCuisine, setActiveCuisine] = useState<Cuisine | null>(null);
@@ -448,7 +436,7 @@ const [offerInputText, setOfferInputText] = useState("");
   const [adminClicks, setAdminClicks] = useState(0);
   const offersTrackRef = useRef<HTMLDivElement | null>(null);
 
-  const baseStatus = getServiceStatus(bestellart);
+  const baseStatus = getServiceStatus(opening, bestellart);
 
 const status = specialClosed
   ? { isOpen: false }
@@ -456,8 +444,8 @@ const status = specialClosed
 
   const availablePreorderDates = useMemo(() => getAvailablePreorderDates(), []);
   const availableTimeSlots = useMemo(
-    () => getAvailableTimeSlots(vorbestellungDatum),
-    [vorbestellungDatum]
+    () => getAvailableTimeSlots(vorbestellungDatum, opening, bestellart),
+    [vorbestellungDatum, opening, bestellart]
   );
 
   const zusammengesetzteAdresse = useMemo(() => {
@@ -892,7 +880,7 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
           ? produkt.name.toLowerCase().includes("burger")
           : produkt.category === activeCategory)
     );
-  }, [activeCuisine, activeCategory]);
+  }, [activeCuisine, activeCategory, produkte]);
 
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -913,7 +901,7 @@ function addOfferToCartWithText(offer: OfferSlide, customText: string) {
         return searchable.includes(query);
       })
       .slice(0, 8);
-  }, [searchQuery]);
+  }, [searchQuery, produkte]);
 
   function scrollOffers(direction: "left" | "right") {
     const container = offersTrackRef.current;
@@ -1018,7 +1006,7 @@ useEffect(() => {
 
     if (availableTimeSlots.length === 0) {
       const nextDateWithSlots = availablePreorderDates.find(
-        (date) => getAvailableTimeSlots(date).length > 0
+        (date) => getAvailableTimeSlots(date, opening, bestellart).length > 0
       );
 
       if (nextDateWithSlots && nextDateWithSlots !== vorbestellungDatum) {
@@ -1036,6 +1024,8 @@ useEffect(() => {
     uhrzeit,
     availablePreorderDates,
     vorbestellungDatum,
+    opening,
+    bestellart,
   ]);
 
   async function handleStripeCheckout() {
@@ -1139,7 +1129,12 @@ useEffect(() => {
     }
 
     if (vorbestellung === "spaeter") {
-      const pruefung = istGueltigeVorbestellung(vorbestellungDatum, uhrzeit);
+      const pruefung = istGueltigeVorbestellung(
+        vorbestellungDatum,
+        uhrzeit,
+        opening,
+        bestellart
+      );
       if (!pruefung.ok) {
         setFehlermeldung(pruefung.message);
         return;
@@ -1515,22 +1510,20 @@ useEffect(() => {
 
         <span
           className={`opening-status-pill ${
-            getServiceStatus("abholung").isOpen ? "open" : "closed"
+            getServiceStatus(opening, "abholung").isOpen ? "open" : "closed"
           }`}
         >
-          {getServiceStatus("abholung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
+          {getServiceStatus(opening, "abholung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
         </span>
       </div>
 
       <div className="opening-hours-rows">
-        <div className="opening-hours-row">
-          <span>Montag – Freitag</span>
-          <strong>11:00 – 23:00</strong>
-        </div>
-        <div className="opening-hours-row">
-          <span>Samstag – Sonntag</span>
-          <strong>14:00 – 23:00</strong>
-        </div>
+        {summarizeWeek(opening.abholung).map((row) => (
+          <div className="opening-hours-row" key={row.label}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        ))}
       </div>
     </div>
 
@@ -1543,22 +1536,20 @@ useEffect(() => {
 
         <span
           className={`opening-status-pill ${
-            getServiceStatus("lieferung").isOpen ? "open" : "closed"
+            getServiceStatus(opening, "lieferung").isOpen ? "open" : "closed"
           }`}
         >
-          {getServiceStatus("lieferung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
+          {getServiceStatus(opening, "lieferung").isOpen ? "Jetzt geöffnet" : "Geschlossen"}
         </span>
       </div>
 
       <div className="opening-hours-rows">
-        <div className="opening-hours-row">
-          <span>Montag – Freitag</span>
-          <strong>11:00 – 22:30</strong>
-        </div>
-        <div className="opening-hours-row">
-          <span>Samstag – Sonntag</span>
-          <strong>14:00 – 22:30</strong>
-        </div>
+        {summarizeWeek(opening.lieferung).map((row) => (
+          <div className="opening-hours-row" key={row.label}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        ))}
       </div>
     </div>
   </div>

@@ -19,9 +19,10 @@ import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { auth } from "../lib/firebase";
-import { needsEmailCode } from "../lib/account-client";
+import { applyPendingNewsletterOptIn, needsEmailCode, rememberNewsletterOptIn } from "../lib/account-client";
 import EmailCodeStep from "../components/email-code-step";
-import { produkte, type Product, type ProductOptionItem } from "../data/menu";
+import { type Product, type ProductOptionItem } from "../data/menu";
+import { useSiteSettings } from "../lib/use-site-settings";
 import styles from "./mobile.module.css";
 
 type PrimaryTab = "home" | "menu" | "cart" | "account";
@@ -206,6 +207,7 @@ export default function MobileAppPage() {
   const [user, setUser] = useState<User | null>(null);
   const [codePending, setCodePending] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("register");
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
   const [accountView, setAccountView] = useState<AccountView>("overview");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -346,6 +348,7 @@ export default function MobileAppPage() {
         return;
       }
       setEmail(nextUser.email ?? "");
+      await applyPendingNewsletterOptIn(nextUser);
       try {
         await loadProfile(nextUser);
       } catch {
@@ -377,9 +380,10 @@ export default function MobileAppPage() {
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
   }, [cart, cartLoaded]);
 
+  const { produkte } = useSiteSettings();
   const categories = useMemo(
     () => ["Alle", "Burger", "Indische Spezialitäten", ...Array.from(new Set(produkte.map((item) => item.category)))],
-    []
+    [produkte]
   );
 
   const visibleProducts = useMemo(() => {
@@ -394,7 +398,7 @@ export default function MobileAppPage() {
       const matches = !needle || `${item.name} ${item.description}`.toLowerCase().includes(needle);
       return inCategory && matches;
     });
-  }, [category, search]);
+  }, [category, search, produkte]);
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -519,6 +523,7 @@ export default function MobileAppPage() {
     setBusy(true);
     setMessage("");
     try {
+      if (authMode === "register") rememberNewsletterOptIn(newsletterOptIn);
       if (Capacitor.isNativePlatform()) {
         // Den 6-stelligen Bestätigungscode verschickt danach die Code-Eingabe im Account-Tab.
         if (authMode === "register") {
@@ -546,6 +551,7 @@ export default function MobileAppPage() {
     setBusy(true);
     setMessage("");
     try {
+      if (authMode === "register") rememberNewsletterOptIn(newsletterOptIn);
       if (Capacitor.isNativePlatform()) {
         if (providerName === "apple") await FirebaseAuthentication.signInWithApple();
         else await FirebaseAuthentication.signInWithGoogle();
@@ -781,6 +787,7 @@ export default function MobileAppPage() {
               <div className={styles.segmented}><button type="button" className={authMode === "register" ? styles.segmentActive : ""} onClick={() => setAuthMode("register")}>Registrieren</button><button type="button" className={authMode === "login" ? styles.segmentActive : ""} onClick={() => setAuthMode("login")}>Anmelden</button></div>
               <h2>{authMode === "register" ? "Dein La-Rosa-Konto" : "Willkommen zurück"}</h2>
               <p>Adressen speichern, Bestellungen verfolgen und Rosen sammeln.</p>
+              {authMode === "register" && <label className={styles.newsletterCheck}><input type="checkbox" checked={newsletterOptIn} onChange={(e) => setNewsletterOptIn(e.target.checked)} /><span><strong>Newsletter abonnieren</strong><small>Angebote und Rosen-Aktionen per E-Mail. Jederzeit abbestellbar.</small></span></label>}
               <div className={styles.socialButtons}>
                 <button type="button" disabled={busy} onClick={() => socialSignIn("apple")}><span><AppleLogo /></span> Mit Apple fortfahren</button>
                 <button type="button" disabled={busy} onClick={() => socialSignIn("google")}><span><GoogleLogo /></span> Mit Google fortfahren</button>

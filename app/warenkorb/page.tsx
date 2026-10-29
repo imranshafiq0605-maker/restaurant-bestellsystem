@@ -5,6 +5,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { WEBSITE_NOTICE_TEXT, WEBSITE_ORDERING_ENABLED } from "../config/website-ordering";
+import { useSiteSettings } from "../lib/use-site-settings";
+import { closedReasonForDate, getPreorderWindow, getServiceStatus, type OpeningSettings } from "../lib/site-settings";
 
 type Bestellart = "abholung" | "lieferung";
 type Vorbestellung = "sofort" | "spaeter";
@@ -98,32 +100,6 @@ function roundUpToNextFiveMinutes(date: Date) {
   return rounded;
 }
 
-function getServiceStatus(bestellart: Bestellart) {
-  const jetzt = new Date();
-  const tag = jetzt.getDay();
-  const minuten = jetzt.getHours() * 60 + jetzt.getMinutes();
-  const istWochenende = tag === 0 || tag === 6;
-
-  const offenAb = istWochenende ? 14 * 60 : 11 * 60;
-  const offenBis = bestellart === "abholung" ? 23 * 60 : 22 * 60 + 30;
-
-  return {
-    isOpen: minuten >= offenAb && minuten <= offenBis,
-  };
-}
-
-function getPreorderWindowForDate(dateString: string) {
-  const date = new Date(`${dateString}T12:00:00`);
-  const day = date.getDay();
-  const isWeekend = day === 0 || day === 6;
-
-  return {
-    startHour: isWeekend ? 15 : 12,
-    endHour: 22,
-    isWeekend,
-  };
-}
-
 function getAvailablePreorderDates(days = 1) {
   return Array.from({ length: days }, (_, index) => {
     const date = new Date();
@@ -132,18 +108,16 @@ function getAvailablePreorderDates(days = 1) {
   });
 }
 
-function getAvailableTimeSlots(dateString: string) {
+function getAvailableTimeSlots(dateString: string, opening: OpeningSettings, bestellart: Bestellart) {
   if (!dateString) return [];
 
-  const { startHour, endHour } = getPreorderWindowForDate(dateString);
   const selectedDate = new Date(`${dateString}T00:00:00`);
+  const window = getPreorderWindow(opening, bestellart, selectedDate);
+  if (!window) return [];
   const nowPlusOneHour = new Date(Date.now() + 60 * 60 * 1000);
 
-  const slotStart = new Date(selectedDate);
-  slotStart.setHours(startHour, 0, 0, 0);
-
-  const slotEnd = new Date(selectedDate);
-  slotEnd.setHours(endHour, 0, 0, 0);
+  const slotStart = new Date(`${dateString}T${window.start}:00`);
+  const slotEnd = new Date(`${dateString}T${window.end}:00`);
 
   const effectiveStart =
     selectedDate.toDateString() === new Date().toDateString()
@@ -233,12 +207,12 @@ function validiereEmail(email: string) {
   return { ok: true, message: "E-Mail sieht gültig aus." };
 }
 
-function istGueltigeVorbestellung(datum: string, uhrzeit: string) {
+function istGueltigeVorbestellung(datum: string, uhrzeit: string, opening: OpeningSettings, bestellart: Bestellart) {
   if (!datum || !uhrzeit) {
     return { ok: false, message: "Bitte wähle Datum und Uhrzeit für die Vorbestellung." };
   }
 
-  const slots = getAvailableTimeSlots(datum);
+  const slots = getAvailableTimeSlots(datum, opening, bestellart);
   if (!slots.includes(uhrzeit)) {
     return { ok: false, message: "Die gewählte Vorbestellzeit ist nicht mehr verfügbar." };
   }
@@ -396,14 +370,19 @@ export default function WarenkorbPage() {
     return pruefeLiefergebiet(plz);
   }, [bestellart, plz]);
 
-  const status = getServiceStatus(bestellart);
+  const { opening } = useSiteSettings();
+  const closedReason = closedReasonForDate(opening, new Date());
+  const status = getServiceStatus(opening, bestellart);
   // The native app supports preorders for the next week. Keep the website's
   // existing same-day behavior unchanged.
   const availablePreorderDates = useMemo(
     () => getAvailablePreorderDates(isMobileCheckout ? 7 : 1),
     [isMobileCheckout]
   );
-  const availableTimeSlots = useMemo(() => getAvailableTimeSlots(vorbestellungDatum), [vorbestellungDatum]);
+  const availableTimeSlots = useMemo(
+    () => getAvailableTimeSlots(vorbestellungDatum, opening, bestellart),
+    [vorbestellungDatum, opening, bestellart]
+  );
 
   const zusammengesetzteAdresse = useMemo(() => {
     if (!strasse && !hausnummer && !plz && !stadt) return "";
@@ -526,13 +505,18 @@ export default function WarenkorbPage() {
   function nextFromZeit() {
     setFehlermeldung("");
 
+    if (opening.closure.active) {
+      setFehlermeldung(closedReason ? `Wir haben gerade geschlossen: ${closedReason}` : "Wir nehmen gerade keine Bestellungen an.");
+      return;
+    }
+
     if (!status.isOpen && vorbestellung === "sofort") {
       setFehlermeldung("Aktuell geschlossen. Bitte wähle eine Vorbestellung.");
       return;
     }
 
     if (vorbestellung === "spaeter") {
-      const pruefung = istGueltigeVorbestellung(vorbestellungDatum, uhrzeit);
+      const pruefung = istGueltigeVorbestellung(vorbestellungDatum, uhrzeit, opening, bestellart);
       if (!pruefung.ok) {
         setFehlermeldung(pruefung.message);
         return;
