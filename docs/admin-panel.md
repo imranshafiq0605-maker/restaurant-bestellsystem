@@ -2,7 +2,7 @@
 
 ## Zugang
 - Anmeldung mit E-Mail + Passwort eines Firebase-Kontos, danach bei **jeder** Anmeldung ein 6-stelliger Code per E-Mail (10 Min. gültig, 5 Versuche). Sitzung: 12 Stunden, httpOnly-Cookie.
-- Erlaubte Adressen: Umgebungsvariable `ADMIN_EMAILS` (kommagetrennt) in Vercel. Ohne diese Variable ist der Admin-Zugang gesperrt.
+- Erlaubte Adressen: larosa1993@outlook.de (fest in app/lib/admin-auth.ts) plus optional weitere, kommagetrennt in der Umgebungsvariable `ADMIN_EMAILS` in Vercel.
 - Optional: `ADMIN_SESSION_SECRET` (sonst `EMAIL_CODE_SECRET` bzw. `FIREBASE_PRIVATE_KEY`).
 
 ## Bereiche

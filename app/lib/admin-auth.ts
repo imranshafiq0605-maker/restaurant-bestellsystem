@@ -2,17 +2,18 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 
 // Anmeldung im Admin-Panel (/admin): E-Mail + Passwort des Firebase-Kontos, danach immer ein 6-stelliger Code per E-Mail.
-// Erst nach dem Code gibt es ein signiertes Sitzungs-Cookie. Nur Adressen aus ADMIN_EMAILS dürfen sich anmelden.
+// Erst nach dem Code gibt es ein signiertes Sitzungs-Cookie. Nur die Restaurant-Adresse und Adressen aus ADMIN_EMAILS dürfen sich anmelden.
 
 export const ADMIN_COOKIE = "larosa_admin";
 export const ADMIN_SESSION_HOURS = 12;
 export const ADMIN_CODE_VALID_MINUTES = 10;
 export const ADMIN_CODE_MAX_ATTEMPTS = 5;
 
-/** Admin-Adressen, kommagetrennt in der Umgebungsvariable ADMIN_EMAILS (z. B. in Vercel). */
+/** Admin-Adresse des Restaurants. Weitere Adressen kommagetrennt in der Umgebungsvariable ADMIN_EMAILS (z. B. in Vercel). */
+const DEFAULT_ADMIN_EMAIL = "larosa1993@outlook.de";
+
 export function adminEmails() {
-  return (process.env.ADMIN_EMAILS || "")
-    .split(",")
+  return [DEFAULT_ADMIN_EMAIL, ...(process.env.ADMIN_EMAILS || "").split(",")]
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
 }
