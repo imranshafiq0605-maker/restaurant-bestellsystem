@@ -376,7 +376,10 @@
   padding: 30px clamp(16px, 3vw, 40px) 80px;
 }
 
-.mobileBar {
+.mobileBar,
+.tabBar,
+.custCards,
+.dayShort {
   display: none;
 }
 
@@ -863,6 +866,222 @@
 .saveBar .ghost:not(:disabled):hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
+}
+
+/* ---------- Sofort schließen / besondere Tage ---------- */
+
+.dangerSolid {
+  border-color: var(--red);
+  background: var(--red);
+  color: #fff;
+}
+
+.closureText .pill {
+  margin-bottom: 8px;
+}
+
+.optionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.optionGrid4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.optionGrid button {
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.optionGrid .optionActive {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.dateRange {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+
+.checkLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.checkLine input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ink);
+}
+
+.serviceBox {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--soft);
+}
+
+.serviceHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+
+.serviceHead strong {
+  font-size: 1rem;
+}
+
+.serviceHead small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #e8ebf0;
+}
+
+.segmented button {
+  min-height: 40px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.segmented .segmentActive {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+
+.specialList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.specialList button {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 40px 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+
+.specialList button:hover {
+  border-color: #cbd2dc;
+}
+
+.specialMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.specialMain strong {
+  font-size: 0.95rem;
+}
+
+.specialMain small {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.specialServices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.closedTag,
+.customTag,
+.normalTag,
+.todayTag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.closedTag {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.customTag {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.normalTag {
+  background: var(--soft);
+  color: var(--muted);
+}
+
+.todayTag {
+  min-height: 22px;
+  background: var(--ink);
+  color: #fff;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: var(--faint);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.pastList {
+  margin-top: 10px;
+  opacity: 0.7;
 }
 
 /* ---------- Tabs / Chips ---------- */
@@ -1689,5 +1908,371 @@
   .dialog,
   .drawer {
     padding: 20px 16px;
+  }
+}
+
+/* ---------- Handy: App-Navigation unten, Bottom-Sheets, Karten statt Tabellen ---------- */
+
+@media (max-width: 860px) {
+  .page {
+    font-size: 16px;
+  }
+
+  .mobileTop {
+    padding: 10px 16px;
+  }
+
+  .main {
+    padding: 18px 14px calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .pageHead {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .pageHead h1 {
+    font-size: 1.6rem;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .cardHead {
+    flex-wrap: wrap;
+  }
+
+  .tabBar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+  }
+
+  .tabBar button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 54px;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--faint);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .tabBar svg {
+    width: 23px;
+    height: 23px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .tabBar .tabActive {
+    color: var(--ink);
+  }
+
+  .tabBar .tabActive svg {
+    stroke-width: 2.3;
+  }
+
+  .saveBar {
+    position: fixed;
+    right: 10px;
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    left: 10px;
+    z-index: 41;
+    margin: 0;
+    padding: 10px 10px 10px 14px;
+  }
+
+  .saveBar span {
+    font-size: 0.86rem;
+  }
+
+  /* Dialoge kommen von unten wie in einer App */
+  .backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: 92dvh;
+    padding: 8px 16px 0;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .dialog::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto 14px;
+    border-radius: 999px;
+    background: #d5dae2;
+  }
+
+  .dialogActions {
+    position: sticky;
+    bottom: 0;
+    margin: 18px -16px 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .dialogActions > button {
+    flex: 1;
+  }
+
+  .drawer {
+    inset: auto 0 0 0;
+    width: 100%;
+    max-height: 90dvh;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  /* Öffnungszeiten: eine Zeile pro Tag */
+  .dayRow {
+    grid-template-columns: 34px minmax(0, 1fr) 46px;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .dayRow .times {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .dayRow > .switch {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .dayName {
+    font-size: 0.95rem;
+  }
+
+  .dayLong {
+    display: none;
+  }
+
+  .dayShort {
+    display: inline;
+  }
+
+  .saveBar {
+    flex-wrap: nowrap;
+  }
+
+  .saveBar span {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  .saveBar .actions {
+    flex: none;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .saveBar .ghost {
+    padding: 0 10px;
+  }
+
+  .segmented button {
+    line-height: 1.15;
+  }
+
+  .times {
+    gap: 4px;
+  }
+
+  .times input {
+    min-height: 40px;
+    padding: 0 6px;
+    font-size: 0.92rem;
+  }
+
+  .times input::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+
+  .closureCard > button {
+    width: 100%;
+  }
+
+  .specialList button {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px 36px 14px 14px;
+  }
+
+  .specialServices {
+    justify-content: flex-start;
+  }
+
+  .dateRange {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .optionGrid4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Kunden */
+  .tableWrap {
+    display: none;
+  }
+
+  .custCards {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .custCards button {
+    width: 100%;
+    display: grid;
+    gap: 3px;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .custCards small {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .custCardTop {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .custCardTop strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .custCardTop .custNo {
+    flex: none;
+    font-size: 0.8rem;
+  }
+
+  .custCardStats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin-top: 6px;
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+    font-weight: 650;
+  }
+
+  .toolbar .search,
+  .toolbar .select {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-right: -16px;
+    padding-right: 16px;
+    scrollbar-width: none;
+  }
+
+  .chips button {
+    flex: none;
+  }
+
+  /* Speisekarte: Kategorien als wischbare Leiste */
+  .catList {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin-right: -16px;
+    padding: 0 16px 4px 0;
+    scrollbar-width: none;
+  }
+
+  .catList li {
+    flex: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+  }
+
+  .catList li + li {
+    margin-top: 0;
+  }
+
+  .catList li.catActive {
+    border-color: var(--ink);
+    background: var(--soft);
+  }
+
+  .catButton {
+    min-height: 38px;
+    border-radius: 999px;
+  }
+
+  .catActive .catButton {
+    background: transparent;
+  }
+
+  .catTools {
+    padding-right: 6px;
+  }
+
+  .productRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+
+  .productNo {
+    display: none;
+  }
+
+  .productTools {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .productTools .iconButton {
+    width: 38px;
+    height: 38px;
   }
 }

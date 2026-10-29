@@ -146,6 +146,26 @@ export default function Customers({ data, error, onReload }: Props) {
               </tbody>
             </table>
           </div>
+          {/* Handy: Karten statt Tabelle */}
+          <ul className={styles.custCards}>
+            {list.slice(0, limit).map((customer) => (
+              <li key={customer.key}>
+                <button type="button" onClick={() => setSelected(customer)}>
+                  <span className={styles.custCardTop}>
+                    <strong>{customer.name || customer.email}</strong>
+                    <span className={styles.custNo}>Nr. {customer.customerNumber ?? "—"}</span>
+                  </span>
+                  <small>{customer.email}</small>
+                  <span className={styles.custCardStats}>
+                    <span>{customer.type === "konto" ? `${number(customer.roses)} 🌹` : "Gast"}</span>
+                    <span>{customer.orders} {customer.orders === 1 ? "Bestellung" : "Bestellungen"}</span>
+                    <span>{euro(customer.revenue)}</span>
+                    {customer.newsletter && <span className={`${styles.badge} ${styles.badgeGreen}`}>Newsletter</span>}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
           {list.length === 0 && <p className={styles.empty}>Keine Kunden gefunden.</p>}
           <div className={styles.tableFoot}>
             {list.length > limit ? (
