@@ -181,7 +181,39 @@ export default function DatenschutzPage() {
           </section>
 
           <section className="legal-section">
-            <h2>13. Änderungen</h2>
+            <h2>13. Google Ads und Zuordnung von Anzeigenbestellungen</h2>
+            <p>
+              Wenn Sie über die Datenschutzeinstellungen zustimmen, verwenden wir Google Ads
+              zur Messung unserer Werbung. Anbieter ist Google Ireland Limited, Gordon House,
+              Barrow Street, Dublin 4, Irland. Das Google-Tag wird erst nach Ihrer Einwilligung
+              geladen. Dabei können technische Daten wie IP-Adresse, Browserinformationen und
+              Anzeigenklickkennungen verarbeitet und Cookies zur Zuordnung einer Bestellung
+              zu einer Anzeige verwendet werden. Bei bestätigten Zahlungen übermitteln wir
+              eine technische Bestellkennung, den Zahlbetrag und die Währung. Namen,
+              E-Mail-Adressen, Telefonnummern und Lieferadressen werden durch diese
+              Bestellmessung nicht an Google übermittelt. Personalisierte Werbung ist in
+              dieser Einbindung deaktiviert.
+            </p>
+            <p>
+              Zusätzlich erfassen wir mit Ihrer Einwilligung Anzeigenbesuche auf unserer
+              eigenen Website. Ein signiertes Cookie ermöglicht es uns, bezahlte Bestellungen
+              dem letzten erfassten Google-Anzeigenbesuch innerhalb von 30 Tagen zuzuordnen.
+              Unsere zugriffsberechtigten Mitarbeitenden sehen diese Zuordnung zusammen mit
+              den bereits zur Bestellung gespeicherten Kundendaten im Admin-Portal. Wir
+              zählen wiedererkannte Browser; daraus ergibt sich keine genaue Anzahl
+              unterschiedlicher Personen. Die Auswahl zur Werbemessung speichern wir
+              für höchstens 180 Tage. Sie können ohne Einwilligung bestellen und Ihre
+              Einwilligung jederzeit mit Wirkung für die Zukunft über
+              „Datenschutzeinstellungen“ widerrufen.
+            </p>
+            <p>
+              Informationen zur Verarbeitung durch Google und möglichen Übermittlungen in
+              Drittländer finden Sie in den <a href="https://policies.google.com/privacy">Datenschutzhinweisen von Google</a>.
+            </p>
+          </section>
+
+          <section className="legal-section">
+            <h2>14. Änderungen</h2>
             <p>
               Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit
               sie stets den aktuellen rechtlichen Anforderungen entspricht.

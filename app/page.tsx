@@ -1,4 +1,5 @@
 "use client";
+import { hasAdsConsent } from "./lib/google-ads-client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -1213,6 +1214,7 @@ useEffect(() => {
         },
         body: JSON.stringify({
           pendingOrderId: pendingOrderRef.id,
+          adsConsent: hasAdsConsent(),
           email: email.trim(),
           artikel: artikelOhneUndefined,
           gesamtpreisProdukte,

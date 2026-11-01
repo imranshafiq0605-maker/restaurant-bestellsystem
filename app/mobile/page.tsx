@@ -324,7 +324,8 @@ export default function MobileAppPage() {
       setCart([]);
       localStorage.removeItem(CART_KEY);
       sessionStorage.removeItem(CART_KEY);
-      window.history.replaceState({}, "", `/mobile?tab=account${requestedOrderId ? `&orderId=${encodeURIComponent(requestedOrderId)}` : ""}`);
+      const checkoutSession = params.get("session_id");
+      window.history.replaceState({}, "", `/mobile?tab=account${requestedOrderId ? `&orderId=${encodeURIComponent(requestedOrderId)}` : ""}${checkoutSession ? `&session_id=${encodeURIComponent(checkoutSession)}` : ""}`);
     }
   }, []);
 

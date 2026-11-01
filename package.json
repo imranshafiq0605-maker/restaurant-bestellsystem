@@ -17,6 +17,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:security": "node --test scripts/security/*.test.mjs",
+    "test:ads": "node --test scripts/ads/*.test.mjs",
     "ios:sync": "cap sync ios",
     "ios:local": "CAPACITOR_SERVER_URL=http://localhost:3000 cap sync ios",
     "ios:device": "CAPACITOR_SERVER_URL=http://192.168.178.105:3000 cap sync ios",

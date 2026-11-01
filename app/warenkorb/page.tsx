@@ -1,4 +1,5 @@
 "use client";
+import { hasAdsConsent } from "../lib/google-ads-client";
 
 import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -598,6 +599,7 @@ export default function WarenkorbPage() {
         },
         body: JSON.stringify({
           pendingOrderId: pendingOrderRef.id,
+          adsConsent: hasAdsConsent(),
           email: email.trim(),
           artikel: artikelOhneUndefined,
           gesamtpreisProdukte,
