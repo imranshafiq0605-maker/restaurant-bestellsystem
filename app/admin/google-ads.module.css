@@ -1,0 +1,32 @@
+.filters { display: flex; align-items: end; gap: 20px; flex-wrap: wrap; }
+.filters label { display: grid; gap: 8px; font-size: 14px; }
+.note { color: #536477; font-size: 14px; line-height: 1.6; margin: 18px 0 0; }
+.range { color: #536477; font-size: 14px; }
+.explanation { margin-top: 16px; color: #536477; font-size: 14px; }
+.explanation summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+.tableScroll { width: 100%; overflow-x: auto; margin-top: 18px; }
+.table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+.table th { color: #536477; font-size: 12px; font-weight: 600; }
+.table th, .table td { padding: 14px 12px; border-bottom: 1px solid #e4e9ee; white-space: nowrap; }
+.table small { display: block; color: #536477; margin-top: 4px; }
+.barCell { display: flex; align-items: center; gap: 12px; }
+.bar { height: 7px; border-radius: 4px; background: #bb8c42; }
+.orderCards { display: none; }
+@media (max-width: 640px) {
+  .filters { align-items: stretch; gap: 16px; }
+  .filters > * { width: 100%; }
+  .filters input { min-height: 44px; min-width: 0; width: 100%; }
+  .filters button { min-height: 44px; }
+  .desktopOrders { display: none; }
+  .table { table-layout: fixed; }
+  .table th, .table td { padding: 12px 3px; font-size: 11px; white-space: normal; overflow-wrap: anywhere; }
+  .bar { display: none; }
+  .orderCards { display: grid; gap: 12px; list-style: none; padding: 0; margin: 16px 0 0; }
+  .orderCards li { display: grid; gap: 6px; padding: 16px; border: 1px solid #e4e9ee; border-radius: 12px; min-width: 0; overflow-wrap: anywhere; }
+  .orderTop { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .email { color: #536477; font-size: 13px; overflow-wrap: anywhere; }
+  .orderCards dl { display: grid; gap: 8px; margin: 10px 0 0; font-size: 12px; }
+  .orderCards dl div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+  .orderCards dt { color: #536477; }
+  .orderCards dd { margin: 0; }
+}

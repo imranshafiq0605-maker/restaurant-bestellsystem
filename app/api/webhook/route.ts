@@ -183,6 +183,8 @@ export async function POST(req: NextRequest) {
       status: "neu",
       bezahlt: true,
       stripeSessionId: session.id,
+      adsPaymentVerified: session.livemode && session.status === "complete" && session.payment_status === "paid" && session.currency === "eur",
+      adsPaidValue: typeof session.amount_total === "number" ? session.amount_total / 100 : null,
       releaseAt: admin.firestore.Timestamp.fromDate(releaseDate),
       acceptedAt: null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

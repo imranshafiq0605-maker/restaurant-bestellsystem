@@ -4,6 +4,9 @@ const nextConfig = {
   devIndicators: false,
   async headers() {
     return [{
+      source: "/:path*",
+      headers: [{ key: "Referrer-Policy", value: "strict-origin" }],
+    }, {
       source: "/.well-known/apple-app-site-association",
       headers: [{ key: "Content-Type", value: "application/json" }],
     }];

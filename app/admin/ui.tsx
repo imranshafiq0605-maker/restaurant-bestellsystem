@@ -31,10 +31,11 @@ export function formatDate(value: string | null | undefined, withTime = false) {
 
 export type IconName =
   | "home" | "clock" | "menu" | "users" | "mail" | "logout" | "plus" | "trash" | "edit" | "up" | "down"
-  | "copy" | "close" | "eye" | "eyeOff" | "refresh" | "download" | "rose" | "send";
+  | "copy" | "close" | "eye" | "eyeOff" | "refresh" | "download" | "rose" | "send" | "chart";
 
 export function Icon({ name, className = styles.iconSvg }: { name: IconName; className?: string }) {
   const paths: Record<IconName, ReactNode> = {
+    chart: <><path d="M4 4v16h16M8 16v-4M12 16V8M16 16V5" /></>,
     home: <><path d="M4 11 12 4l8 7" /><path d="M6 10v10h12V10" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
     menu: <><path d="M5 5h14v14H5z" /><path d="M9 9h6M9 12h6M9 15h4" /></>,

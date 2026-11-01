@@ -11,15 +11,17 @@ import HoursEditor from "./hours";
 import MenuEditor from "./menu-editor";
 import Customers from "./customers";
 import Newsletter from "./newsletter";
+import GoogleAds from "./google-ads";
 
-type Section = "uebersicht" | "zeiten" | "speisekarte" | "kunden" | "newsletter";
+type Section = "uebersicht" | "zeiten" | "speisekarte" | "kunden" | "newsletter" | "google-ads";
 
 const sections: Array<{ id: Section; label: string; short: string; icon: IconName }> = [
   { id: "uebersicht", label: "Übersicht", short: "Übersicht", icon: "home" },
   { id: "zeiten", label: "Öffnungszeiten", short: "Zeiten", icon: "clock" },
   { id: "speisekarte", label: "Speisekarte", short: "Karte", icon: "menu" },
   { id: "kunden", label: "Kunden", short: "Kunden", icon: "users" },
-  { id: "newsletter", label: "Newsletter", short: "Newsletter", icon: "mail" },
+  { id: "newsletter", label: "Newsletter", short: "Mails", icon: "mail" },
+  { id: "google-ads", label: "Google Ads", short: "Ads", icon: "chart" },
 ];
 
 export type CustomerData = { customers: AdminCustomer[]; stats: CustomerStats };
@@ -248,6 +250,7 @@ function Dashboard({ email, onSignedOut }: { email: string; onSignedOut: () => v
             {section === "speisekarte" && <MenuEditor onError={handleError} />}
             {section === "kunden" && <Customers data={customerData} error={customerError} onReload={loadCustomers} />}
             {section === "newsletter" && <Newsletter adminEmail={email} subscriberCount={customerData?.stats.newsletter ?? null} onError={handleError} />}
+            {section === "google-ads" && <GoogleAds onError={handleError} />}
           </div>
         </div>
       </div>

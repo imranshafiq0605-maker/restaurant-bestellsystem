@@ -1951,7 +1951,7 @@
     left: 0;
     z-index: 40;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.96);

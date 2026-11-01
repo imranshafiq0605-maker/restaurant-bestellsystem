@@ -1,7 +1,8 @@
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/react";
+import WebsiteAnalytics from "./components/website-analytics";
 import type { Viewport } from "next";
 import { Playfair_Display } from "next/font/google";
+import AdsMeasurement from "./components/ads-measurement";
 
 // Schrift für den Schriftzug „LA ROSA“ in der Kopfleiste der Website.
 const brandFont = Playfair_Display({
@@ -37,7 +38,8 @@ export default function RootLayout({
     <html lang="de" className={brandFont.variable}>
       <body>
         {children}
-        <Analytics />
+        <WebsiteAnalytics />
+        <AdsMeasurement />
       </body>
     </html>
   );

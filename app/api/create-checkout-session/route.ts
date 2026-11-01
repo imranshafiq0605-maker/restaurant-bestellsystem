@@ -5,6 +5,7 @@ import { stripeMetadataQuery, verifyFirebaseIdToken } from "../../lib/firebase-r
 import { getAdminDb } from "../../lib/firebase-admin";
 import { loadOpeningSettings } from "../../lib/site-config-server";
 import { isClosureActive } from "../../lib/site-settings";
+import { ATTRIBUTION_COOKIE, readAttribution } from "../../lib/ads-attribution";
 
 function validiereEmail(email: string) {
   const emailBereinigt = email.trim();
@@ -182,6 +183,9 @@ export async function POST(req: NextRequest) {
     const rosenVerdient = firebaseUid ? Math.floor(zahlbetrag) : 0;
     try {
       await pendingOrderRef.set({
+        // Overwrite any client-supplied attribution with the signed consent cookie.
+        adsAttribution: body.adsConsent === true && readAttribution(req.cookies.get(ATTRIBUTION_COOKIE)?.value)
+          ? req.cookies.get(ATTRIBUTION_COOKIE)!.value : null,
         paymentMethod: selectedPaymentMethod || "card",
         firebaseUid: firebaseUid || null,
         rosenVerdient,
@@ -247,8 +251,8 @@ export async function POST(req: NextRequest) {
               : "0.00",
         },
         success_url: source === "mobile"
-          ? `${origin}/mobile?tab=account&paid=true&orderId=${pendingOrderId}`
-          : `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}`,
+          ? `${origin}/mobile?tab=account&paid=true&orderId=${pendingOrderId}&session_id={CHECKOUT_SESSION_ID}`
+          : `${origin}/order-status?paid=true&pendingOrderId=${pendingOrderId}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: source === "mobile"
           ? `${origin}/warenkorb?source=mobile&cancelledOrderId=${pendingOrderId}`
           : requestedRoses > 0
